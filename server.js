@@ -3,15 +3,15 @@ const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
 const { syncAllExcelFiles, TARGET_DIR } = require('./excelScanner');
-
+ 
 const PORT = 3000;
 const DATA_FILE = path.join(__dirname, 'data', 'acrs.json');
 const DAILY_DATA_FILE = path.join(__dirname, 'data', 'daily_tasks.json');
 const PUBLIC_DIR = path.join(__dirname, 'public');
-
+ 
 // Active Real-Time SSE Clients
 const sseClients = new Set();
-
+ 
 function broadcastEvent(payload) {
     const dataStr = `data: ${JSON.stringify(payload)}\n\n`;
     for (const client of sseClients) {
@@ -22,7 +22,7 @@ function broadcastEvent(payload) {
         }
     }
 }
-
+ 
 // Initial Auto-Sync of Excel files on startup
 console.log('🚀 Ejecutando escaneo inicial de formatos Excel de ACR en red...');
 try {
@@ -30,7 +30,7 @@ try {
 } catch (e) {
     console.error('⚠️ Error en escaneo inicial de Excel:', e.message);
 }
-
+ 
 // Periodic Background Auto-Sync every 15 seconds
 setInterval(() => {
     try {
@@ -47,7 +47,7 @@ setInterval(() => {
         console.error('Error en intervalo de sincronización de Excel:', e.message);
     }
 }, 15000);
-
+ 
 function getMimeType(filePath) {
     const ext = path.extname(filePath).toLowerCase();
     const mimeTypes = {
@@ -61,22 +61,22 @@ function getMimeType(filePath) {
     };
     return mimeTypes[ext] || 'application/octet-stream';
 }
-
+ 
 const server = http.createServer((req, res) => {
     // Enable CORS for all clients
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
+ 
     if (req.method === 'OPTIONS') {
         res.writeHead(200);
         res.end();
         return;
     }
-
+ 
     const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
     const pathname = parsedUrl.pathname;
-
+ 
     // REAL-TIME SERVER-SENT EVENTS (SSE) STREAM
     if (pathname === '/api/events' && req.method === 'GET') {
         res.writeHead(200, {
@@ -84,20 +84,20 @@ const server = http.createServer((req, res) => {
             'Cache-Control': 'no-cache',
             'Connection': 'keep-alive'
         });
-
+ 
         sseClients.add(res);
-
+ 
         // Notify client of successful connection & send current active user count
         res.write(`data: ${JSON.stringify({ type: 'init', activeUsers: sseClients.size })}\n\n`);
         broadcastEvent({ type: 'users_count', count: sseClients.size });
-
+ 
         req.on('close', () => {
             sseClients.delete(res);
             broadcastEvent({ type: 'users_count', count: sseClients.size });
         });
         return;
     }
-
+ 
     // REST API ENDPOINTS
     if (pathname === '/api/info' && req.method === 'GET') {
         const lanIp = getLocalIp();
@@ -109,7 +109,7 @@ const server = http.createServer((req, res) => {
         }));
         return;
     }
-
+ 
     if (pathname === '/api/acrs' && req.method === 'GET') {
         fs.readFile(DATA_FILE, 'utf8', (err, data) => {
             if (err) {
@@ -122,7 +122,7 @@ const server = http.createServer((req, res) => {
         });
         return;
     }
-
+ 
     if (pathname === '/api/acrs/sync' && req.method === 'POST') {
         try {
             const acrs = syncAllExcelFiles();
@@ -140,7 +140,7 @@ const server = http.createServer((req, res) => {
         }
         return;
     }
-
+ 
     if (pathname === '/api/tasks/status' && req.method === 'POST') {
         let body = '';
         req.on('data', chunk => { body += chunk.toString(); });
@@ -152,7 +152,7 @@ const server = http.createServer((req, res) => {
                     let acrs = JSON.parse(data);
                     let acr = acrs.find(a => a.id === payload.acrId);
                     let targetTareaDesc = '';
-
+ 
                     if (acr) {
                         let tarea = acr.tareas.find(t => t.idTarea === payload.taskId);
                         if (tarea) {
@@ -179,7 +179,7 @@ const server = http.createServer((req, res) => {
                     }
                     fs.writeFile(DATA_FILE, JSON.stringify(acrs, null, 2), 'utf8', (wErr) => {
                         if (wErr) throw wErr;
-
+ 
                         // REAL-TIME BROADCAST TO ALL CONNECTED NETWORK USERS
                         broadcastEvent({
                             type: 'data_updated',
@@ -187,7 +187,7 @@ const server = http.createServer((req, res) => {
                             user: payload.usuario || 'Un usuario',
                             message: `Tarea '${targetTareaDesc}' actualizada a '${payload.nuevoEstado}'`
                         });
-
+ 
                         res.writeHead(200, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify({ success: true, message: 'Estado actualizado correctamente' }));
                     });
@@ -199,7 +199,7 @@ const server = http.createServer((req, res) => {
         });
         return;
     }
-
+ 
     // DAILY MEETINGS (DDS - TECNICOS E INGENIEROS) ENDPOINTS
     if (pathname === '/api/daily-tasks' && req.method === 'GET') {
         fs.readFile(DAILY_DATA_FILE, 'utf8', (err, data) => {
@@ -213,7 +213,7 @@ const server = http.createServer((req, res) => {
         });
         return;
     }
-
+ 
     if (pathname === '/api/daily-tasks/create' && req.method === 'POST') {
         let body = '';
         req.on('data', chunk => { body += chunk.toString(); });
@@ -223,14 +223,13 @@ const server = http.createServer((req, res) => {
                 fs.readFile(DAILY_DATA_FILE, 'utf8', (err, data) => {
                     let tasks = [];
                     if (!err && data) tasks = JSON.parse(data);
-                    
                     const ahoraStr = new Date().toLocaleDateString('es-ES');
                     const ahoraHora = new Date().toLocaleString('es-ES');
                     const newId = `DAILY-${new Date().getFullYear()}-${String(tasks.length + 1).padStart(3, '0')}`;
-
+ 
                     let respVal = payload.responsable;
                     if (!respVal || respVal.trim() === '') respVal = 'No Hay Responsable';
-
+ 
                     const newTask = {
                         id: newId,
                         fecha: ahoraStr,
@@ -249,19 +248,19 @@ const server = http.createServer((req, res) => {
                             }
                         ]
                     };
-
+ 
                     tasks.unshift(newTask);
-
+ 
                     fs.writeFile(DAILY_DATA_FILE, JSON.stringify(tasks, null, 2), 'utf8', (wErr) => {
                         if (wErr) throw wErr;
-
+ 
                         broadcastEvent({
                             type: 'daily_updated',
                             dailyTasks: tasks,
                             user: payload.usuario || 'Técnico/Ingeniero',
                             message: `Nuevo compromiso registrado: '${payload.compromiso}'`
                         });
-
+ 
                         res.writeHead(200, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify({ success: true, task: newTask }));
                     });
@@ -273,7 +272,7 @@ const server = http.createServer((req, res) => {
         });
         return;
     }
-
+ 
     if (pathname === '/api/daily-tasks/status' && req.method === 'POST') {
         let body = '';
         req.on('data', chunk => { body += chunk.toString(); });
@@ -294,17 +293,17 @@ const server = http.createServer((req, res) => {
                             accion: `Estado cambiado de '${antiguoEstado}' a '${payload.nuevoEstado}'. Obs: ${payload.observaciones || 'Sin cambios'}`
                         });
                     }
-
+ 
                     fs.writeFile(DAILY_DATA_FILE, JSON.stringify(tasks, null, 2), 'utf8', (wErr) => {
                         if (wErr) throw wErr;
-
+ 
                         broadcastEvent({
                             type: 'daily_updated',
                             dailyTasks: tasks,
                             user: payload.usuario || 'Técnico/Ingeniero',
                             message: `Compromiso diario actualizado a '${payload.nuevoEstado}'`
                         });
-
+ 
                         res.writeHead(200, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify({ success: true }));
                     });
@@ -316,7 +315,7 @@ const server = http.createServer((req, res) => {
         });
         return;
     }
-
+ 
     if (pathname === '/api/send-alerts' && req.method === 'POST') {
         let body = '';
         req.on('data', chunk => { body += chunk.toString(); });
@@ -329,7 +328,7 @@ const server = http.createServer((req, res) => {
                     if (params.modoReal) extraArgs += ` -ModoSimulacion "false"`;
                 }
             } catch (e) {}
-
+ 
             const psScript = path.join(__dirname, 'scripts', 'Send-ACRAlerts.ps1');
             exec(`powershell -ExecutionPolicy Bypass -File "${psScript}" ${extraArgs}`, (error, stdout, stderr) => {
                 res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -342,17 +341,17 @@ const server = http.createServer((req, res) => {
         });
         return;
     }
-
+ 
     // STATIC FILE SERVING
     let reqFile = pathname === '/' ? 'index.html' : pathname.replace(/^\//, '');
     let safePath = path.join(PUBLIC_DIR, reqFile);
-
+ 
     if (!safePath.startsWith(PUBLIC_DIR)) {
         res.writeHead(403);
         res.end('Acceso denegado');
         return;
     }
-
+ 
     fs.readFile(safePath, (err, content) => {
         if (err) {
             res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
@@ -363,7 +362,7 @@ const server = http.createServer((req, res) => {
         }
     });
 });
-
+ 
 const os = require('os');
 function getLocalIp() {
     const interfaces = os.networkInterfaces();
@@ -376,9 +375,9 @@ function getLocalIp() {
     }
     return '172.25.114.42';
 }
-
+ 
 let activePublicUrl = '';
-
+ 
 // LISTEN ON 0.0.0.0 FOR LOCAL NETWORK CONNECTIONS
 server.listen(PORT, '0.0.0.0', () => {
     const currentIp = getLocalIp();
