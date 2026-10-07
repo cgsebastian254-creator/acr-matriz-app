@@ -4,7 +4,7 @@ const path = require('path');
 const { exec } = require('child_process');
 const { syncAllExcelFiles, TARGET_DIR } = require('./excelScanner');
  
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'data', 'acrs.json');
 const DAILY_DATA_FILE = path.join(__dirname, 'data', 'daily_tasks.json');
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -223,6 +223,7 @@ const server = http.createServer((req, res) => {
                 fs.readFile(DAILY_DATA_FILE, 'utf8', (err, data) => {
                     let tasks = [];
                     if (!err && data) tasks = JSON.parse(data);
+ 
                     const ahoraStr = new Date().toLocaleDateString('es-ES');
                     const ahoraHora = new Date().toLocaleString('es-ES');
                     const newId = `DAILY-${new Date().getFullYear()}-${String(tasks.length + 1).padStart(3, '0')}`;
@@ -342,13 +343,17 @@ const server = http.createServer((req, res) => {
         return;
     }
  
-    // STATIC FILE SERVING
-    let reqFile = pathname === '/' ? 'index.html' : pathname.replace(/^\//, '');
-    let safePath = path.join(PUBLIC_DIR, reqFile);
+    // STATIC FILE SERVING (Auto-detect root or public folder)
+    let reqFile = (pathname === '/' || !pathname) ? 'index.html' : pathname.replace(/^\//, '');
+    let safePath = path.join(__dirname, reqFile);
  
-    if (!safePath.startsWith(PUBLIC_DIR)) {
-        res.writeHead(403);
-        res.end('Acceso denegado');
+    if (!fs.existsSync(safePath)) {
+        safePath = path.join(PUBLIC_DIR, reqFile);
+    }
+ 
+    if (!fs.existsSync(safePath)) {
+        res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end('<h1>404 Recurso No Encontrado</h1>');
         return;
     }
  
@@ -378,11 +383,11 @@ function getLocalIp() {
  
 let activePublicUrl = '';
  
-// LISTEN ON 0.0.0.0 FOR LOCAL NETWORK CONNECTIONS
+// LISTEN ON DYNAMIC CLOUD PORT OR PORT 3000
 server.listen(PORT, '0.0.0.0', () => {
     const currentIp = getLocalIp();
     console.log(`=======================================================`);
-    console.log(`🚀 SERVIDOR WEB REAL-TIME DISPONIBLE EN RED LOCAL:`);
+    console.log(`🚀 SERVIDOR WEB REAL-TIME DISPONIBLE EN PUERTO: ${PORT}`);
     console.log(`👉 En este equipo: http://localhost:${PORT}`);
     console.log(`👉 Para otros usuarios de la red: http://${currentIp}:${PORT}`);
     console.log(`=======================================================`);
