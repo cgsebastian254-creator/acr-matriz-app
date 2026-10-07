@@ -1,6 +1,11 @@
 {
+  "name": "acr-matriz-app",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
   "dependencies": {
-    "localtunnel": "^2.0.2",
     "xlsx": "^0.18.5"
   }
 }
