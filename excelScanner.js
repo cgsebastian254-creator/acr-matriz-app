@@ -168,7 +168,7 @@ function parseSingleACRExcel(filePath, index) {
                             tipoBadge: '⚡ Accion Inmediata',
                             responsable: inmedResp,
                             fechaCompromiso: inmedDate || fecha,
-                            estado: ar % 2 === 0 ? 'En Proceso' : 'Realizado',
+                            estado: 'Pendiente',
                             observaciones: 'Acción inmediata del formato ACR',
                             historial: [
                                 {

@@ -3,6 +3,7 @@ let acrsData = [];
 let dailyTasksData = [];
 let currentTab = 'dashboard';
 let eventSource = null;
+let alertaPendienteId = null;
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
@@ -28,7 +29,9 @@ async function rescanExcelFiles() {
         const res = await response.json();
         if (res.success) {
             mostrarNotificacionToast('Sistema Sync', res.cloud
-                ? `Mostrando ${res.count} ACRs. Se actualizan automáticamente desde SharePoint cada 5 minutos.`
+                ? (res.agenteConectado
+                    ? `Mostrando ${res.count} ACRs. Se actualizan automáticamente desde SharePoint cada 5 minutos.`
+                    : `Mostrando ${res.count} ACRs. ⚠️ El PC corporativo no está conectado: los Excel nuevos aparecerán cuando se conecte.`)
                 : `Se han rescaneado ${res.count} formatos Excel desde la red.`);
             cargarDatosACRs();
         } else {
@@ -64,6 +67,15 @@ function iniciarRealtimeSSE() {
                 acrsData = data.acrs;
                 renderizarTodo();
                 mostrarNotificacionToast(data.user, data.message);
+            } else if (data.type === 'alert_result') {
+                if (alertaPendienteId && data.id === alertaPendienteId) {
+                    alertaPendienteId = null;
+                    const box = document.getElementById('ps-console-output');
+                    if (box) {
+                        box.textContent = `[RESULTADO DEL ENVÍO ${data.success ? '✅' : '❌'}]\n${data.output || ''}${data.error ? '\n[ERRORES]:\n' + data.error : ''}`;
+                    }
+                    mostrarNotificacionToast('Alertas O365', data.success ? 'Correo procesado en el PC corporativo.' : 'No se pudo enviar el correo. Revisa la consola.');
+                }
             } else if (data.type === 'daily_updated') {
                 console.log('⚡ Evento Reunión Diaria recibido:', data.message);
                 dailyTasksData = data.dailyTasks;
@@ -643,7 +655,12 @@ async function ejecutarScriptAlertasConfigured() {
             body: JSON.stringify({ liderEmail, modoReal })
         });
         const data = await response.json();
-        consoleBox.textContent = `[SALIDA POWERSHELL O365 ALERTAS]\n${data.output}\n${data.error ? '[ERRORES]:\n' + data.error : ''}`;
+        if (data.queued) {
+            alertaPendienteId = data.id;
+            consoleBox.textContent = data.output || 'Solicitud enviada. Esperando respuesta...';
+        } else {
+            consoleBox.textContent = `[SALIDA POWERSHELL O365 ALERTAS]\n${data.output || ''}${data.error ? '\n[ERRORES]:\n' + data.error : ''}`;
+        }
     } catch (err) {
         consoleBox.textContent = "❌ Error al ejecutar el script de alertas por correo.";
     }
@@ -653,3 +670,41 @@ function sendO365Alerts() {
     switchTab('powershell');
     ejecutarScriptAlertasConfigured();
 }
+
+
+// VISTA CELULAR: cada celda recibe el nombre de su columna para mostrar las tablas como tarjetas
+function aplicarEtiquetasMoviles(raiz = document) {
+    raiz.querySelectorAll('table.data-table').forEach(tabla => {
+        const titulos = [...tabla.querySelectorAll('thead th')].map(th => th.textContent.trim());
+        tabla.querySelectorAll('tbody tr').forEach(tr => {
+            [...tr.children].forEach((td, i) => {
+                if (td.hasAttribute('colspan')) {
+                    td.classList.add('td-mensaje');
+                } else if (titulos[i] && td.getAttribute('data-label') !== titulos[i]) {
+                    td.setAttribute('data-label', titulos[i]);
+                }
+            });
+        });
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    aplicarEtiquetasMoviles();
+    let pendiente = false;
+    new MutationObserver(() => {
+        if (pendiente) return;
+        pendiente = true;
+        requestAnimationFrame(() => { pendiente = false; aplicarEtiquetasMoviles(); });
+    }).observe(document.querySelector('.main-container') || document.body, { childList: true, subtree: true });
+});
+
+// En el celular, desplaza la barra de pestañas para que la pestaña activa quede a la vista
+(function () {
+    if (typeof switchTab !== 'function') return;
+    const original = switchTab;
+    switchTab = function (tab) {
+        original(tab);
+        const activa = document.querySelector('.tab-btn.active');
+        if (activa && activa.scrollIntoView) activa.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    };
+})();
