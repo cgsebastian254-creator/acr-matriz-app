@@ -272,6 +272,7 @@ function syncAllExcelFiles() {
             }
         }
 
+        fs.mkdirSync(path.dirname(LOCAL_DATA_FILE), { recursive: true });
         fs.writeFileSync(LOCAL_DATA_FILE, JSON.stringify(parsedACRs, null, 2), 'utf8');
         console.log(`✅ Base de datos acrs.json actualizada con ${parsedACRs.length} ACRs de Excel.`);
     }

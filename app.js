@@ -27,7 +27,9 @@ async function rescanExcelFiles() {
         const response = await fetch('/api/acrs/sync', { method: 'POST' });
         const res = await response.json();
         if (res.success) {
-            mostrarNotificacionToast('Sistema Sync', `Se han rescaneado ${res.count} formatos Excel desde la red.`);
+            mostrarNotificacionToast('Sistema Sync', res.cloud
+                ? `Mostrando ${res.count} ACRs. Se actualizan automáticamente desde SharePoint cada 5 minutos.`
+                : `Se han rescaneado ${res.count} formatos Excel desde la red.`);
             cargarDatosACRs();
         } else {
             alert('❌ Error al escanear formatos: ' + res.error);
