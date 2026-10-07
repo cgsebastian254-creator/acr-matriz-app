@@ -658,6 +658,8 @@ async function ejecutarScriptAlertasConfigured() {
         if (data.queued) {
             alertaPendienteId = data.id;
             consoleBox.textContent = data.output || 'Solicitud enviada. Esperando respuesta...';
+        } else if (data.agenteDesconectado) {
+            consoleBox.textContent = `⚠️ ${data.error}`;
         } else {
             consoleBox.textContent = `[SALIDA POWERSHELL O365 ALERTAS]\n${data.output || ''}${data.error ? '\n[ERRORES]:\n' + data.error : ''}`;
         }
@@ -708,3 +710,189 @@ document.addEventListener('DOMContentLoaded', () => {
         if (activa && activa.scrollIntoView) activa.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     };
 })();
+
+// =====================================================================
+// SUBIR EXCEL DE ACR (ingenieros)
+// =====================================================================
+function leerPreferencia(clave) {
+    try { return localStorage.getItem(clave) || ''; } catch (e) { return ''; }
+}
+function guardarPreferencia(clave, valor) {
+    try { localStorage.setItem(clave, valor); } catch (e) { /* sin almacenamiento local */ }
+}
+
+function abrirModalSubirExcel() {
+    document.getElementById('subir-resultado').textContent = '';
+    document.getElementById('subir-usuario').value = leerPreferencia('acr-subido-por');
+    document.getElementById('subir-clave').value = leerPreferencia('acr-clave-ingenieros');
+    const lista = document.getElementById('eliminar-acr');
+    lista.innerHTML = '<option value="">Selecciona el ACR...</option>' + acrsData
+        .map(a => `<option value="${a.id}">${a.linea} · ${a.codigoACR || a.id}</option>`).join('');
+    document.getElementById('modal-subir-excel').classList.add('active');
+    fetch('/api/status').then(r => r.json()).then(st => {
+        if (st.sharepointUrl) document.getElementById('link-sharepoint-acr').href = st.sharepointUrl;
+    }).catch(() => {});
+}
+
+function cerrarModalSubirExcel() {
+    document.getElementById('modal-subir-excel').classList.remove('active');
+    document.getElementById('form-subir-excel').reset();
+}
+
+async function subirExcelACR(event) {
+    event.preventDefault();
+    const archivo = document.getElementById('subir-archivo').files[0];
+    const linea = document.getElementById('subir-linea').value;
+    const usuario = document.getElementById('subir-usuario').value.trim();
+    const clave = document.getElementById('subir-clave').value;
+    const resultado = document.getElementById('subir-resultado');
+    const boton = document.getElementById('subir-boton');
+    if (!archivo) return;
+
+    boton.disabled = true;
+    boton.textContent = '⏳ Subiendo...';
+    resultado.style.color = 'var(--text-muted)';
+    resultado.textContent = 'Procesando el Excel...';
+    try {
+        const qs = new URLSearchParams({ nombre: archivo.name, linea, usuario });
+        const response = await fetch(`/api/acrs/upload?${qs}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/octet-stream', 'x-clave-ingenieros': clave },
+            body: archivo
+        });
+        const data = await response.json();
+        if (data.success) {
+            guardarPreferencia('acr-subido-por', usuario);
+            guardarPreferencia('acr-clave-ingenieros', clave);
+            resultado.style.color = 'var(--status-green)';
+            resultado.textContent = `✅ ${data.reemplazado ? 'ACR actualizado' : 'ACR agregado'}: ${data.acr.codigoACR}\n${data.acr.tareas} tareas · Línea ${data.acr.linea} · ${data.acr.equipo}`;
+            document.getElementById('subir-archivo').value = '';
+        } else {
+            resultado.style.color = 'var(--status-red)';
+            resultado.textContent = '❌ ' + (data.error || 'No se pudo subir el archivo.');
+        }
+    } catch (e) {
+        resultado.style.color = 'var(--status-red)';
+        resultado.textContent = '❌ Error de comunicación con el servidor.';
+    } finally {
+        boton.disabled = false;
+        boton.textContent = 'Subir ACR';
+    }
+}
+
+async function eliminarACR() {
+    const id = document.getElementById('eliminar-acr').value;
+    const clave = document.getElementById('subir-clave').value;
+    const usuario = document.getElementById('subir-usuario').value.trim();
+    const resultado = document.getElementById('subir-resultado');
+    if (!id) { alert('Selecciona el ACR que quieres eliminar.'); return; }
+    if (!clave) { alert('Escribe la clave de ingenieros.'); return; }
+    const acr = acrsData.find(a => a.id === id);
+    if (!confirm(`¿Eliminar el ACR "${acr ? acr.codigoACR : id}" y todas sus tareas? Esta acción no se puede deshacer.`)) return;
+    try {
+        const response = await fetch('/api/acrs/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-clave-ingenieros': clave },
+            body: JSON.stringify({ id, usuario })
+        });
+        const data = await response.json();
+        resultado.style.color = data.success ? 'var(--status-green)' : 'var(--status-red)';
+        resultado.textContent = data.success ? '🗑️ ACR eliminado.' : '❌ ' + data.error;
+        if (data.success) abrirModalSubirExcel();
+    } catch (e) {
+        resultado.style.color = 'var(--status-red)';
+        resultado.textContent = '❌ Error de comunicación con el servidor.';
+    }
+}
+
+// =====================================================================
+// CORREO DESDE LA CUENTA DEL USUARIO (no necesita el PC corporativo)
+// =====================================================================
+function convertirFechaACR(texto) {
+    const t = String(texto || '').trim().split(' ')[0].split('T')[0];
+    let m = t.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/);
+    if (m) {
+        const anio = m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]);
+        return new Date(anio, Number(m[2]) - 1, Number(m[1]));
+    }
+    m = t.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    return null;
+}
+
+function calcularResumenAlertas(diasProximos = 7) {
+    const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+    const limite = new Date(hoy); limite.setDate(limite.getDate() + diasProximos);
+    const vencidas = [];
+    const proximas = [];
+    for (const acr of acrsData) {
+        for (const t of acr.tareas || []) {
+            if (t.estado === 'Realizado') continue;
+            const f = convertirFechaACR(t.fechaCompromiso);
+            const fila = { linea: acr.linea, tarea: t.descripcion, responsable: t.responsable, fecha: t.fechaCompromiso || 'sin fecha', f };
+            if (t.estado === 'Vencido' || (f && f < hoy)) vencidas.push(fila);
+            else if (f && f <= limite) proximas.push(fila);
+        }
+    }
+    vencidas.sort((a, b) => (a.f || 0) - (b.f || 0));
+    proximas.sort((a, b) => (a.f || 0) - (b.f || 0));
+    const compromisos = dailyTasksData.filter(d => d.estado !== 'Realizado');
+    return { vencidas, proximas, compromisos, diasProximos, hoy };
+}
+
+function textoResumenAlertas(maxCaracteres) {
+    const r = calcularResumenAlertas();
+    const fecha = r.hoy.toLocaleDateString('es-CO');
+    const asunto = `Alertas ACR Planta Conversión - ${fecha} - ${r.vencidas.length} vencidas, ${r.proximas.length} próximas a vencer`;
+    const enlace = location.origin;
+    const lineas = [
+        `Resumen de la Matriz de ACRs al ${fecha}:`,
+        `• ${r.vencidas.length} tareas vencidas`,
+        `• ${r.proximas.length} tareas vencen en los próximos ${r.diasProximos} días`,
+        `• ${r.compromisos.length} compromisos de reunión diaria pendientes`,
+        ''
+    ];
+    const bloques = [
+        ['TAREAS VENCIDAS', r.vencidas.map(v => `- [${v.linea}] ${v.tarea} | ${v.responsable || 'Sin responsable'} | ${v.fecha}`)],
+        ['PRÓXIMAS A VENCER', r.proximas.map(v => `- [${v.linea}] ${v.tarea} | ${v.responsable || 'Sin responsable'} | ${v.fecha}`)],
+        ['COMPROMISOS DIARIOS PENDIENTES', r.compromisos.map(d => `- [${d.linea}] ${d.compromiso} | ${d.responsable || 'Sin responsable'} | ${d.prioridad || ''}`)]
+    ];
+    const cierre = ['', `Ver y actualizar: ${enlace}`];
+    let cuerpo = lineas.join('\n');
+    let recortado = false;
+    for (const [titulo, filas] of bloques) {
+        if (!filas.length) continue;
+        const bloque = `\n${titulo}\n` + filas.join('\n') + '\n';
+        if (maxCaracteres && cuerpo.length + bloque.length > maxCaracteres) {
+            const disponibles = filas.filter((_, i) => (cuerpo.length + (`\n${titulo}\n` + filas.slice(0, i + 1).join('\n')).length) < maxCaracteres);
+            if (disponibles.length) cuerpo += `\n${titulo}\n` + disponibles.join('\n') + `\n(... y ${filas.length - disponibles.length} más)\n`;
+            recortado = true;
+            break;
+        }
+        cuerpo += bloque;
+    }
+    if (recortado) cuerpo += '\nEl listado completo está en la aplicación.';
+    cuerpo += cierre.join('\n');
+    return { asunto, cuerpo };
+}
+
+function abrirCorreoEnMiOutlook() {
+    const cc = (document.getElementById('o365-lider-email').value || '').trim();
+    // Los enlaces de correo muy largos se cortan en algunos equipos: se limita el texto
+    const { asunto, cuerpo } = textoResumenAlertas(1500);
+    const url = `mailto:?${cc ? 'cc=' + encodeURIComponent(cc) + '&' : ''}subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+    document.getElementById('ps-console-output').textContent = `✉️ Se abrió tu aplicación de correo con el resumen.\nRevisa los destinatarios y dale Enviar.\n\nAsunto: ${asunto}`;
+    window.location.href = url;
+}
+
+async function copiarResumenAlertas() {
+    const { asunto, cuerpo } = textoResumenAlertas(0);
+    const texto = `${asunto}\n\n${cuerpo}`;
+    try {
+        await navigator.clipboard.writeText(texto);
+        document.getElementById('ps-console-output').textContent = '📋 Resumen completo copiado. Pégalo en un correo nuevo de Outlook.\n\n' + texto;
+    } catch (e) {
+        document.getElementById('ps-console-output').textContent = texto;
+        alert('No se pudo copiar automáticamente. El resumen quedó en la consola para que lo copies a mano.');
+    }
+}

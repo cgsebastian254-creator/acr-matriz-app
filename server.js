@@ -2,10 +2,13 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const storage = require('./storage');
 
 const PORT = process.env.PORT || 3000;
 const IS_CLOUD = !!process.env.RENDER;              // Render define esta variable automáticamente
 const SYNC_TOKEN = process.env.SYNC_TOKEN || '';    // Clave secreta compartida con el agente de sincronización
+const UPLOAD_KEY = process.env.UPLOAD_KEY || '';    // Clave de ingenieros para subir Excel desde la web
+const SHAREPOINT_ACR_URL = process.env.SHAREPOINT_ACR_URL || 'https://kimberlyclark.sharepoint.com/sites/B636'; // Carpeta de ACRs en SharePoint
 const BOOT_ID = Date.now().toString(36);            // Cambia en cada reinicio: el agente lo usa para restaurar datos
 
 // Dominios a los que se permite enviar la copia (CC) del correo de alertas
@@ -45,8 +48,12 @@ function readJson(file) {
         return [];
     }
 }
+function docName(file) {
+    return file === DAILY_DATA_FILE ? 'daily_tasks' : 'acrs';
+}
 function writeJson(file, data) {
     fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8');
+    storage.save(docName(file), data);      // copia permanente en la base de datos (si está configurada)
 }
 
 function ahoraTexto() {
@@ -292,7 +299,7 @@ function isAgent(req) {
 }
 
 // Archivos que nunca se deben servir como estáticos
-const BLOCKED_FILES = new Set(['server.js', 'excelScanner.js', 'sync-agent.js', 'package.json', 'package-lock.json', '.env', '.gitignore']);
+const BLOCKED_FILES = new Set(['server.js', 'excelScanner.js', 'sync-agent.js', 'storage.js', 'package.json', 'package-lock.json', '.env', '.gitignore']);
 const BLOCKED_DIRS = ['scripts', 'node_modules', '.git'];
 
 const server = http.createServer((req, res) => {
@@ -340,7 +347,10 @@ const server = http.createServer((req, res) => {
             cloud: IS_CLOUD,
             agenteConectado: IS_CLOUD ? agentOnline() : true,
             ultimaConexionAgente: agentLastSeen ? new Date(agentLastSeen).toISOString() : null,
-            alertasEnCola: alertQueue.length
+            alertasEnCola: alertQueue.length,
+            subidaExcel: !!UPLOAD_KEY,
+            sharepointUrl: SHAREPOINT_ACR_URL,
+            ...storage.status()
         });
     }
 
@@ -358,7 +368,12 @@ const server = http.createServer((req, res) => {
                 const incoming = JSON.parse(body);
                 if (!Array.isArray(incoming)) return sendJson(res, 400, { error: 'Se esperaba una lista de ACRs' });
                 const existing = readJson(DATA_FILE);
+                incoming.forEach(a => { a.origen = 'sharepoint'; });
                 const merged = mergeAcrs(incoming, existing);
+                // Los ACRs subidos desde la web se conservan aunque el PC no los tenga
+                for (const a of existing) {
+                    if (a.origen === 'web' && !merged.some(m => sameAcr(m, a))) merged.push(a);
+                }
                 const cambio = JSON.stringify(merged) !== JSON.stringify(existing);
                 if (cambio) {
                     writeJson(DATA_FILE, merged);
@@ -522,7 +537,14 @@ const server = http.createServer((req, res) => {
                 return;
             }
 
-            // En la nube: se deja en cola y el agente del PC corporativo lo envía con Outlook
+            // En la nube: si el PC corporativo no está conectado, no tiene sentido esperar
+            if (!agentOnline()) {
+                return sendJson(res, 200, {
+                    success: false, agenteDesconectado: true,
+                    error: 'El PC corporativo no está conectado, así que no puede enviar el correo con formato. Usa "Abrir correo en mi Outlook" para enviarlo desde tu propia cuenta.'
+                });
+            }
+            // Se deja en cola y el agente del PC corporativo lo envía con Outlook
             const enCurso = alertQueue[0];
             if (enCurso) {
                 return sendJson(res, 200, {
@@ -537,13 +559,87 @@ const server = http.createServer((req, res) => {
                 error: 'El PC corporativo no respondió en 10 minutos. Verifica que el agente de sincronización (iniciar-sincronizacion.bat) esté abierto.'
             }), ALERT_TIMEOUT_MS);
 
-            const aviso = agentOnline()
-                ? 'El PC corporativo está conectado; el correo saldrá en menos de 1 minuto.'
-                : '⚠️ El PC corporativo no está conectado ahora. El correo saldrá cuando se conecte (espera máxima 10 minutos).';
+            const aviso = 'El PC corporativo está conectado; el correo saldrá en menos de 1 minuto.';
             sendJson(res, 200, {
                 success: true, queued: true, id: alerta.id,
                 output: `📨 Solicitud enviada (${modoReal ? 'envío real' : 'simulación'}${liderEmail ? ', CC: ' + liderEmail : ''}).\n${aviso}\nEsperando respuesta...`
             });
+        });
+        return;
+    }
+
+    // Ingenieros: subir un Excel de ACR desde la web (PC o celular)
+    if (pathname === '/api/acrs/upload' && req.method === 'POST') {
+        if (!UPLOAD_KEY) return sendJson(res, 503, { error: 'La subida de Excel no está habilitada (falta UPLOAD_KEY en Render).' });
+        if (req.headers['x-clave-ingenieros'] !== UPLOAD_KEY) return sendJson(res, 401, { error: 'Clave de ingenieros incorrecta.' });
+
+        const nombre = path.basename(String(parsedUrl.searchParams.get('nombre') || '')).replace(/[^\w.\- áéíóúÁÉÍÓÚñÑ()]/g, '_');
+        const linea = String(parsedUrl.searchParams.get('linea') || '').replace(/[^\w áéíóúÁÉÍÓÚñÑ-]/g, '').trim();
+        const usuario = String(parsedUrl.searchParams.get('usuario') || 'Ingeniero').slice(0, 80);
+        if (!/\.(xlsx|xlsm|xls)$/i.test(nombre)) return sendJson(res, 400, { error: 'El archivo debe ser un Excel (.xlsx, .xlsm o .xls).' });
+        if (!linea) return sendJson(res, 400, { error: 'Selecciona la línea del ACR.' });
+
+        const partes = [];
+        let tam = 0;
+        let demasiadoGrande = false;
+        req.on('data', c => {
+            tam += c.length;
+            if (tam > 15 * 1024 * 1024) { demasiadoGrande = true; return; }
+            partes.push(c);
+        });
+        req.on('end', () => {
+            if (demasiadoGrande) return sendJson(res, 413, { error: 'El archivo supera 15 MB.' });
+            const carpeta = fs.mkdtempSync(path.join(os.tmpdir(), 'acr-'));
+            try {
+                fs.mkdirSync(path.join(carpeta, linea));
+                const ruta = path.join(carpeta, linea, nombre);
+                fs.writeFileSync(ruta, Buffer.concat(partes));
+                const { parseSingleACRExcel } = require('./excelScanner');
+                const nuevo = parseSingleACRExcel(ruta, 1);
+                if (!nuevo) return sendJson(res, 400, { error: 'No se pudo leer el Excel. Verifica que sea un formato de ACR.' });
+                if (!nuevo.tareas || nuevo.tareas.length === 0) {
+                    return sendJson(res, 400, { error: 'El Excel no tiene acciones inmediatas ni preventivas reconocibles. Verifica que sea el formato de ACR.' });
+                }
+                nuevo.origen = 'web';
+                nuevo.subidoPor = usuario;
+                nuevo.fechaSubida = ahoraTexto();
+                delete nuevo.rutaCompleta;
+
+                const existing = readJson(DATA_FILE);
+                const reemplaza = existing.some(a => sameAcr(a, nuevo));
+                const incoming = reemplaza
+                    ? existing.map(a => (sameAcr(a, nuevo) ? nuevo : a))
+                    : [...existing, nuevo];
+                const merged = mergeAcrs(incoming.map(a => ({ ...a })), existing);
+                writeJson(DATA_FILE, merged);
+                const final = merged.find(a => sameAcr(a, nuevo));
+                broadcastEvent({ type: 'data_updated', acrs: merged, user: usuario, message: `${reemplaza ? 'Actualizó' : 'Subió'} el ACR '${final.codigoACR}' (${final.tareas.length} tareas).` });
+                sendJson(res, 200, { success: true, reemplazado: reemplaza, acr: { id: final.id, codigoACR: final.codigoACR, linea: final.linea, equipo: final.equipo, tareas: final.tareas.length } });
+            } catch (e) {
+                sendJson(res, 400, { error: 'No se pudo procesar el Excel: ' + e.message });
+            } finally {
+                fs.rmSync(carpeta, { recursive: true, force: true });
+            }
+        });
+        return;
+    }
+
+    // Ingenieros: eliminar un ACR (por ejemplo, si se subió un archivo equivocado)
+    if (pathname === '/api/acrs/delete' && req.method === 'POST') {
+        if (!UPLOAD_KEY || req.headers['x-clave-ingenieros'] !== UPLOAD_KEY) return sendJson(res, 401, { error: 'Clave de ingenieros incorrecta.' });
+        readBody(req, 64 * 1024, body => {
+            try {
+                const { id, usuario } = JSON.parse(body);
+                const acrs = readJson(DATA_FILE);
+                const acr = acrs.find(a => a.id === id);
+                if (!acr) return sendJson(res, 404, { error: 'Ese ACR ya no existe.' });
+                const restantes = acrs.filter(a => a.id !== id);
+                writeJson(DATA_FILE, restantes);
+                broadcastEvent({ type: 'data_updated', acrs: restantes, user: usuario || 'Ingeniero', message: `Eliminó el ACR '${acr.codigoACR}'.` });
+                sendJson(res, 200, { success: true });
+            } catch (e) {
+                sendJson(res, 400, { error: e.message });
+            }
         });
         return;
     }
@@ -608,10 +704,31 @@ function getLocalIp() {
     return '127.0.0.1';
 }
 
-server.listen(PORT, '0.0.0.0', () => {
+// Arranque: primero se recuperan los datos de la base de datos (si está configurada)
+async function arrancar() {
+    const conectada = await storage.init(global.__ACR_TEST_DB_CLIENT__);
+    if (conectada) {
+        for (const [nombre, archivo] of [['acrs', DATA_FILE], ['daily_tasks', DAILY_DATA_FILE]]) {
+            const guardado = await storage.load(nombre);
+            if (Array.isArray(guardado)) {
+                fs.writeFileSync(archivo, JSON.stringify(guardado, null, 2), 'utf8');
+            } else {
+                await storage.save(nombre, readJson(archivo));   // primera vez: se sube lo que hay
+            }
+        }
+        console.log('🗄️  Base de datos conectada: los datos son permanentes.');
+    } else if (IS_CLOUD) {
+        console.warn('⚠️ Sin base de datos (MONGODB_URI): los cambios se pierden si Render se reinicia.');
+    }
+    server.listen(PORT, '0.0.0.0', alEscuchar);
+}
+
+function alEscuchar() {
     console.log('=======================================================');
     console.log(`🚀 SERVIDOR ACR DISPONIBLE EN PUERTO: ${PORT} (${IS_CLOUD ? 'nube' : 'local'})`);
     if (!IS_CLOUD) console.log(`👉 En este equipo: http://localhost:${PORT}`);
     if (IS_CLOUD && !SYNC_TOKEN) console.warn('⚠️ Falta la variable SYNC_TOKEN: el agente no podrá enviar datos.');
     console.log('=======================================================');
-});
+}
+
+arrancar();

@@ -201,8 +201,8 @@
                         <option value="Realizado">🟢 Realizado</option>
                     </select>
  
-                    <button class="btn btn-secondary" onclick="rescanExcelFiles()" title="Forzar lectura de formatos Excel en la red">
-                        🔄 Escanear Excel S:\
+                    <button class="btn btn-primary" onclick="abrirModalSubirExcel()" title="Subir un formato Excel de ACR (solo ingenieros)">
+                        ⬆️ Subir Excel ACR
                     </button>
                 </div>
                 <div>
@@ -400,6 +400,17 @@
                     <button class="btn btn-success" style="width: 100%; justify-content: center;" onclick="ejecutarScriptAlertasConfigured()">
                         <span>📧</span> Disparar Alertas Reales a mi Correo Outlook
                     </button>
+                    <p style="font-size: 12px; color: var(--text-muted); margin: 12px 0 8px;">
+                        El botón verde usa el PC corporativo. Si no está conectado, envía el resumen desde tu propia cuenta:
+                    </p>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn btn-secondary" style="flex: 1; justify-content: center;" onclick="abrirCorreoEnMiOutlook()">
+                            ✉️ Abrir correo en mi Outlook
+                        </button>
+                        <button class="btn btn-secondary" style="flex: 1; justify-content: center;" onclick="copiarResumenAlertas()">
+                            📋 Copiar resumen completo
+                        </button>
+                    </div>
                 </div>
             </div>
  
@@ -558,6 +569,67 @@
         </div>
     </div>
  
+    <!-- Modal Subir Excel de ACR (ingenieros) -->
+    <div id="modal-subir-excel" class="modal-backdrop">
+        <div class="modal-box" style="max-width: 540px;">
+            <div class="modal-header">
+                <h2>⬆️ Subir Excel de ACR</h2>
+                <button class="close-modal" onclick="cerrarModalSubirExcel()">&times;</button>
+            </div>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+                Sube el mismo formato que guardas en SharePoint. Si ya existe un ACR con el mismo nombre de archivo, se actualiza y se conservan los estados y observaciones de sus tareas.
+            </p>
+            <a id="link-sharepoint-acr" class="btn btn-secondary" href="https://kimberlyclark.sharepoint.com/sites/B636" target="_blank" rel="noopener"
+               style="width: 100%; justify-content: center; margin-bottom: 14px; text-decoration: none;">
+                📂 Abrir carpeta de ACRs en SharePoint
+            </a>
+            <p style="font-size: 12px; color: var(--text-muted); margin: -4px 0 16px;">
+                Guarda primero el Excel en SharePoint como siempre. Luego selecciónalo aquí: en el PC búscalo en la carpeta sincronizada de Kimberly-Clark; en el celular elige OneDrive o SharePoint al seleccionar el archivo.
+            </p>
+            <form id="form-subir-excel" onsubmit="subirExcelACR(event)">
+                <div class="form-group">
+                    <label>Archivo Excel (.xlsx, .xlsm, .xls)</label>
+                    <input type="file" id="subir-archivo" class="form-control" accept=".xlsx,.xlsm,.xls" required>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label>Línea</label>
+                        <select id="subir-linea" class="form-control" required>
+                            <option value="">Selecciona...</option>
+                            <option value="Forte">Forte</option>
+                            <option value="Futura">Futura</option>
+                            <option value="Hinnli">Hinnli</option>
+                            <option value="Pocket">Pocket</option>
+                            <option value="Sincro 1">Sincro 1</option>
+                            <option value="Sincro 2">Sincro 2</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Subido por</label>
+                        <input type="text" id="subir-usuario" class="form-control" placeholder="Tu nombre" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Clave de ingenieros</label>
+                    <input type="password" id="subir-clave" class="form-control" autocomplete="current-password" required>
+                </div>
+                <div id="subir-resultado" style="font-size: 13px; margin-top: 4px; white-space: pre-wrap;"></div>
+                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary" onclick="cerrarModalSubirExcel()">Cerrar</button>
+                    <button type="submit" class="btn btn-primary" id="subir-boton">Subir ACR</button>
+                </div>
+            </form>
+
+            <details style="margin-top: 22px; border-top: 1px solid var(--border-color); padding-top: 14px;">
+                <summary style="cursor: pointer; font-size: 13px; color: var(--text-muted);">🗑️ Eliminar un ACR subido por error</summary>
+                <div class="form-group" style="margin-top: 12px;">
+                    <select id="eliminar-acr" class="form-control"></select>
+                </div>
+                <button type="button" class="btn btn-danger" style="width: 100%; justify-content: center;" onclick="eliminarACR()">Eliminar ACR seleccionado</button>
+            </details>
+        </div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 </html>
