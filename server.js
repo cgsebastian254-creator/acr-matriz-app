@@ -23,28 +23,34 @@ function broadcastEvent(payload) {
     }
 }
  
-// Initial Auto-Sync of Excel files on startup
-console.log('🚀 Ejecutando escaneo inicial de formatos Excel de ACR en red...');
+// Initial Auto-Sync of Excel files on startup (Safe for Cloud & SharePoint)
+console.log('🚀 Ejecutando escaneo inicial de formatos Excel...');
 try {
-    syncAllExcelFiles();
+    if (TARGET_DIR && fs.existsSync(TARGET_DIR)) {
+        syncAllExcelFiles();
+    } else {
+        console.log('ℹ️ Operando en modo Web Cloud / SharePoint. Usando base de datos acrs.json.');
+    }
 } catch (e) {
-    console.error('⚠️ Error en escaneo inicial de Excel:', e.message);
+    console.log('ℹ️ Operando en modo Web Cloud. Usando base de datos acrs.json.');
 }
  
-// Periodic Background Auto-Sync every 15 seconds
+// Periodic Background Auto-Sync every 15 seconds (Only if local/network folder exists)
 setInterval(() => {
     try {
-        const acrs = syncAllExcelFiles();
-        if (acrs && acrs.length > 0) {
-            broadcastEvent({
-                type: 'data_updated',
-                acrs: acrs,
-                user: 'Auto-Sync Excel',
-                message: 'Escaneo automático de red finalizado. Formatos Excel actualizados.'
-            });
+        if (TARGET_DIR && fs.existsSync(TARGET_DIR)) {
+            const acrs = syncAllExcelFiles();
+            if (acrs && acrs.length > 0) {
+                broadcastEvent({
+                    type: 'data_updated',
+                    acrs: acrs,
+                    user: 'Auto-Sync Excel',
+                    message: 'Escaneo automático de red finalizado. Formatos Excel actualizados.'
+                });
+            }
         }
     } catch (e) {
-        console.error('Error en intervalo de sincronización de Excel:', e.message);
+        // Silent catch for cloud environments
     }
 }, 15000);
  
