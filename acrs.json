@@ -1,0 +1,854 @@
+[
+  {
+    "id": "ACR-2026-001",
+    "codigoACR": "ACR 07092026 Mal Corte cortadora Interna - Forte",
+    "linea": "Forte",
+    "equipo": "Cortadora Interna",
+    "falla": "ACR 07092026 Mal Corte cortadora Interna - Forte",
+    "causaRaiz": "Sin causa raíz especificada en el formato",
+    "responsableAcr": "Luis Felipe Correa",
+    "archivoOrigen": "ACR 07092026 Mal Corte cortadora Interna - Forte.xlsx",
+    "rutaCompleta": "S:\\OP_01_Produccion_Conversion1\\03_Mejora_Continua\\14_IG_Solución_Problemas_Kaizen_N2\\12_IG_Solución_Problemas_Tiempo_Real\\ACRs 2026 Conversiones\\Forte\\ACR 07092026 Mal Corte cortadora Interna - Forte.xlsx",
+    "tareas": [
+      {
+        "idTarea": "T-01",
+        "descripcion": "Verificar estado y limpieza del sensor de seguimiento de cuchilla",
+        "tipo": "Accion Inmediata",
+        "tipoBadge": "⚡ Accion Inmediata",
+        "responsable": "Tecnico Mecanico",
+        "fechaCompromiso": "09/09/2026",
+        "estado": "Realizado",
+        "observaciones": "Acción inmediata del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "Tecnico Mecanico",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-02",
+        "descripcion": "Programar una intervención planificada de 8 horas para inspección integral del sistema automático de afilado",
+        "tipo": "Accion Preventiva",
+        "tipoBadge": "🛡️ Accion Preventiva",
+        "responsable": "Faber / Luis Felipe",
+        "fechaCompromiso": "14/09/2026",
+        "estado": "Pendiente",
+        "observaciones": "Acción preventiva del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "Faber / Luis Felipe",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-03",
+        "descripcion": "Revisar desgaste de piedras de afilado",
+        "tipo": "Accion Inmediata",
+        "tipoBadge": "⚡ Accion Inmediata",
+        "responsable": "Tecnico Mecanico",
+        "fechaCompromiso": "09/09/2026",
+        "estado": "Realizado",
+        "observaciones": "Acción inmediata del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "Tecnico Mecanico",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-04",
+        "descripcion": "Incorporar en la BP de cortadoras una validación funcional del avance automático.",
+        "tipo": "Accion Preventiva",
+        "tipoBadge": "🛡️ Accion Preventiva",
+        "responsable": "Faber / Luis Felipe",
+        "fechaCompromiso": "11/09/2026",
+        "estado": "Pendiente",
+        "observaciones": "Acción preventiva del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "Faber / Luis Felipe",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-05",
+        "descripcion": "Actualizar BP para incluir la verificación del supervisor de la ejecución por turno mecanica y operativa",
+        "tipo": "Accion Preventiva",
+        "tipoBadge": "🛡️ Accion Preventiva",
+        "responsable": "Faber / Luis Felipe",
+        "fechaCompromiso": "11/09/2026",
+        "estado": "Pendiente",
+        "observaciones": "Acción preventiva del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "Faber / Luis Felipe",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-06",
+        "descripcion": "Mantener limpieza del sensor una vez por turno por operación.",
+        "tipo": "Accion Preventiva",
+        "tipoBadge": "🛡️ Accion Preventiva",
+        "responsable": "Faber / Luis Felipe",
+        "fechaCompromiso": "11/09/2026",
+        "estado": "Pendiente",
+        "observaciones": "Acción preventiva del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "Faber / Luis Felipe",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-07",
+        "descripcion": "Mantener inspección técnica una vez por turno.",
+        "tipo": "Accion Preventiva",
+        "tipoBadge": "🛡️ Accion Preventiva",
+        "responsable": "Faber / Luis Felipe",
+        "fechaCompromiso": "11/09/2026",
+        "estado": "Pendiente",
+        "observaciones": "Acción preventiva del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "Faber / Luis Felipe",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-08",
+        "descripcion": "Pasos para la ejecución de un ACR NIVEL 1",
+        "tipo": "Accion Inmediata",
+        "tipoBadge": "⚡ Accion Inmediata",
+        "responsable": "No Hay Responsable",
+        "fechaCompromiso": "10/09/2026",
+        "estado": "En Proceso",
+        "observaciones": "Acción inmediata del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "No Hay Responsable",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ACR-2026-002",
+    "codigoACR": "ACRs 31072026 Cortadora Interna -Forte",
+    "linea": "Forte",
+    "equipo": "Equipo General",
+    "falla": "ACRs 31072026 Cortadora Interna -Forte",
+    "causaRaiz": "Sin causa raíz especificada en el formato",
+    "responsableAcr": "No Hay Responsable",
+    "archivoOrigen": "ACRs 31072026 Cortadora Interna -Forte.xlsx",
+    "rutaCompleta": "S:\\OP_01_Produccion_Conversion1\\03_Mejora_Continua\\14_IG_Solución_Problemas_Kaizen_N2\\12_IG_Solución_Problemas_Tiempo_Real\\ACRs 2026 Conversiones\\Forte\\ACRs 31072026 Cortadora Interna -Forte.xlsx",
+    "tareas": [
+      {
+        "idTarea": "T-01",
+        "descripcion": "Reparación de mordazas",
+        "tipo": "Accion Inmediata",
+        "tipoBadge": "⚡ Accion Inmediata",
+        "responsable": "Edy Vidal",
+        "fechaCompromiso": "31/07/2026",
+        "estado": "En Proceso",
+        "observaciones": "Acción inmediata del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "Edy Vidal",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-02",
+        "descripcion": "Incluir inspección en OT bimensual",
+        "tipo": "Accion Preventiva",
+        "tipoBadge": "🛡️ Accion Preventiva",
+        "responsable": "No Hay Responsable",
+        "fechaCompromiso": "2026-10-07",
+        "estado": "Pendiente",
+        "observaciones": "Acción preventiva del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "No Hay Responsable",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-03",
+        "descripcion": "Ajuste de Guia con tuercas de seguridad",
+        "tipo": "Accion Inmediata",
+        "tipoBadge": "⚡ Accion Inmediata",
+        "responsable": "Edy Vidal",
+        "fechaCompromiso": "31/07/2026",
+        "estado": "En Proceso",
+        "observaciones": "Acción inmediata del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "Edy Vidal",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-04",
+        "descripcion": "Propuesta de cambio de material por empack",
+        "tipo": "Accion Preventiva",
+        "tipoBadge": "🛡️ Accion Preventiva",
+        "responsable": "No Hay Responsable",
+        "fechaCompromiso": "2026-10-07",
+        "estado": "Pendiente",
+        "observaciones": "Acción preventiva del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "No Hay Responsable",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-05",
+        "descripcion": "Cambio de cuchilla",
+        "tipo": "Accion Inmediata",
+        "tipoBadge": "⚡ Accion Inmediata",
+        "responsable": "Edy Vidal",
+        "fechaCompromiso": "31/07/2026",
+        "estado": "En Proceso",
+        "observaciones": "Acción inmediata del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "Edy Vidal",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-06",
+        "descripcion": "Montar doble seguro en soporte o tuercas de seguridad",
+        "tipo": "Accion Preventiva",
+        "tipoBadge": "🛡️ Accion Preventiva",
+        "responsable": "No Hay Responsable",
+        "fechaCompromiso": "2026-10-07",
+        "estado": "Pendiente",
+        "observaciones": "Acción preventiva del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "No Hay Responsable",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-07",
+        "descripcion": "Cambio de piedras de afilado",
+        "tipo": "Accion Inmediata",
+        "tipoBadge": "⚡ Accion Inmediata",
+        "responsable": "Edy Vidal",
+        "fechaCompromiso": "31/07/2026",
+        "estado": "En Proceso",
+        "observaciones": "Acción inmediata del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "Edy Vidal",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-08",
+        "descripcion": "Estandarizar altura y regulación de guias",
+        "tipo": "Accion Preventiva",
+        "tipoBadge": "🛡️ Accion Preventiva",
+        "responsable": "No Hay Responsable",
+        "fechaCompromiso": "2026-10-07",
+        "estado": "Pendiente",
+        "observaciones": "Acción preventiva del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "No Hay Responsable",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-09",
+        "descripcion": "Ajuste de brisagras que se encuentran flojas",
+        "tipo": "Accion Inmediata",
+        "tipoBadge": "⚡ Accion Inmediata",
+        "responsable": "Luis Agredo",
+        "fechaCompromiso": "04/08/2026",
+        "estado": "En Proceso",
+        "observaciones": "Acción inmediata del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "Luis Agredo",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-10",
+        "descripcion": "Cambio de diseño de bisagras",
+        "tipo": "Accion Preventiva",
+        "tipoBadge": "🛡️ Accion Preventiva",
+        "responsable": "No Hay Responsable",
+        "fechaCompromiso": "2026-10-07",
+        "estado": "Pendiente",
+        "observaciones": "Acción preventiva del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "No Hay Responsable",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-11",
+        "descripcion": "Pasos para la ejecución de un ACR NIVEL 1",
+        "tipo": "Accion Inmediata",
+        "tipoBadge": "⚡ Accion Inmediata",
+        "responsable": "No Hay Responsable",
+        "fechaCompromiso": "2026-10-07",
+        "estado": "Realizado",
+        "observaciones": "Acción inmediata del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "No Hay Responsable",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ACR-2026-003",
+    "codigoACR": "ACR 09092026 Daño fusibles maquina Futura",
+    "linea": "Futura",
+    "equipo": "Equipo General",
+    "falla": "ACR 09092026 Daño fusibles maquina Futura",
+    "causaRaiz": "Falla de aislamiento eléctrico (caída a 5 K Ohmios) e ionización en el barraje y componentes del tablero eléctrico de la rebobinadora, provocada por la acumulación e infiltración de humedad residual. Esta condición fue originada por una gotera previa en el colector de polvos (Dust Control) de la máquina Futura. Aunque la filtración física en el colector fue reparada con anterioridad, no se ejecutó un protocolo de inspección, secado ni mantenimiento preventivo en el interior del tablero, permitiendo que la humedad confinada generara caminos conductores atípicos y cortocircuitos repetitivos en los fusibles de potencia durante los intentos de arranque.",
+    "responsableAcr": "Edinson Loaiza",
+    "archivoOrigen": "ACR 09092026 Daño fusibles maquina Futura.xlsx",
+    "rutaCompleta": "S:\\OP_01_Produccion_Conversion1\\03_Mejora_Continua\\14_IG_Solución_Problemas_Kaizen_N2\\12_IG_Solución_Problemas_Tiempo_Real\\ACRs 2026 Conversiones\\Futura\\ACR 09092026 Daño fusibles maquina Futura.xlsx",
+    "tareas": [
+      {
+        "idTarea": "T-01",
+        "descripcion": "Efectuar mantenimiento electrónico integral a los tableros, tarjetas de los drivers de los 5 servos y barraje principal para eliminar residuos de humedad.",
+        "tipo": "Accion Inmediata",
+        "tipoBadge": "⚡ Accion Inmediata",
+        "responsable": "E.Loaiza y Equipo Técnico",
+        "fechaCompromiso": "14/09/2026",
+        "estado": "En Proceso",
+        "observaciones": "Acción inmediata del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "E.Loaiza y Equipo Técnico",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-02",
+        "descripcion": "Ejecutar un protocolo de medición final de aislamiento (Megado) entre fase y tierra, asegurando lecturas estables entre 0.5 M Ohmios y 1 M Ohmios antes del cierre definitivo.",
+        "tipo": "Accion Preventiva",
+        "tipoBadge": "🛡️ Accion Preventiva",
+        "responsable": "E.Loaiza y Equipo Técnico",
+        "fechaCompromiso": "14/09/2026",
+        "estado": "Pendiente",
+        "observaciones": "Acción preventiva del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "E.Loaiza y Equipo Técnico",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-03",
+        "descripcion": "Aplicarlimpieza con limpia-contactos dieléctrico de secado rápido y realizar secado controlado por aire tibio/deshumidificación en compartimentos.",
+        "tipo": "Accion Inmediata",
+        "tipoBadge": "⚡ Accion Inmediata",
+        "responsable": "E.Loaiza y Equipo Técnico",
+        "fechaCompromiso": "14/09/2026",
+        "estado": "En Proceso",
+        "observaciones": "Acción inmediata del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "E.Loaiza y Equipo Técnico",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-04",
+        "descripcion": "Verificar e Instalar en su ausencia empaquetaduras de sellado hermético (neopreno) en las puertas del tablero eléctrico y verificar la estanqueidad del colector de polvos (Dust Control).",
+        "tipo": "Accion Preventiva",
+        "tipoBadge": "🛡️ Accion Preventiva",
+        "responsable": "E.Loaiza y Equipo Técnico",
+        "fechaCompromiso": "14/09/2026",
+        "estado": "Pendiente",
+        "observaciones": "Acción preventiva del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "E.Loaiza y Equipo Técnico",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-05",
+        "descripcion": "Establecer una rutina trimestral de inspección termográfica  en los tableros principales de la máquina Futura.",
+        "tipo": "Accion Preventiva",
+        "tipoBadge": "🛡️ Accion Preventiva",
+        "responsable": "E.Loaiza y Equipo Técnico",
+        "fechaCompromiso": "14/09/2026",
+        "estado": "Pendiente",
+        "observaciones": "Acción preventiva del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "E.Loaiza y Equipo Técnico",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-06",
+        "descripcion": "Pasos para la ejecución de un ACR NIVEL 1",
+        "tipo": "Accion Inmediata",
+        "tipoBadge": "⚡ Accion Inmediata",
+        "responsable": "No Hay Responsable",
+        "fechaCompromiso": "2026-10-07",
+        "estado": "Realizado",
+        "observaciones": "Acción inmediata del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "No Hay Responsable",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ACR-2026-004",
+    "codigoACR": "ACRs 01082026 Banda selladora Q uno  -Futura",
+    "linea": "Futura",
+    "equipo": "Equipo General",
+    "falla": "ACRs 01082026 Banda selladora Q uno  -Futura",
+    "causaRaiz": "Sin causa raíz especificada en el formato",
+    "responsableAcr": "No Hay Responsable",
+    "archivoOrigen": "ACRs 01082026 Banda selladora Q uno  -Futura.xlsx",
+    "rutaCompleta": "S:\\OP_01_Produccion_Conversion1\\03_Mejora_Continua\\14_IG_Solución_Problemas_Kaizen_N2\\12_IG_Solución_Problemas_Tiempo_Real\\ACRs 2026 Conversiones\\Futura\\ACRs 01082026 Banda selladora Q uno  -Futura.xlsx",
+    "tareas": [
+      {
+        "idTarea": "T-01",
+        "descripcion": "Pasos para la ejecución de un ACR NIVEL 1",
+        "tipo": "Accion Inmediata",
+        "tipoBadge": "⚡ Accion Inmediata",
+        "responsable": "No Hay Responsable",
+        "fechaCompromiso": "2026-10-07",
+        "estado": "En Proceso",
+        "observaciones": "Acción inmediata del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "No Hay Responsable",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ACR-2026-005",
+    "codigoACR": "ACR 07092026 Formadora de Tubos Sincro 1 -  Atascos en sistema de corte",
+    "linea": "Sincro 1",
+    "equipo": "Formadora de Nucleo  - Sincro 1",
+    "falla": "ACR 07092026 Formadora de Tubos Sincro 1 -  Atascos en sistema de corte",
+    "causaRaiz": "Sin causa raíz especificada en el formato",
+    "responsableAcr": "Luis Felipe Correa Hoyos  / Yair Blanco",
+    "archivoOrigen": "ACR 07092026 Formadora de Tubos Sincro 1 -  Atascos en sistema de corte.xlsx",
+    "rutaCompleta": "S:\\OP_01_Produccion_Conversion1\\03_Mejora_Continua\\14_IG_Solución_Problemas_Kaizen_N2\\12_IG_Solución_Problemas_Tiempo_Real\\ACRs 2026 Conversiones\\Sincro 1\\ACR 07092026 Formadora de Tubos Sincro 1 -  Atascos en sistema de corte.xlsx",
+    "tareas": [
+      {
+        "idTarea": "T-01",
+        "descripcion": "Verificar presión y caudal de ambos actuadores neumáticos",
+        "tipo": "Accion Inmediata",
+        "tipoBadge": "⚡ Accion Inmediata",
+        "responsable": "Operario de linea",
+        "fechaCompromiso": "08/09/2026",
+        "estado": "Realizado",
+        "observaciones": "Acción inmediata del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "Operario de linea",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-02",
+        "descripcion": "Recuperar o reemplazar yunque de corte",
+        "tipo": "Accion Preventiva",
+        "tipoBadge": "🛡️ Accion Preventiva",
+        "responsable": "Luis F. Correa",
+        "fechaCompromiso": "11/09/2026",
+        "estado": "Pendiente",
+        "observaciones": "Acción preventiva del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "Luis F. Correa",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-03",
+        "descripcion": "Inspeccionar cilindro y válvula del carro de corte",
+        "tipo": "Accion Inmediata",
+        "tipoBadge": "⚡ Accion Inmediata",
+        "responsable": "Tecnico de mantenimiento",
+        "fechaCompromiso": "08/09/2026",
+        "estado": "Realizado",
+        "observaciones": "Acción inmediata del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "Tecnico de mantenimiento",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-04",
+        "descripcion": "Definir estándar de presión y caudal para ambos actuadores",
+        "tipo": "Accion Preventiva",
+        "tipoBadge": "🛡️ Accion Preventiva",
+        "responsable": "Yair Blanco",
+        "fechaCompromiso": "14/09/2026",
+        "estado": "Pendiente",
+        "observaciones": "Acción preventiva del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "Yair Blanco",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-05",
+        "descripcion": "Validar alineación cuchilla-yunque",
+        "tipo": "Accion Inmediata",
+        "tipoBadge": "⚡ Accion Inmediata",
+        "responsable": "Tecnico de mantenimiento",
+        "fechaCompromiso": "08/09/2026",
+        "estado": "Realizado",
+        "observaciones": "Acción inmediata del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "Tecnico de mantenimiento",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-06",
+        "descripcion": "Documentar parámetros de sincronización del grupo de corte",
+        "tipo": "Accion Preventiva",
+        "tipoBadge": "🛡️ Accion Preventiva",
+        "responsable": "Yair Blanco",
+        "fechaCompromiso": "14/09/2026",
+        "estado": "Pendiente",
+        "observaciones": "Acción preventiva del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "Yair Blanco",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-07",
+        "descripcion": "Medir desgaste del yunque",
+        "tipo": "Accion Inmediata",
+        "tipoBadge": "⚡ Accion Inmediata",
+        "responsable": "Tecnico de mantenimiento",
+        "fechaCompromiso": "08/09/2026",
+        "estado": "Realizado",
+        "observaciones": "Acción inmediata del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "Tecnico de mantenimiento",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-08",
+        "descripcion": "Capacitar al personal en ajuste del sistema modificado",
+        "tipo": "Accion Preventiva",
+        "tipoBadge": "🛡️ Accion Preventiva",
+        "responsable": "Yair Blanco",
+        "fechaCompromiso": "14/09/2026",
+        "estado": "Pendiente",
+        "observaciones": "Acción preventiva del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "Yair Blanco",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-09",
+        "descripcion": "Pasos para la ejecución de un ACR NIVEL 1",
+        "tipo": "Accion Inmediata",
+        "tipoBadge": "⚡ Accion Inmediata",
+        "responsable": "No Hay Responsable",
+        "fechaCompromiso": "10/09/2026",
+        "estado": "En Proceso",
+        "observaciones": "Acción inmediata del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "No Hay Responsable",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ACR-2026-006",
+    "codigoACR": "ACR 11092026 Cortadora externa sincro1 daño polea trasmisión cuchilla",
+    "linea": "Sincro 1",
+    "equipo": "Cortadora Externa Sincro 1",
+    "falla": "ACR 11092026 Cortadora externa sincro1 daño polea trasmisión cuchilla",
+    "causaRaiz": "Sin causa raíz especificada en el formato",
+    "responsableAcr": "Luis Felipe Correa",
+    "archivoOrigen": "ACR 11092026 Cortadora externa sincro1 daño polea trasmisión cuchilla.xlsx",
+    "rutaCompleta": "S:\\OP_01_Produccion_Conversion1\\03_Mejora_Continua\\14_IG_Solución_Problemas_Kaizen_N2\\12_IG_Solución_Problemas_Tiempo_Real\\ACRs 2026 Conversiones\\Sincro 1\\ACR 11092026 Cortadora externa sincro1 daño polea trasmisión cuchilla.xlsx",
+    "tareas": [
+      {
+        "idTarea": "T-01",
+        "descripcion": "Reemplazo del conjunto dañado Pos. 12 y rodamientos Pos. 44",
+        "tipo": "Accion Inmediata",
+        "tipoBadge": "⚡ Accion Inmediata",
+        "responsable": "Tecnicos de mantenimiento",
+        "fechaCompromiso": "11/09/2026",
+        "estado": "Realizado",
+        "observaciones": "Acción inmediata del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "Tecnicos de mantenimiento",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-02",
+        "descripcion": "Comparar dimensiones del componente nacionalizado contra especificaciones Originales",
+        "tipo": "Accion Preventiva",
+        "tipoBadge": "🛡️ Accion Preventiva",
+        "responsable": "Luis F Correa",
+        "fechaCompromiso": "30/09/2026",
+        "estado": "Pendiente",
+        "observaciones": "Acción preventiva del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "Luis F Correa",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-03",
+        "descripcion": "Verificación de estado de poleas y correa",
+        "tipo": "Accion Inmediata",
+        "tipoBadge": "⚡ Accion Inmediata",
+        "responsable": "Tecnicos de mantenimiento",
+        "fechaCompromiso": "11/09/2026",
+        "estado": "Realizado",
+        "observaciones": "Acción inmediata del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "Tecnicos de mantenimiento",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-04",
+        "descripcion": "Establecer trazabilidad obligatoria para cambios de componentes críticos orden de trabajo",
+        "tipo": "Accion Preventiva",
+        "tipoBadge": "🛡️ Accion Preventiva",
+        "responsable": "Milciades",
+        "fechaCompromiso": "20/09/2026",
+        "estado": "Pendiente",
+        "observaciones": "Acción preventiva del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "Milciades",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-05",
+        "descripcion": "Alineación del sistema de transmisión",
+        "tipo": "Accion Inmediata",
+        "tipoBadge": "⚡ Accion Inmediata",
+        "responsable": "Tecnicos de mantenimiento",
+        "fechaCompromiso": "11/09/2026",
+        "estado": "Realizado",
+        "observaciones": "Acción inmediata del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "Tecnicos de mantenimiento",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-06",
+        "descripcion": "Crear plan de mantenimiento preventivo específico para el sistema de giro de cuchilla.",
+        "tipo": "Accion Preventiva",
+        "tipoBadge": "🛡️ Accion Preventiva",
+        "responsable": "Milciades",
+        "fechaCompromiso": "20/09/2026",
+        "estado": "Pendiente",
+        "observaciones": "Acción preventiva del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "Milciades",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-07",
+        "descripcion": "Configurar estrategia de mantenimiento con frecuencia anual y lanzamiento automático condicionado al cierre de la orden anterior ejecutada.",
+        "tipo": "Accion Preventiva",
+        "tipoBadge": "🛡️ Accion Preventiva",
+        "responsable": "Milciades",
+        "fechaCompromiso": "20/09/2026",
+        "estado": "Pendiente",
+        "observaciones": "Acción preventiva del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "Milciades",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      },
+      {
+        "idTarea": "T-08",
+        "descripcion": "Pasos para la ejecución de un ACR NIVEL 1",
+        "tipo": "Accion Inmediata",
+        "tipoBadge": "⚡ Accion Inmediata",
+        "responsable": "No Hay Responsable",
+        "fechaCompromiso": "12/09/2026",
+        "estado": "En Proceso",
+        "observaciones": "Acción inmediata del formato ACR",
+        "historial": [
+          {
+            "fecha": "7/10/2026, 10:33:27",
+            "usuario": "Sistema Auto-Sync Excel",
+            "responsableTarea": "No Hay Responsable",
+            "accion": "Extraído automáticamente desde formato Excel de red"
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,56 @@
+[
+  {
+    "id": "DAILY-2026-001",
+    "fecha": "30/09/2026",
+    "linea": "Forte",
+    "equipo": "Cortadora Interna PROLOG LT",
+    "compromiso": "Ajuste de fotocélula de centrado de corte por desviación detectada en turno 1",
+    "responsable": "Técnico Mecánico / Ingeniero Turno",
+    "prioridad": "Alta",
+    "estado": "Pendiente",
+    "observaciones": "Acordado en reunión diaria de las 7:00 AM",
+    "historial": [
+      {
+        "fecha": "30/09/2026 07:15:00",
+        "usuario": "Ingeniería / Técnico",
+        "accion": "Compromiso registrado en reunión diaria"
+      }
+    ]
+  },
+  {
+    "id": "DAILY-2026-002",
+    "fecha": "30/09/2026",
+    "linea": "Futura",
+    "equipo": "Empacadora Automática",
+    "compromiso": "Limpieza y calibración de sensores de presión de vacío",
+    "responsable": "Faber / Luis Felipe",
+    "prioridad": "Media",
+    "estado": "En Proceso",
+    "observaciones": "Repuestos validados con almacén de mantenimiento",
+    "historial": [
+      {
+        "fecha": "30/09/2026 07:30:00",
+        "usuario": "Mantenimiento Planta",
+        "accion": "En proceso de calibración"
+      }
+    ]
+  },
+  {
+    "id": "DAILY-2026-003",
+    "fecha": "30/09/2026",
+    "linea": "Sincro 1",
+    "equipo": "Rebobinadora Principal",
+    "compromiso": "Verificación de temperatura de rodamientos motor eje principal",
+    "responsable": "Equipo Eléctrico / Luis Felipe",
+    "prioridad": "Alta",
+    "estado": "Realizado",
+    "observaciones": "Temperatura dentro del rango seguro (42°C)",
+    "historial": [
+      {
+        "fecha": "30/09/2026 08:30:00",
+        "usuario": "Electrónico Turno",
+        "accion": "Verificación realizada y aprobada"
+      }
+    ]
+  }
+]
