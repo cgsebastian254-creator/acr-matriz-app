@@ -912,7 +912,20 @@ async function arrancar() {
             }
         }
         console.log('🗄️  Base de datos conectada: los datos son permanentes.');
-    } else if (IS_CLOUD) {
+    }
+    // Limpieza: quita la tarea falsa que el lector anterior tomaba del pie del formato
+    const acrsActuales = readJson(DATA_FILE);
+    let quitadas = 0;
+    for (const a of acrsActuales) {
+        const antes = (a.tareas || []).length;
+        a.tareas = (a.tareas || []).filter(t => !/^pasos para la ejecuci[oó]n de un acr/i.test(String(t.descripcion || '').trim()));
+        quitadas += antes - a.tareas.length;
+    }
+    if (quitadas) {
+        writeJson(DATA_FILE, acrsActuales);
+        console.log(`🧹 Se quitaron ${quitadas} tareas "Pasos para la ejecución de un ACR" leídas por error.`);
+    }
+    if (!conectada && IS_CLOUD) {
         console.warn('⚠️ Sin base de datos (MONGODB_URI): los cambios se pierden si Render se reinicia.');
     }
     server.listen(PORT, '0.0.0.0', alEscuchar);

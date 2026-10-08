@@ -294,7 +294,7 @@
         <section id="tab-catalogo" class="tab-content">
             <div class="filter-bar">
                 <div class="filter-group">
-                    <input type="text" id="catalogo-search" class="search-input" placeholder="🔍 Buscar por equipo, falla, causa raíz..." oninput="filtrarCatalogo()">
+                    <input type="text" id="catalogo-search" class="search-input" placeholder="🔍 Buscar por equipo, problema, causa raíz..." oninput="filtrarCatalogo()">
  
                     <select id="catalogo-linea" class="select-input" onchange="filtrarCatalogo()">
                         <option value="TODAS">Línea: Todas</option>
@@ -321,10 +321,11 @@
                             <tr>
                                 <th>LÍNEA</th>
                                 <th>EQUIPO / SUBEQUIPO</th>
-                                <th>AVERÍA / FALLA (FORMATO EXCEL)</th>
+                                <th>ACR</th>
+                                <th>DESCRIPCIÓN DEL PROBLEMA</th>
                                 <th>CAUSA RAÍZ IDENTIFICADA</th>
                                 <th>RESPONSABLE ACR</th>
-                                <th>CÓDIGO ACR</th>
+                                <th>ANÁLISIS</th>
                             </tr>
                         </thead>
                         <tbody id="catalogo-tbody">
@@ -624,6 +625,17 @@
                 </div>
                 <button type="button" class="btn btn-danger" style="width: 100%; justify-content: center;" onclick="eliminarACR()">Eliminar ACR seleccionado</button>
             </details>
+        </div>
+    </div>
+
+    <!-- Modal Análisis del ACR -->
+    <div id="modal-analisis" class="modal-backdrop" onclick="if (event.target === this) cerrarModalAnalisis()">
+        <div class="modal-box" style="max-width: 760px;">
+            <div class="modal-header">
+                <h2 id="analisis-titulo">Análisis del ACR</h2>
+                <button class="close-modal" onclick="cerrarModalAnalisis()">&times;</button>
+            </div>
+            <div id="analisis-contenido"></div>
         </div>
     </div>
 

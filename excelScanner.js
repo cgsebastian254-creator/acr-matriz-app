@@ -67,6 +67,121 @@ function formatDateValue(val) {
     return str;
 }
 
+
+// ---------------------------------------------------------------
+// Lectura del análisis (formato "Análisis 5 POR QUÉ")
+// ---------------------------------------------------------------
+function normalizar(v) {
+    return String(v == null ? '' : v).normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/\s+/g, ' ').trim();
+}
+function textoCelda(v) {
+    if (v instanceof Date) return formatDateValue(v);
+    return String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+}
+function buscarCelda(grid, prueba, desde = 0) {
+    for (let r = desde; r < grid.length; r++) {
+        const row = grid[r] || [];
+        for (let c = 0; c < row.length; c++) {
+            if (prueba(normalizar(row[c]))) return { r, c };
+        }
+    }
+    return null;
+}
+// Etiquetas fijas del formato que no son respuestas
+const ETIQUETAS = new Set(['QUE?', 'CUANDO?', 'COMO?', 'DONDE?', 'HACE CUANTO?', 'DESPUES DE?', 'CUANTO ES?',
+    'QUE VEO?', 'QUE SIENTO?', 'QUE HUELO?', 'AGUJERO', 'MAL SELLADO', 'ARRUGA', 'MALA FORMACION', 'MAL CORTE',
+    'PAQUETE QUEMADO', 'MAL LAMIMADO', 'MAL LAMINADO', 'MAL ESTIBADO']);
+function esEtiqueta(v) {
+    const n = normalizar(v).replace(/^¿/, '');
+    return !n || ETIQUETAS.has(n) || /^\d\.\s/.test(n) || /POR QUE\?$/.test(n);
+}
+
+function extraerAnalisis(grid) {
+    const out = { problema: '', detalleProblema: [], sintomas: [], causasPotenciales: [], porques: [] };
+
+    const desc = buscarCelda(grid, n => n.includes('DESCRIPCION DEL PROBLEMA'));
+    const sint = buscarCelda(grid, n => /^2\.?\s*SINTOMAS/.test(n));
+    const caus = buscarCelda(grid, n => n.includes('CAUSAS POTENCIALES'));
+    const porq = buscarCelda(grid, n => /^4\.?\s*1\s*¿?POR QUE/.test(n) || /^1\s*¿POR QUE/.test(n));
+    const filaFin = porq ? porq.r : Math.min(grid.length, (desc ? desc.r : 0) + 20);
+
+    if (desc) {
+        const colFin = sint && sint.r === desc.r ? sint.c : desc.c + 6;
+        for (let r = desc.r + 1; r < filaFin; r++) {
+            const row = grid[r] || [];
+            let pregunta = '';
+            const respuestas = [];
+            for (let c = desc.c; c < colFin; c++) {
+                const t = textoCelda(row[c]);
+                if (!t) continue;
+                if (esEtiqueta(t)) { if (!pregunta) pregunta = t.replace(/[¿?:]/g, '').trim(); }
+                else respuestas.push(t);
+            }
+            if (respuestas.length) out.detalleProblema.push({ pregunta: pregunta || 'Descripción', respuesta: respuestas.join(' ') });
+        }
+        const que = out.detalleProblema.find(d => normalizar(d.pregunta) === 'QUE') || out.detalleProblema[0];
+        out.problema = que ? que.respuesta : '';
+    }
+
+    const recolectar = (inicio, colIni, colFin) => {
+        const vals = [];
+        if (!inicio) return vals;
+        for (let r = inicio.r + 1; r < filaFin; r++) {
+            const row = grid[r] || [];
+            for (let c = colIni; c < colFin; c++) {
+                const t = textoCelda(row[c]);
+                if (t && !esEtiqueta(t) && !vals.includes(t)) vals.push(t);
+            }
+        }
+        return vals;
+    };
+    if (sint) out.sintomas = recolectar(sint, sint.c, caus && caus.r === sint.r ? caus.c : sint.c + 5);
+    if (caus) out.causasPotenciales = recolectar(caus, caus.c, caus.c + 6);
+
+    if (porq) {
+        const cab = grid[porq.r] || [];
+        const columnas = [];
+        cab.forEach((v, c) => { if (/POR QUE/.test(normalizar(v))) columnas.push(c); });
+        const finPorques = (() => {
+            const f = buscarCelda(grid, n => n.includes('CAUSA RAIZ') || n.includes('ACCIONES INMEDIATAS'), porq.r + 1);
+            return f ? f.r : Math.min(grid.length, porq.r + 30);
+        })();
+        columnas.forEach((c, i) => {
+            const vals = [];
+            const hasta = columnas[i + 1] || c + 3;
+            for (let r = porq.r + 1; r < finPorques; r++) {
+                for (let cc = c; cc < hasta; cc++) {
+                    const t = textoCelda((grid[r] || [])[cc]);
+                    if (t && !esEtiqueta(t) && !vals.includes(t)) vals.push(t);
+                }
+            }
+            out.porques.push(vals.join(' / '));
+        });
+        while (out.porques.length && !out.porques[out.porques.length - 1]) out.porques.pop();
+    }
+    return out;
+}
+
+function extraerCausaRaiz(grid) {
+    const ini = buscarCelda(grid, n => /CAUSA RAIZ\s*:?$/.test(n) && !n.includes('ANALISIS'));
+    if (!ini) return '';
+    const etiqueta = textoCelda(grid[ini.r][ini.c]);
+    const enLinea = etiqueta.replace(/^.*causa ra[ií]z\s*:?/i, '').trim();
+    if (enLinea.length > 5) return enLinea;
+    // Debajo (misma columna, hasta 4 filas), luego a la derecha
+    for (let r = ini.r + 1; r <= Math.min(ini.r + 4, grid.length - 1); r++) {
+        for (let c = ini.c; c <= ini.c + 3; c++) {
+            const t = textoCelda((grid[r] || [])[c]);
+            if (t.length > 5 && !/ACCIONES|FECHA|RESPONSABLE/.test(normalizar(t))) return t;
+        }
+    }
+    for (let c = ini.c + 1; c < (grid[ini.r] || []).length; c++) {
+        const t = textoCelda(grid[ini.r][c]);
+        if (t.length > 5) return t;
+    }
+    return '';
+}
+
 function parseSingleACRExcel(filePath, index) {
     try {
         const workbook = XLSX.readFile(filePath, { cellDates: true, cellText: true });
@@ -85,7 +200,7 @@ function parseSingleACRExcel(filePath, index) {
         let causaRaiz = 'Sin causa raíz especificada en el formato';
 
         // Header Extraction
-        for (let r = 0; r < Math.min(grid.length, 45); r++) {
+        for (let r = 0; r < Math.min(grid.length, 20); r++) {
             const row = grid[r] || [];
             for (let c = 0; c < row.length; c++) {
                 const val = String(row[c] || '').trim();
@@ -117,6 +232,26 @@ function parseSingleACRExcel(filePath, index) {
                 }
             }
         }
+
+        // Fecha junto a "MÁQUINA:" cuando no hay etiqueta "FECHA:"
+        const filaMaq = buscarCelda(grid, n => n.startsWith('MAQUINA'));
+        if (filaMaq) {
+            const row = grid[filaMaq.r] || [];
+            for (let c = filaMaq.c + 1; c < row.length; c++) {
+                const v = row[c];
+                if (v instanceof Date || /^\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}$/.test(textoCelda(v))) { fecha = formatDateValue(v); break; }
+            }
+        }
+        let numeroACR = '';
+        const celdaNum = buscarCelda(grid.slice(0, 20), n => /NO\.?\s*ACR/.test(n));
+        if (celdaNum) {
+            const t = textoCelda(grid[celdaNum.r][celdaNum.c]).replace(/^.*ACR\s*:?/i, '').trim()
+                || textoCelda((grid[celdaNum.r] || [])[celdaNum.c + 1]);
+            numeroACR = t;
+        }
+        const causaEncontrada = extraerCausaRaiz(grid);
+        if (causaEncontrada) causaRaiz = causaEncontrada;
+        const analisis = extraerAnalisis(grid);
 
         // Clean up multi-line Responsable
         if (responsableAcr) {
@@ -151,6 +286,8 @@ function parseSingleACRExcel(filePath, index) {
                 for (let ar = r + 1; ar < Math.min(r + 30, grid.length); ar++) {
                     const aRow = grid[ar] || [];
                     if (aRow.every(v => v === '')) continue;
+                    // Fin de la sección de acciones (pie del formato)
+                    if (/PASOS PARA LA EJECUCION|ANALISIS CAUSA RAIZ|DOCUMENT NUMBER/.test(normalizar(aRow.join(' ')))) break;
 
                     // Acciones Inmediatas (left side cols: inmedHeaderCol to prevHeaderCol - 1)
                     const inmedDesc = String(aRow[inmedHeaderCol] || '').trim();
@@ -223,6 +360,13 @@ function parseSingleACRExcel(filePath, index) {
             equipo: equipo,
             falla: fileName,
             causaRaiz: causaRaiz,
+            problema: analisis.problema,
+            detalleProblema: analisis.detalleProblema,
+            sintomas: analisis.sintomas,
+            causasPotenciales: analisis.causasPotenciales,
+            porques: analisis.porques,
+            numeroACR: numeroACR,
+            fechaACR: fecha,
             responsableAcr: responsableAcr,
             archivoOrigen: fileName + path.extname(filePath),
             rutaCompleta: filePath,

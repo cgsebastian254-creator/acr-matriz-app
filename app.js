@@ -545,20 +545,25 @@ function filtrarCatalogo() {
             (acr.equipo || '').toLowerCase().includes(busqueda) ||
             (acr.falla || '').toLowerCase().includes(busqueda) ||
             (acr.causaRaiz || '').toLowerCase().includes(busqueda) ||
+            (acr.problema || '').toLowerCase().includes(busqueda) ||
+            (acr.numeroACR || '').toLowerCase().includes(busqueda) ||
             (acr.codigoACR || acr.id).toLowerCase().includes(busqueda);
 
         if (!coincideBusqueda) return;
 
         contador++;
 
+        const sinDato = '<span style="color: var(--text-muted); font-style: italic;">Vuelve a subir el Excel para leerlo</span>';
+        const causa = acr.causaRaiz && !/^Sin causa ra/i.test(acr.causaRaiz) ? escaparHTML(acr.causaRaiz) : sinDato;
         tbody.innerHTML += `
             <tr>
-                <td><span class="badge badge-linea">${acr.linea}</span></td>
-                <td><strong>${acr.equipo}</strong></td>
-                <td>${acr.falla}</td>
-                <td>${acr.causaRaiz}</td>
+                <td><span class="badge badge-linea">${escaparHTML(acr.linea)}</span></td>
+                <td><strong>${escaparHTML(acr.equipo)}</strong></td>
+                <td><code>${acr.numeroACR ? 'N° ' + escaparHTML(acr.numeroACR) + ' · ' : ''}${escaparHTML(acr.codigoACR || acr.id)}</code>${acr.fechaACR ? `<div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">${escaparHTML(acr.fechaACR)}</div>` : ''}</td>
+                <td><div class="texto-recortado">${acr.problema ? escaparHTML(acr.problema) : sinDato}</div></td>
+                <td><div class="texto-recortado">${causa}</div></td>
                 <td>${renderResponsableBadge(acr.responsableAcr)}</td>
-                <td><code>${acr.codigoACR || acr.id}</code></td>
+                <td><button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="abrirModalAnalisis('${acr.id}')">🔍 Ver análisis</button></td>
             </tr>
         `;
     });
@@ -922,3 +927,54 @@ document.addEventListener('DOMContentLoaded', () => {
         if (main) main.prepend(aviso);
     }).catch(() => {});
 });
+
+
+// =====================================================================
+// ANÁLISIS COMPLETO DEL ACR (5 POR QUÉ)
+// =====================================================================
+function escaparHTML(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+}
+
+function abrirModalAnalisis(id) {
+    const acr = acrsData.find(a => a.id === id);
+    if (!acr) return;
+    const bloque = (titulo, html) => html ? `
+        <div style="margin-bottom: 18px;">
+            <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); margin-bottom: 6px;">${titulo}</div>
+            <div style="font-size: 14px; line-height: 1.5;">${html}</div>
+        </div>` : '';
+    const lista = arr => (arr && arr.length) ? '<ul style="padding-left: 18px; display: grid; gap: 4px;">' + arr.map(x => `<li>${escaparHTML(x)}</li>`).join('') + '</ul>' : '';
+    const detalle = (acr.detalleProblema || []).filter(d => d.respuesta && d.respuesta !== acr.problema)
+        .map(d => `<div><strong>${escaparHTML(d.pregunta)}:</strong> ${escaparHTML(d.respuesta)}</div>`).join('');
+    const porques = (acr.porques || []).map((p, i) => p ? `
+        <div style="display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: start; margin-bottom: 8px;">
+            <span class="badge badge-en-proceso" style="justify-content: center;">${i + 1}</span>
+            <span>${escaparHTML(p)}</span>
+        </div>` : '').join('');
+    const causa = acr.causaRaiz && !/^Sin causa ra/i.test(acr.causaRaiz)
+        ? `<div style="background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.4); border-radius: 10px; padding: 12px 14px;">${escaparHTML(acr.causaRaiz)}</div>` : '';
+    const vacio = !acr.problema && !causa && !porques;
+
+    document.getElementById('analisis-titulo').textContent = `${acr.numeroACR ? 'ACR N° ' + acr.numeroACR + ' · ' : ''}${acr.equipo || ''}`;
+    document.getElementById('analisis-contenido').innerHTML = `
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px;">
+            <span class="badge badge-linea">${escaparHTML(acr.linea)}</span>
+            ${acr.fechaACR ? `<span class="badge badge-pendiente">📅 ${escaparHTML(acr.fechaACR)}</span>` : ''}
+            <span class="badge badge-purple">👤 ${escaparHTML(acr.responsableAcr || 'Sin responsable')}</span>
+            <span class="badge badge-realizado">${(acr.tareas || []).filter(t => t.estado === 'Realizado').length}/${(acr.tareas || []).length} tareas cerradas</span>
+        </div>
+        ${vacio ? '<p style="color: var(--text-muted);">Este ACR se cargó con una versión anterior del lector. Vuelve a subir su Excel con el botón "Subir Excel ACR" para ver el análisis completo; se conservan los estados de sus tareas.</p>' : ''}
+        ${bloque('1. Descripción del problema', acr.problema ? escaparHTML(acr.problema) + (detalle ? '<div style="margin-top: 8px; font-size: 13px; color: var(--text-muted); display: grid; gap: 4px;">' + detalle + '</div>' : '') : '')}
+        ${bloque('2. Síntomas', lista(acr.sintomas))}
+        ${bloque('3. Causas potenciales', lista(acr.causasPotenciales))}
+        ${bloque('4. Análisis 5 ¿Por qué?', porques)}
+        ${bloque('6. Causa raíz', causa)}
+        <div style="font-size: 12px; color: var(--text-muted);">Archivo: ${escaparHTML(acr.archivoOrigen || acr.codigoACR || '')}</div>
+    `;
+    document.getElementById('modal-analisis').classList.add('active');
+}
+
+function cerrarModalAnalisis() {
+    document.getElementById('modal-analisis').classList.remove('active');
+}
