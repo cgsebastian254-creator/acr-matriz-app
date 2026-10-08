@@ -212,6 +212,57 @@ function restoreFromBackup(backup) {
     return { acrs, dailyTasks: tasks };
 }
 
+
+// ---------------------------------------------------------------
+// Procesar un Excel de ACR (subido desde la web o enviado por Power Automate)
+// ---------------------------------------------------------------
+const LINEAS = ['Forte', 'Futura', 'Hinnli', 'Pocket', 'Sincro 1', 'Sincro 2'];
+function lineaDesdeCarpeta(texto) {
+    const partes = String(texto).split(/[\\/]/).map(x => x.trim()).filter(Boolean);
+    const normal = x => x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+    // Se busca de la carpeta más profunda hacia arriba una que corresponda a una línea conocida
+    for (let i = partes.length - 1; i >= 0; i--) {
+        const encontrada = LINEAS.find(l => normal(l) === normal(partes[i]));
+        if (encontrada) return encontrada;
+    }
+    return partes.length ? partes[partes.length - 1].replace(/[^\w áéíóúÁÉÍÓÚñÑ-]/g, '').trim() || 'Sin línea' : 'Sin línea';
+}
+
+function procesarExcelACR(buffer, nombre, linea, usuario, origen) {
+    const carpeta = fs.mkdtempSync(path.join(os.tmpdir(), 'acr-'));
+    try {
+        const lineaSegura = String(linea || 'Sin línea').replace(/[^\w áéíóúÁÉÍÓÚñÑ-]/g, '').trim() || 'Sin línea';
+        fs.mkdirSync(path.join(carpeta, lineaSegura));
+        const ruta = path.join(carpeta, lineaSegura, nombre);
+        fs.writeFileSync(ruta, buffer);
+        const { parseSingleACRExcel } = require('./excelScanner');
+        const nuevo = parseSingleACRExcel(ruta, 1);
+        if (!nuevo) return { status: 400, body: { error: 'No se pudo leer el Excel. Verifica que sea un formato de ACR.' } };
+        if (!nuevo.tareas || nuevo.tareas.length === 0) {
+            return { status: 400, body: { error: 'El Excel no tiene acciones inmediatas ni preventivas reconocibles. Verifica que sea el formato de ACR.' } };
+        }
+        nuevo.origen = origen;
+        nuevo.subidoPor = String(usuario || '').slice(0, 80);
+        nuevo.fechaSubida = ahoraTexto();
+        delete nuevo.rutaCompleta;
+
+        const existing = readJson(DATA_FILE);
+        const reemplaza = existing.some(a => sameAcr(a, nuevo));
+        const incoming = reemplaza
+            ? existing.map(a => (sameAcr(a, nuevo) ? nuevo : a))
+            : [...existing, nuevo];
+        const merged = mergeAcrs(incoming.map(a => ({ ...a })), existing);
+        writeJson(DATA_FILE, merged);
+        const final = merged.find(a => sameAcr(a, nuevo));
+        broadcastEvent({ type: 'data_updated', acrs: merged, user: nuevo.subidoPor || 'SharePoint', message: `${reemplaza ? 'Actualizó' : 'Subió'} el ACR '${final.codigoACR}' (${final.tareas.length} tareas).` });
+        return { status: 200, body: { success: true, reemplazado: reemplaza, acr: { id: final.id, codigoACR: final.codigoACR, linea: final.linea, equipo: final.equipo, tareas: final.tareas.length } } };
+    } catch (e) {
+        return { status: 400, body: { error: 'No se pudo procesar el Excel: ' + e.message } };
+    } finally {
+        fs.rmSync(carpeta, { recursive: true, force: true });
+    }
+}
+
 // ---------------------------------------------------------------
 // Cola de correos de alerta (se ejecutan en el PC corporativo)
 // ---------------------------------------------------------------
@@ -368,11 +419,11 @@ const server = http.createServer((req, res) => {
                 const incoming = JSON.parse(body);
                 if (!Array.isArray(incoming)) return sendJson(res, 400, { error: 'Se esperaba una lista de ACRs' });
                 const existing = readJson(DATA_FILE);
-                incoming.forEach(a => { a.origen = 'sharepoint'; });
+                incoming.forEach(a => { a.origen = 'agente'; });
                 const merged = mergeAcrs(incoming, existing);
                 // Los ACRs subidos desde la web se conservan aunque el PC no los tenga
                 for (const a of existing) {
-                    if (a.origen === 'web' && !merged.some(m => sameAcr(m, a))) merged.push(a);
+                    if ((a.origen === 'web' || a.origen === 'sharepoint') && !merged.some(m => sameAcr(m, a))) merged.push(a);
                 }
                 const cambio = JSON.stringify(merged) !== JSON.stringify(existing);
                 if (cambio) {
@@ -589,36 +640,51 @@ const server = http.createServer((req, res) => {
         });
         req.on('end', () => {
             if (demasiadoGrande) return sendJson(res, 413, { error: 'El archivo supera 15 MB.' });
-            const carpeta = fs.mkdtempSync(path.join(os.tmpdir(), 'acr-'));
-            try {
-                fs.mkdirSync(path.join(carpeta, linea));
-                const ruta = path.join(carpeta, linea, nombre);
-                fs.writeFileSync(ruta, Buffer.concat(partes));
-                const { parseSingleACRExcel } = require('./excelScanner');
-                const nuevo = parseSingleACRExcel(ruta, 1);
-                if (!nuevo) return sendJson(res, 400, { error: 'No se pudo leer el Excel. Verifica que sea un formato de ACR.' });
-                if (!nuevo.tareas || nuevo.tareas.length === 0) {
-                    return sendJson(res, 400, { error: 'El Excel no tiene acciones inmediatas ni preventivas reconocibles. Verifica que sea el formato de ACR.' });
-                }
-                nuevo.origen = 'web';
-                nuevo.subidoPor = usuario;
-                nuevo.fechaSubida = ahoraTexto();
-                delete nuevo.rutaCompleta;
+            const r = procesarExcelACR(Buffer.concat(partes), nombre, linea, usuario, 'web');
+            sendJson(res, r.status, r.body);
+        });
+        return;
+    }
 
-                const existing = readJson(DATA_FILE);
-                const reemplaza = existing.some(a => sameAcr(a, nuevo));
-                const incoming = reemplaza
-                    ? existing.map(a => (sameAcr(a, nuevo) ? nuevo : a))
-                    : [...existing, nuevo];
-                const merged = mergeAcrs(incoming.map(a => ({ ...a })), existing);
-                writeJson(DATA_FILE, merged);
-                const final = merged.find(a => sameAcr(a, nuevo));
-                broadcastEvent({ type: 'data_updated', acrs: merged, user: usuario, message: `${reemplaza ? 'Actualizó' : 'Subió'} el ACR '${final.codigoACR}' (${final.tareas.length} tareas).` });
-                sendJson(res, 200, { success: true, reemplazado: reemplaza, acr: { id: final.id, codigoACR: final.codigoACR, linea: final.linea, equipo: final.equipo, tareas: final.tareas.length } });
+    // Power Automate: recibe un Excel de ACR cuando se crea o modifica en SharePoint
+    if (pathname === '/api/acrs/sharepoint' && req.method === 'POST') {
+        if (!isAgent(req)) return sendJson(res, 401, { error: 'No autorizado (revisa el encabezado x-sync-token).' });
+        readBody(req, 25 * 1024 * 1024, body => {
+            let p;
+            try { p = JSON.parse(body); } catch (e) { return sendJson(res, 400, { error: 'JSON inválido: ' + e.message }); }
+            const nombre = path.basename(String(p.nombre || '')).replace(/[^\w.\- áéíóúÁÉÍÓÚñÑ()]/g, '_');
+            if (!/\.(xlsx|xlsm|xls)$/i.test(nombre)) {
+                return sendJson(res, 200, { success: true, ignorado: true, motivo: 'No es un archivo Excel' });
+            }
+            if (nombre.startsWith('~$')) return sendJson(res, 200, { success: true, ignorado: true, motivo: 'Archivo temporal de Excel' });
+
+            // El contenido llega como {"$content-type": ..., "$content": "base64"} o como texto base64
+            const archivo = p.archivo || p.contenido;
+            const base64 = typeof archivo === 'string' ? archivo : (archivo && archivo['$content']);
+            if (!base64) return sendJson(res, 400, { error: 'Falta el contenido del archivo (campo "archivo").' });
+
+            const linea = lineaDesdeCarpeta(p.linea || p.carpeta || '');
+            const r = procesarExcelACR(Buffer.from(base64, 'base64'), nombre, linea, p.usuario || 'SharePoint', 'sharepoint');
+            sendJson(res, r.status, r.body);
+        });
+        return;
+    }
+
+    // Power Automate: un Excel se eliminó de SharePoint
+    if (pathname === '/api/acrs/sharepoint-delete' && req.method === 'POST') {
+        if (!isAgent(req)) return sendJson(res, 401, { error: 'No autorizado (revisa el encabezado x-sync-token).' });
+        readBody(req, 64 * 1024, body => {
+            try {
+                const p = JSON.parse(body);
+                const nombre = path.basename(String(p.nombre || ''));
+                const acrs = readJson(DATA_FILE);
+                const quedan = acrs.filter(a => a.archivoOrigen !== nombre);
+                if (quedan.length === acrs.length) return sendJson(res, 200, { success: true, eliminado: false });
+                writeJson(DATA_FILE, quedan);
+                broadcastEvent({ type: 'data_updated', acrs: quedan, user: 'SharePoint', message: `Se eliminó el ACR '${nombre}' de SharePoint.` });
+                sendJson(res, 200, { success: true, eliminado: true });
             } catch (e) {
-                sendJson(res, 400, { error: 'No se pudo procesar el Excel: ' + e.message });
-            } finally {
-                fs.rmSync(carpeta, { recursive: true, force: true });
+                sendJson(res, 400, { error: e.message });
             }
         });
         return;
