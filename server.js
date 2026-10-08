@@ -7,7 +7,8 @@ const storage = require('./storage');
 const PORT = process.env.PORT || 3000;
 const IS_CLOUD = !!process.env.RENDER;              // Render define esta variable automáticamente
 const SYNC_TOKEN = process.env.SYNC_TOKEN || '';    // Clave secreta compartida con el agente de sincronización
-const UPLOAD_KEY = process.env.UPLOAD_KEY || '';    // Clave de ingenieros para subir Excel desde la web
+const APP_PASSWORD = process.env.APP_PASSWORD || '';  // Contraseña para entrar a la app (si está vacía, la app queda abierta)
+const SESSION_DAYS = Number(process.env.SESSION_DAYS || 30);
 const SHAREPOINT_ACR_URL = process.env.SHAREPOINT_ACR_URL || 'https://kimberlyclark.sharepoint.com/sites/B636'; // Carpeta de ACRs en SharePoint
 const BOOT_ID = Date.now().toString(36);            // Cambia en cada reinicio: el agente lo usa para restaurar datos
 
@@ -59,6 +60,98 @@ function writeJson(file, data) {
 function ahoraTexto() {
     return new Date().toLocaleString('es-ES', { timeZone: 'America/Bogota' });
 }
+
+// ---------------------------------------------------------------
+// Acceso con contraseña
+// ---------------------------------------------------------------
+const crypto = require('crypto');
+// La firma depende de la contraseña: si se cambia APP_PASSWORD, todas las sesiones se cierran
+const SESSION_SECRET = crypto.createHash('sha256').update('acr-sesion|' + APP_PASSWORD + '|' + (process.env.SESSION_SECRET || '')).digest();
+const COOKIE = 'acr_sesion';
+
+function firmar(valor) {
+    return crypto.createHmac('sha256', SESSION_SECRET).update(valor).digest('base64url');
+}
+function igualSeguro(a, b) {
+    const x = Buffer.from(String(a));
+    const y = Buffer.from(String(b));
+    return x.length === y.length && crypto.timingSafeEqual(x, y);
+}
+function leerCookie(req, nombre) {
+    const partes = String(req.headers.cookie || '').split(';');
+    for (const p of partes) {
+        const i = p.indexOf('=');
+        if (i > -1 && p.slice(0, i).trim() === nombre) return decodeURIComponent(p.slice(i + 1).trim());
+    }
+    return '';
+}
+function sesionValida(req) {
+    if (!APP_PASSWORD) return true;
+    const token = leerCookie(req, COOKIE);
+    const [vence, firma] = token.split('.');
+    if (!vence || !firma || !igualSeguro(firma, firmar(vence))) return false;
+    return Number(vence) > Date.now();
+}
+function crearCookieSesion(req) {
+    const vence = String(Date.now() + SESSION_DAYS * 24 * 3600 * 1000);
+    const seguro = (req.headers['x-forwarded-proto'] || '').includes('https') ? '; Secure' : '';
+    return `${COOKIE}=${vence}.${firmar(vence)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_DAYS * 24 * 3600}${seguro}`;
+}
+
+// Límite de intentos por IP para evitar que adivinen la contraseña
+const intentos = new Map();
+function ipDe(req) {
+    return String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+}
+function bloqueado(ip) {
+    const r = intentos.get(ip);
+    if (!r) return false;
+    if (Date.now() - r.desde > 15 * 60 * 1000) { intentos.delete(ip); return false; }
+    return r.n >= 10;
+}
+function registrarFallo(ip) {
+    const r = intentos.get(ip);
+    if (!r || Date.now() - r.desde > 15 * 60 * 1000) intentos.set(ip, { n: 1, desde: Date.now() });
+    else r.n++;
+}
+
+function paginaLogin(mensaje) {
+    return `<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f172a">
+<link rel="manifest" href="manifest.json">
+<title>Matriz de ACRs - Ingreso</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Inter,Segoe UI,Arial,sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+  .caja{width:100%;max-width:380px;background:#1e293b;border:1px solid #334155;border-radius:16px;padding:28px 24px;box-shadow:0 20px 40px rgba(0,0,0,.4)}
+  .logo{display:inline-block;background:#fff;border-radius:8px;padding:6px 12px;margin-bottom:18px}
+  .logo img{height:30px;display:block}
+  h1{font-size:19px;margin-bottom:4px}
+  p{font-size:13px;color:#94a3b8;margin-bottom:20px}
+  label{display:block;font-size:12px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+  input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid #334155;background:#0f172a;color:#f1f5f9;font-size:16px;outline:none}
+  input:focus{border-color:#3b82f6}
+  button{width:100%;margin-top:16px;padding:12px;border:0;border-radius:10px;background:#3b82f6;color:#fff;font-size:15px;font-weight:600;cursor:pointer}
+  button:hover{background:#2563eb}
+  .error{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.5);color:#fca5a5;border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:14px}
+</style></head>
+<body><form class="caja" method="POST" action="/login">
+  <div class="logo"><img src="arbex_logo.png" alt="Arbex"></div>
+  <h1>Matriz de ACRs</h1>
+  <p>Planta Conversión · Acceso restringido</p>
+  ${mensaje ? `<div class="error">${mensaje}</div>` : ''}
+  <label for="clave">Contraseña</label>
+  <input id="clave" name="clave" type="password" autocomplete="current-password" autofocus required>
+  <button type="submit">Entrar</button>
+</form></body></html>`;
+}
+
+// Rutas que no necesitan sesión: la página de ingreso, lo que el navegador
+// necesita para instalar la app, y las que usan su propia clave (agente / Power Automate)
+const RUTAS_PUBLICAS = new Set(['/login', '/logout', '/manifest.json', '/arbex_logo.png']);
+const RUTAS_CON_TOKEN = new Set(['/api/acrs/push', '/api/state/sync', '/api/alerts/result', '/api/acrs/sharepoint', '/api/acrs/sharepoint-delete']);
 
 // ---------------------------------------------------------------
 // Tiempo real (SSE)
@@ -368,6 +461,45 @@ const server = http.createServer((req, res) => {
         res.writeHead(400); res.end(); return;
     }
 
+    // ---------- Ingreso con contraseña ----------
+    if (pathname === '/login' && req.method === 'GET') {
+        if (sesionValida(req)) { res.writeHead(302, { Location: '/' }); res.end(); return; }
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+        res.end(paginaLogin(''));
+        return;
+    }
+    if (pathname === '/login' && req.method === 'POST') {
+        const ip = ipDe(req);
+        readBody(req, 4096, body => {
+            const html = (msg, code) => {
+                res.writeHead(code, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+                res.end(paginaLogin(msg));
+            };
+            if (bloqueado(ip)) return html('Demasiados intentos. Espera 15 minutos e intenta de nuevo.', 429);
+            const clave = new URLSearchParams(body).get('clave') || '';
+            if (!APP_PASSWORD || igualSeguro(clave, APP_PASSWORD)) {
+                intentos.delete(ip);
+                res.writeHead(302, { 'Set-Cookie': crearCookieSesion(req), Location: '/', 'Cache-Control': 'no-store' });
+                res.end();
+                return;
+            }
+            registrarFallo(ip);
+            html('Contraseña incorrecta.', 401);
+        });
+        return;
+    }
+    if (pathname === '/logout') {
+        res.writeHead(302, { 'Set-Cookie': `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`, Location: '/login' });
+        res.end();
+        return;
+    }
+    if (!RUTAS_PUBLICAS.has(pathname) && !RUTAS_CON_TOKEN.has(pathname) && !sesionValida(req)) {
+        if (pathname.startsWith('/api/')) return sendJson(res, 401, { error: 'Sesión vencida. Vuelve a ingresar.', login: true });
+        res.writeHead(302, { Location: '/login', 'Cache-Control': 'no-store' });
+        res.end();
+        return;
+    }
+
     // ---------- SSE ----------
     if (pathname === '/api/events' && req.method === 'GET') {
         res.writeHead(200, {
@@ -399,7 +531,7 @@ const server = http.createServer((req, res) => {
             agenteConectado: IS_CLOUD ? agentOnline() : true,
             ultimaConexionAgente: agentLastSeen ? new Date(agentLastSeen).toISOString() : null,
             alertasEnCola: alertQueue.length,
-            subidaExcel: !!UPLOAD_KEY,
+            accesoConClave: !!APP_PASSWORD,
             sharepointUrl: SHAREPOINT_ACR_URL,
             ...storage.status()
         });
@@ -621,8 +753,6 @@ const server = http.createServer((req, res) => {
 
     // Ingenieros: subir un Excel de ACR desde la web (PC o celular)
     if (pathname === '/api/acrs/upload' && req.method === 'POST') {
-        if (!UPLOAD_KEY) return sendJson(res, 503, { error: 'La subida de Excel no está habilitada (falta UPLOAD_KEY en Render).' });
-        if (req.headers['x-clave-ingenieros'] !== UPLOAD_KEY) return sendJson(res, 401, { error: 'Clave de ingenieros incorrecta.' });
 
         const nombre = path.basename(String(parsedUrl.searchParams.get('nombre') || '')).replace(/[^\w.\- áéíóúÁÉÍÓÚñÑ()]/g, '_');
         const linea = String(parsedUrl.searchParams.get('linea') || '').replace(/[^\w áéíóúÁÉÍÓÚñÑ-]/g, '').trim();
@@ -692,7 +822,6 @@ const server = http.createServer((req, res) => {
 
     // Ingenieros: eliminar un ACR (por ejemplo, si se subió un archivo equivocado)
     if (pathname === '/api/acrs/delete' && req.method === 'POST') {
-        if (!UPLOAD_KEY || req.headers['x-clave-ingenieros'] !== UPLOAD_KEY) return sendJson(res, 401, { error: 'Clave de ingenieros incorrecta.' });
         readBody(req, 64 * 1024, body => {
             try {
                 const { id, usuario } = JSON.parse(body);
@@ -793,6 +922,7 @@ function alEscuchar() {
     console.log('=======================================================');
     console.log(`🚀 SERVIDOR ACR DISPONIBLE EN PUERTO: ${PORT} (${IS_CLOUD ? 'nube' : 'local'})`);
     if (!IS_CLOUD) console.log(`👉 En este equipo: http://localhost:${PORT}`);
+    if (IS_CLOUD && !APP_PASSWORD) console.warn('⚠️ Falta APP_PASSWORD: la app está abierta para cualquiera con el enlace.');
     if (IS_CLOUD && !SYNC_TOKEN) console.warn('⚠️ Falta la variable SYNC_TOKEN: el agente no podrá enviar datos.');
     console.log('=======================================================');
 }

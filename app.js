@@ -1,3 +1,19 @@
+// Si la sesión vence, cualquier llamada al servidor lleva de nuevo a la pantalla de ingreso
+(function () {
+    const fetchOriginal = window.fetch.bind(window);
+    window.fetch = async (...args) => {
+        const r = await fetchOriginal(...args);
+        if (r.status === 401) {
+            const copia = r.clone();
+            try {
+                const d = await copia.json();
+                if (d && d.login) { window.location.href = '/login'; }
+            } catch (e) { /* respuesta sin JSON */ }
+        }
+        return r;
+    };
+})();
+
 // State Management
 let acrsData = [];
 let dailyTasksData = [];
@@ -724,7 +740,6 @@ function guardarPreferencia(clave, valor) {
 function abrirModalSubirExcel() {
     document.getElementById('subir-resultado').textContent = '';
     document.getElementById('subir-usuario').value = leerPreferencia('acr-subido-por');
-    document.getElementById('subir-clave').value = leerPreferencia('acr-clave-ingenieros');
     const lista = document.getElementById('eliminar-acr');
     lista.innerHTML = '<option value="">Selecciona el ACR...</option>' + acrsData
         .map(a => `<option value="${a.id}">${a.linea} · ${a.codigoACR || a.id}</option>`).join('');
@@ -744,7 +759,6 @@ async function subirExcelACR(event) {
     const archivo = document.getElementById('subir-archivo').files[0];
     const linea = document.getElementById('subir-linea').value;
     const usuario = document.getElementById('subir-usuario').value.trim();
-    const clave = document.getElementById('subir-clave').value;
     const resultado = document.getElementById('subir-resultado');
     const boton = document.getElementById('subir-boton');
     if (!archivo) return;
@@ -757,13 +771,12 @@ async function subirExcelACR(event) {
         const qs = new URLSearchParams({ nombre: archivo.name, linea, usuario });
         const response = await fetch(`/api/acrs/upload?${qs}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/octet-stream', 'x-clave-ingenieros': clave },
+            headers: { 'Content-Type': 'application/octet-stream' },
             body: archivo
         });
         const data = await response.json();
         if (data.success) {
             guardarPreferencia('acr-subido-por', usuario);
-            guardarPreferencia('acr-clave-ingenieros', clave);
             resultado.style.color = 'var(--status-green)';
             resultado.textContent = `✅ ${data.reemplazado ? 'ACR actualizado' : 'ACR agregado'}: ${data.acr.codigoACR}\n${data.acr.tareas} tareas · Línea ${data.acr.linea} · ${data.acr.equipo}`;
             document.getElementById('subir-archivo').value = '';
@@ -782,17 +795,15 @@ async function subirExcelACR(event) {
 
 async function eliminarACR() {
     const id = document.getElementById('eliminar-acr').value;
-    const clave = document.getElementById('subir-clave').value;
     const usuario = document.getElementById('subir-usuario').value.trim();
     const resultado = document.getElementById('subir-resultado');
     if (!id) { alert('Selecciona el ACR que quieres eliminar.'); return; }
-    if (!clave) { alert('Escribe la clave de ingenieros.'); return; }
     const acr = acrsData.find(a => a.id === id);
     if (!confirm(`¿Eliminar el ACR "${acr ? acr.codigoACR : id}" y todas sus tareas? Esta acción no se puede deshacer.`)) return;
     try {
         const response = await fetch('/api/acrs/delete', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-clave-ingenieros': clave },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id, usuario })
         });
         const data = await response.json();
