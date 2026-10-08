@@ -896,3 +896,18 @@ async function copiarResumenAlertas() {
         alert('No se pudo copiar automáticamente. El resumen quedó en la consola para que lo copies a mano.');
     }
 }
+
+// AVISO SI LOS DATOS NO ESTÁN PROTEGIDOS (sin base de datos en la nube)
+document.addEventListener('DOMContentLoaded', () => {
+    fetch('/api/status').then(r => r.json()).then(st => {
+        if (!st.cloud || st.baseDatos === 'conectada') return;
+        const aviso = document.createElement('div');
+        aviso.id = 'aviso-base-datos';
+        aviso.style.cssText = 'background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.5); color: #fca5a5; padding: 10px 14px; border-radius: 10px; margin-bottom: 16px; font-size: 13px;';
+        aviso.innerHTML = st.baseDatos === 'error'
+            ? '⚠️ <strong>No hay conexión con la base de datos.</strong> Los cambios que hagas ahora podrían perderse si el servidor se reinicia. Revisa MONGODB_URI en Render.'
+            : '⚠️ <strong>Datos temporales:</strong> la base de datos aún no está configurada (MONGODB_URI en Render). Los ACR subidos y los cambios se pierden si el servidor se reinicia.';
+        const main = document.querySelector('.main-container');
+        if (main) main.prepend(aviso);
+    }).catch(() => {});
+});
