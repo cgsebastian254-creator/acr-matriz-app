@@ -7,6 +7,8 @@
     "sync": "node sync-agent.js"
   },
   "dependencies": {
+    "imapflow": "^1.7.8",
+    "mailparser": "^3.9.38",
     "mongodb": "^6.21.0",
     "xlsx": "^0.18.5"
   },

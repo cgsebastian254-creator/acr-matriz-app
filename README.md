@@ -34,3 +34,15 @@ Para que el agente arranque solo al prender el PC: `Win + R` → `shell:startup`
 ## Limitaciones
 - El agente debe estar abierto en el PC corporativo para traer Excel nuevos, respaldar cambios y enviar correos.
 - En el plan gratis de Render el disco no es permanente. Si Render se reinicia mientras el agente está apagado, los cambios hechos en ese intervalo y no respaldados se pierden. Para eliminar este riesgo, usar una base de datos (por ejemplo Supabase o MongoDB Atlas, gratis).
+
+## Actualización automática por correo (sin Power Automate Premium)
+
+Power Automate (conectores estándar) envía cada Excel de ACR como adjunto a un buzón dedicado; la app lo revisa por IMAP.
+
+Variables en Render: `IMAP_USER`, `IMAP_PASS` (contraseña de aplicación de Gmail), opcionales `IMAP_HOST` (imap.gmail.com), `MAIL_TOKEN` (por defecto `SYNC_TOKEN`), `MAIL_ALLOWED_DOMAINS` (kcc.com,kimberly-clark.com), `MAIL_INTERVAL_SEC` (60).
+
+Asuntos que envía el flujo:
+- `ACR-SYNC <clave> | <ruta de la carpeta>` con el Excel adjunto: crea o actualiza el ACR.
+- `ACR-DELETE <clave> | <nombre del archivo>`: quita el ACR.
+
+Si Render está dormido, los correos esperan en el buzón y se procesan apenas alguien abre la app.

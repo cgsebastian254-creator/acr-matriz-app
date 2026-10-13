@@ -45,7 +45,7 @@ async function rescanExcelFiles() {
         const res = await response.json();
         if (res.success) {
             mostrarNotificacionToast('Sistema Sync', res.cloud
-                ? (res.agenteConectado
+                ? (res.correo ? `Buzón de ACR revisado. Mostrando ${res.count} ACRs.` : res.agenteConectado
                     ? `Mostrando ${res.count} ACRs. Se actualizan automáticamente desde SharePoint cada 5 minutos.`
                     : `Mostrando ${res.count} ACRs. ⚠️ El PC corporativo no está conectado: los Excel nuevos aparecerán cuando se conecte.`)
                 : `Se han rescaneado ${res.count} formatos Excel desde la red.`);

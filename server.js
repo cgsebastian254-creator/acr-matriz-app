@@ -356,6 +356,30 @@ function procesarExcelACR(buffer, nombre, linea, usuario, origen) {
     }
 }
 
+function eliminarACRPorArchivo(nombre, usuario = 'SharePoint') {
+    const base = path.basename(String(nombre || '')).trim();
+    if (!base) return false;
+    const sinExt = base.replace(/\.(xlsx|xlsm|xls)$/i, '');
+    const acrs = readJson(DATA_FILE);
+    const quedan = acrs.filter(a => a.archivoOrigen !== base && a.codigoACR !== sinExt);
+    if (quedan.length === acrs.length) return false;
+    writeJson(DATA_FILE, quedan);
+    broadcastEvent({ type: 'data_updated', acrs: quedan, user: usuario, message: `Se eliminó el ACR '${sinExt}' (se borró de SharePoint).` });
+    return true;
+}
+
+// ---------------------------------------------------------------
+// Recepción de ACR por correo (Power Automate estándar -> buzón -> app)
+// ---------------------------------------------------------------
+const { crearReceptorCorreo } = require('./mail-ingest');
+const receptorCorreo = crearReceptorCorreo({
+    procesarExcel: (buffer, nombre, carpeta, usuario) => {
+        const limpio = path.basename(String(nombre)).replace(/[^\w.\- áéíóúÁÉÍÓÚñÑ()]/g, '_');
+        return procesarExcelACR(buffer, limpio, lineaDesdeCarpeta(carpeta), usuario, 'sharepoint');
+    },
+    eliminarACR: nombre => eliminarACRPorArchivo(nombre)
+});
+
 // ---------------------------------------------------------------
 // Cola de correos de alerta (se ejecutan en el PC corporativo)
 // ---------------------------------------------------------------
@@ -532,6 +556,7 @@ const server = http.createServer((req, res) => {
             ultimaConexionAgente: agentLastSeen ? new Date(agentLastSeen).toISOString() : null,
             alertasEnCola: alertQueue.length,
             accesoConClave: !!APP_PASSWORD,
+            buzonACR: receptorCorreo.estado,
             sharepointUrl: SHAREPOINT_ACR_URL,
             ...storage.status()
         });
@@ -589,7 +614,13 @@ const server = http.createServer((req, res) => {
     }
 
     if (pathname === '/api/acrs/sync' && req.method === 'POST') {
-        // En la nube no hay acceso a SharePoint: se devuelve lo último recibido
+        // Revisa ya mismo el buzón de ACR (si está configurado) y devuelve lo que hay
+        if (receptorCorreo.estado.configurado) {
+            receptorCorreo.revisar().then(() => sendJson(res, 200, {
+                success: true, count: readJson(DATA_FILE).length, cloud: IS_CLOUD, correo: receptorCorreo.estado
+            }));
+            return;
+        }
         return sendJson(res, 200, {
             success: true,
             count: readJson(DATA_FILE).length,
@@ -932,6 +963,7 @@ async function arrancar() {
 }
 
 function alEscuchar() {
+    receptorCorreo.iniciar();
     console.log('=======================================================');
     console.log(`🚀 SERVIDOR ACR DISPONIBLE EN PUERTO: ${PORT} (${IS_CLOUD ? 'nube' : 'local'})`);
     if (!IS_CLOUD) console.log(`👉 En este equipo: http://localhost:${PORT}`);
