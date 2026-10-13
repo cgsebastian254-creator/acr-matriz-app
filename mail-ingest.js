@@ -118,8 +118,15 @@ function crearReceptorCorreo({ procesarExcel, eliminarACR, log = console.log }) 
             estado.ultimaRevision = new Date().toISOString();
             estado.ultimoError = '';
         } catch (e) {
-            estado.ultimoError = e.message;
-            log(`❌ No se pudo revisar el buzón de ACR: ${e.message}`);
+            const detalle = [e.message, e.responseText, e.serverResponseCode].filter(Boolean).join(' | ');
+            let causa = detalle;
+            if (e.authenticationFailed || /AUTHENTICATIONFAILED|Invalid credentials|Application-specific password/i.test(detalle)) {
+                causa = 'Gmail rechazó el usuario o la contraseña. Usa la CONTRASEÑA DE APLICACIÓN de 16 letras (sin espacios) en IMAP_PASS, no la contraseña normal. Detalle: ' + detalle;
+            } else if (/IMAP access is disabled|IMAP.*disabled|web login required/i.test(detalle)) {
+                causa = 'Gmail tiene el acceso IMAP desactivado o pide verificar el inicio de sesión en el navegador. Detalle: ' + detalle;
+            }
+            estado.ultimoError = causa;
+            log(`❌ No se pudo revisar el buzón de ACR: ${causa}`);
             try { await cliente.logout(); } catch (_) { /* conexión ya cerrada */ }
         } finally {
             enCurso = false;
