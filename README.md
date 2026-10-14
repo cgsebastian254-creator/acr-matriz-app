@@ -39,7 +39,7 @@ Para que el agente arranque solo al prender el PC: `Win + R` → `shell:startup`
 
 Power Automate (conectores estándar) envía cada Excel de ACR como adjunto a un buzón dedicado; la app lo revisa por IMAP.
 
-Variables en Render: `IMAP_USER`, `IMAP_PASS` (contraseña de aplicación de Gmail), opcionales `IMAP_HOST` (imap.gmail.com), `MAIL_TOKEN` (por defecto `SYNC_TOKEN`), `MAIL_ALLOWED_DOMAINS` (kcc.com,kimberly-clark.com), `MAIL_INTERVAL_SEC` (60).
+Variables en Render: `IMAP_USER`, `IMAP_PASS` (contraseña de aplicación de Gmail), opcionales `IMAP_HOST` (imap.gmail.com), `MAIL_TOKEN` (por defecto `SYNC_TOKEN`), `MAIL_ALLOWED_DOMAINS` (kcc.com,kimberly-clark.com,arbex.com), `MAIL_INTERVAL_SEC` (60).
 
 Asuntos que envía el flujo:
 - `ACR-SYNC <clave> | <ruta de la carpeta>` con el Excel adjunto: crea o actualiza el ACR.

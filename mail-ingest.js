@@ -13,7 +13,7 @@
 //   IMAP_USER, IMAP_PASS         cuenta del buzón (en Gmail: contraseña de aplicación)
 //   IMAP_HOST (imap.gmail.com), IMAP_PORT (993)
 //   MAIL_TOKEN                   clave que debe venir en el asunto (si no hay, usa SYNC_TOKEN)
-//   MAIL_ALLOWED_DOMAINS         dominios de remitente aceptados (kcc.com,kimberly-clark.com)
+//   MAIL_ALLOWED_DOMAINS         dominios de remitente aceptados (kcc.com,kimberly-clark.com,arbex.com)
 //   MAIL_INTERVAL_SEC            cada cuánto revisar el buzón (60)
 // =====================================================================
 const { ImapFlow } = require('imapflow');
@@ -23,7 +23,7 @@ function crearReceptorCorreo({ procesarExcel, eliminarACR, log = console.log }) 
     const user = process.env.IMAP_USER || '';
     const pass = process.env.IMAP_PASS || '';
     const token = process.env.MAIL_TOKEN || process.env.SYNC_TOKEN || '';
-    const dominios = (process.env.MAIL_ALLOWED_DOMAINS || 'kcc.com,kimberly-clark.com')
+    const dominios = (process.env.MAIL_ALLOWED_DOMAINS || 'kcc.com,kimberly-clark.com,arbex.com')
         .split(',').map(d => d.trim().toLowerCase()).filter(Boolean);
     const intervalo = Math.max(20, Number(process.env.MAIL_INTERVAL_SEC || 60)) * 1000;
 
