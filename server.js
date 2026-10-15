@@ -62,12 +62,23 @@ function ahoraTexto() {
 }
 
 // ---------------------------------------------------------------
-// Acceso con contraseña
+// Acceso a la app
+//   LOGIN_MODE=correo  -> correo corporativo + código de 6 dígitos enviado al correo
+//   (por defecto)      -> contraseña única APP_PASSWORD (si está vacía, la app queda abierta)
 // ---------------------------------------------------------------
 const crypto = require('crypto');
-// La firma depende de la contraseña: si se cambia APP_PASSWORD, todas las sesiones se cierran
-const SESSION_SECRET = crypto.createHash('sha256').update('acr-sesion|' + APP_PASSWORD + '|' + (process.env.SESSION_SECRET || '')).digest();
+const LOGIN_MODE = (process.env.LOGIN_MODE || '').toLowerCase() === 'correo' ? 'correo' : 'clave';
+const LOGIN_DOMAINS = (process.env.LOGIN_DOMAINS || 'kcc.com,kimberly-clark.com,arbex.com')
+    .split(',').map(d => d.trim().toLowerCase()).filter(Boolean);
+const LOGIN_EMAILS = (process.env.LOGIN_EMAILS || '')            // opcional: lista exacta de correos permitidos
+    .split(',').map(d => d.trim().toLowerCase()).filter(Boolean);
+const SMTP_USER = process.env.SMTP_USER || process.env.IMAP_USER || '';
+const SMTP_PASS = process.env.SMTP_PASS || process.env.IMAP_PASS || '';
+// La firma usa los secretos del servidor: si se cambia alguno, todas las sesiones se cierran
+const SESSION_SECRET = crypto.createHash('sha256').update(['acr-sesion', LOGIN_MODE, APP_PASSWORD,
+    process.env.SESSION_SECRET || '', SYNC_TOKEN, SMTP_PASS].join('|')).digest();
 const COOKIE = 'acr_sesion';
+const accesoProtegido = () => LOGIN_MODE === 'correo' || !!APP_PASSWORD;
 
 function firmar(valor) {
     return crypto.createHmac('sha256', SESSION_SECRET).update(valor).digest('base64url');
@@ -85,20 +96,47 @@ function leerCookie(req, nombre) {
     }
     return '';
 }
-function sesionValida(req) {
-    if (!APP_PASSWORD) return true;
-    const token = leerCookie(req, COOKIE);
-    const [vence, firma] = token.split('.');
-    if (!vence || !firma || !igualSeguro(firma, firmar(vence))) return false;
-    return Number(vence) > Date.now();
+// Devuelve la sesión ({ correo }) o null
+function leerSesion(req) {
+    if (!accesoProtegido()) return { correo: '' };
+    const partes = leerCookie(req, COOKIE).split('.');
+    if (LOGIN_MODE === 'correo') {
+        if (partes.length !== 3) return null;
+        const [correoB64, vence, firma] = partes;
+        if (!igualSeguro(firma, firmar(correoB64 + '.' + vence)) || Number(vence) <= Date.now()) return null;
+        const correo = Buffer.from(correoB64, 'base64url').toString('utf8');
+        return correoPermitido(correo) ? { correo } : null;
+    }
+    if (partes.length !== 2) return null;
+    const [vence, firma] = partes;
+    if (!igualSeguro(firma, firmar(vence)) || Number(vence) <= Date.now()) return null;
+    return { correo: '' };
 }
-function crearCookieSesion(req) {
+function sesionValida(req) {
+    return !!leerSesion(req);
+}
+function crearCookieSesion(req, correo) {
     const vence = String(Date.now() + SESSION_DAYS * 24 * 3600 * 1000);
+    const valor = correo
+        ? `${Buffer.from(correo, 'utf8').toString('base64url')}.${vence}`
+        : vence;
     const seguro = (req.headers['x-forwarded-proto'] || '').includes('https') ? '; Secure' : '';
-    return `${COOKIE}=${vence}.${firmar(vence)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_DAYS * 24 * 3600}${seguro}`;
+    return `${COOKIE}=${valor}.${firmar(valor)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_DAYS * 24 * 3600}${seguro}`;
 }
 
-// Límite de intentos por IP para evitar que adivinen la contraseña
+function correoPermitido(correo) {
+    const c = String(correo || '').trim().toLowerCase();
+    if (!/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(c)) return false;
+    if (LOGIN_EMAILS.length) return LOGIN_EMAILS.includes(c);
+    const dominio = c.split('@')[1];
+    return LOGIN_DOMAINS.some(d => dominio === d || dominio.endsWith('.' + d));
+}
+function nombreDesdeCorreo(correo) {
+    return String(correo || '').split('@')[0].split(/[._-]+/).filter(Boolean)
+        .map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+}
+
+// Límite de intentos por IP para evitar que adivinen la contraseña o el código
 const intentos = new Map();
 function ipDe(req) {
     return String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
@@ -115,12 +153,101 @@ function registrarFallo(ip) {
     else r.n++;
 }
 
-function paginaLogin(mensaje) {
+// ---- Códigos de verificación por correo ----
+const codigos = new Map();   // correo -> { hash, vence, intentos, enviados: [timestamps] }
+function hashCodigo(correo, codigo) {
+    return crypto.createHmac('sha256', SESSION_SECRET).update(correo + '|' + codigo).digest('base64url');
+}
+let transporteCorreo = null;
+function transporte() {
+    if (!transporteCorreo) {
+        const nodemailer = require('nodemailer');
+        transporteCorreo = nodemailer.createTransport({
+            host: process.env.SMTP_HOST || 'smtp.gmail.com',
+            port: Number(process.env.SMTP_PORT || 465),
+            secure: (process.env.SMTP_PORT || '465') === '465',
+            auth: { user: SMTP_USER, pass: SMTP_PASS }
+        });
+    }
+    return transporteCorreo;
+}
+async function enviarCodigo(correo, ip) {
+    const ahora = Date.now();
+    const reg = codigos.get(correo) || { enviados: [] };
+    reg.enviados = (reg.enviados || []).filter(t => ahora - t < 60 * 60 * 1000);
+    if (reg.enviados.length && ahora - reg.enviados[reg.enviados.length - 1] < 45 * 1000) {
+        return { ok: true, reciente: true };   // ya se envió hace menos de 45 s: no se reenvía
+    }
+    if (reg.enviados.length >= 6) return { ok: false, error: 'Se enviaron demasiados códigos a este correo. Espera una hora e intenta de nuevo.' };
+    const codigo = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+    reg.hash = hashCodigo(correo, codigo);
+    reg.vence = ahora + 10 * 60 * 1000;
+    reg.intentos = 0;
+    reg.enviados.push(ahora);
+    codigos.set(correo, reg);
+    if (global.__ACR_TEST_CODIGOS__) { global.__ACR_TEST_CODIGOS__[correo] = codigo; return { ok: true }; }
+    await transporte().sendMail({
+        from: `"Matriz de ACRs" <${SMTP_USER}>`,
+        to: correo,
+        subject: `Tu código de ingreso a la Matriz de ACRs: ${codigo}`,
+        text: `Tu código de ingreso es ${codigo}\n\nVence en 10 minutos. Si no lo pediste, ignora este correo.`,
+        html: `<div style="font-family:Segoe UI,Arial,sans-serif;max-width:420px">
+<h2 style="color:#1e3a8a;margin:0 0 8px">Matriz de ACRs</h2>
+<p style="margin:0 0 16px;color:#334155">Tu código de ingreso es:</p>
+<div style="font-size:32px;font-weight:700;letter-spacing:8px;background:#eff6ff;border-radius:10px;padding:14px 18px;text-align:center;color:#1e3a8a">${codigo}</div>
+<p style="color:#64748b;font-size:13px;margin-top:16px">Vence en 10 minutos. Si no lo pediste, ignora este correo.</p></div>`
+    });
+    console.log(`🔐 Código de ingreso enviado a ${correo} (IP ${ip})`);
+    return { ok: true };
+}
+function verificarCodigo(correo, codigo) {
+    const reg = codigos.get(correo);
+    if (!reg || !reg.hash) return 'Pide un código nuevo.';
+    if (Date.now() > reg.vence) return 'El código venció. Pide uno nuevo.';
+    if (reg.intentos >= 5) return 'Demasiados intentos con este código. Pide uno nuevo.';
+    reg.intentos++;
+    if (!igualSeguro(hashCodigo(correo, String(codigo).replace(/\D/g, '')), reg.hash)) return 'Código incorrecto.';
+    reg.hash = null;    // un código sirve una sola vez
+    return '';
+}
+
+function escHtml(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+}
+function paginaLogin(mensaje, opciones = {}) {
+    const paso = opciones.paso || (LOGIN_MODE === 'correo' ? 'correo' : 'clave');
+    const correo = escHtml(opciones.correo || '');
+    let formulario;
+    if (paso === 'clave') {
+        formulario = `<form method="POST" action="/login">
+  <label for="clave">Contraseña</label>
+  <input id="clave" name="clave" type="password" autocomplete="current-password" autofocus required>
+  <button type="submit">Entrar</button></form>`;
+    } else if (paso === 'correo') {
+        formulario = `<form method="POST" action="/login/codigo">
+  <label for="correo">Correo corporativo</label>
+  <input id="correo" name="correo" type="email" inputmode="email" autocomplete="email" placeholder="nombre@kcc.com" value="${correo}" autofocus required>
+  <button type="submit">Enviarme un código</button>
+  <p class="nota">Te enviaremos un código de 6 dígitos a tu correo de la empresa.</p></form>`;
+    } else {
+        formulario = `<form method="POST" action="/login/verificar">
+  <input type="hidden" name="correo" value="${correo}">
+  <p class="ok">Enviamos un código a <strong>${correo}</strong>. Revisa también la carpeta de correo no deseado.</p>
+  <label for="codigo">Código de 6 dígitos</label>
+  <input id="codigo" name="codigo" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}" maxlength="7" placeholder="000000" autofocus required>
+  <button type="submit">Entrar</button>
+</form>
+<form method="POST" action="/login/codigo" class="secundario">
+  <input type="hidden" name="correo" value="${correo}">
+  <button type="submit" class="link">Reenviar código</button>
+  <a href="/login" class="link">Usar otro correo</a>
+</form>`;
+    }
     return `<!DOCTYPE html>
 <html lang="es"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0f172a">
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="/manifest.json">
 <title>Matriz de ACRs - Ingreso</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
@@ -129,28 +256,32 @@ function paginaLogin(mensaje) {
   .logo{display:inline-block;background:#fff;border-radius:8px;padding:6px 12px;margin-bottom:18px}
   .logo img{height:30px;display:block}
   h1{font-size:19px;margin-bottom:4px}
-  p{font-size:13px;color:#94a3b8;margin-bottom:20px}
+  .sub{font-size:13px;color:#94a3b8;margin-bottom:20px}
   label{display:block;font-size:12px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
   input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid #334155;background:#0f172a;color:#f1f5f9;font-size:16px;outline:none}
+  input#codigo{font-size:24px;letter-spacing:8px;text-align:center}
   input:focus{border-color:#3b82f6}
   button{width:100%;margin-top:16px;padding:12px;border:0;border-radius:10px;background:#3b82f6;color:#fff;font-size:15px;font-weight:600;cursor:pointer}
   button:hover{background:#2563eb}
+  .nota{font-size:12px;color:#94a3b8;margin-top:12px}
+  .ok{font-size:13px;color:#cbd5e1;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.35);border-radius:10px;padding:10px 12px;margin-bottom:14px}
+  .secundario{display:flex;justify-content:space-between;align-items:center;margin-top:14px;gap:10px}
+  .link{background:none;border:0;color:#93c5fd;font-size:13px;font-weight:500;padding:0;margin:0;width:auto;cursor:pointer;text-decoration:none}
+  .link:hover{background:none;text-decoration:underline}
   .error{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.5);color:#fca5a5;border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:14px}
 </style></head>
-<body><form class="caja" method="POST" action="/login">
-  <div class="logo"><img src="arbex_logo.png" alt="Arbex"></div>
+<body><div class="caja">
+  <div class="logo"><img src="/arbex_logo.png" alt="Arbex"></div>
   <h1>Matriz de ACRs</h1>
-  <p>Planta Conversión · Acceso restringido</p>
-  ${mensaje ? `<div class="error">${mensaje}</div>` : ''}
-  <label for="clave">Contraseña</label>
-  <input id="clave" name="clave" type="password" autocomplete="current-password" autofocus required>
-  <button type="submit">Entrar</button>
-</form></body></html>`;
+  <p class="sub">Planta Conversión · Acceso restringido</p>
+  ${mensaje ? `<div class="error">${escHtml(mensaje)}</div>` : ''}
+  ${formulario}
+</div></body></html>`;
 }
 
 // Rutas que no necesitan sesión: la página de ingreso, lo que el navegador
 // necesita para instalar la app, y las que usan su propia clave (agente / Power Automate)
-const RUTAS_PUBLICAS = new Set(['/login', '/logout', '/manifest.json', '/arbex_logo.png']);
+const RUTAS_PUBLICAS = new Set(['/login', '/login/codigo', '/login/verificar', '/logout', '/manifest.json', '/arbex_logo.png']);
 const RUTAS_CON_TOKEN = new Set(['/api/acrs/push', '/api/state/sync', '/api/alerts/result', '/api/acrs/sharepoint', '/api/acrs/sharepoint-delete']);
 
 // ---------------------------------------------------------------
@@ -492,14 +623,14 @@ const server = http.createServer((req, res) => {
         res.end(paginaLogin(''));
         return;
     }
-    if (pathname === '/login' && req.method === 'POST') {
+    const responderLogin = (msg, code, opciones) => {
+        res.writeHead(code, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+        res.end(paginaLogin(msg, opciones));
+    };
+    if (pathname === '/login' && req.method === 'POST' && LOGIN_MODE === 'clave') {
         const ip = ipDe(req);
         readBody(req, 4096, body => {
-            const html = (msg, code) => {
-                res.writeHead(code, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
-                res.end(paginaLogin(msg));
-            };
-            if (bloqueado(ip)) return html('Demasiados intentos. Espera 15 minutos e intenta de nuevo.', 429);
+            if (bloqueado(ip)) return responderLogin('Demasiados intentos. Espera 15 minutos e intenta de nuevo.', 429);
             const clave = new URLSearchParams(body).get('clave') || '';
             if (!APP_PASSWORD || igualSeguro(clave, APP_PASSWORD)) {
                 intentos.delete(ip);
@@ -508,8 +639,55 @@ const server = http.createServer((req, res) => {
                 return;
             }
             registrarFallo(ip);
-            html('Contraseña incorrecta.', 401);
+            responderLogin('Contraseña incorrecta.', 401);
         });
+        return;
+    }
+    if (pathname === '/login/codigo' && req.method === 'POST' && LOGIN_MODE === 'correo') {
+        const ip = ipDe(req);
+        readBody(req, 4096, async body => {
+            const correo = String(new URLSearchParams(body).get('correo') || '').trim().toLowerCase();
+            if (bloqueado(ip)) return responderLogin('Demasiados intentos. Espera 15 minutos e intenta de nuevo.', 429, { paso: 'correo', correo });
+            if (!correoPermitido(correo)) {
+                registrarFallo(ip);
+                const msg = LOGIN_EMAILS.length
+                    ? 'Este correo no tiene acceso a la Matriz de ACRs.'
+                    : `Usa tu correo corporativo (${LOGIN_DOMAINS.map(d => '@' + d).join(', ')}).`;
+                return responderLogin(msg, 400, { paso: 'correo', correo });
+            }
+            try {
+                const r = await enviarCodigo(correo, ip);
+                if (!r.ok) return responderLogin(r.error, 429, { paso: 'correo', correo });
+                responderLogin('', 200, { paso: 'codigo', correo });
+            } catch (e) {
+                console.error('❌ No se pudo enviar el código de ingreso:', e.message);
+                responderLogin('No se pudo enviar el código. Intenta de nuevo en un momento.', 500, { paso: 'correo', correo });
+            }
+        });
+        return;
+    }
+    if (pathname === '/login/verificar' && req.method === 'POST' && LOGIN_MODE === 'correo') {
+        const ip = ipDe(req);
+        readBody(req, 4096, body => {
+            const datos = new URLSearchParams(body);
+            const correo = String(datos.get('correo') || '').trim().toLowerCase();
+            if (bloqueado(ip)) return responderLogin('Demasiados intentos. Espera 15 minutos e intenta de nuevo.', 429, { paso: 'correo', correo });
+            if (!correoPermitido(correo)) return responderLogin('Correo no válido.', 400, { paso: 'correo' });
+            const error = verificarCodigo(correo, datos.get('codigo') || '');
+            if (error) {
+                registrarFallo(ip);
+                return responderLogin(error, 401, { paso: /nuevo/.test(error) ? 'correo' : 'codigo', correo });
+            }
+            intentos.delete(ip);
+            console.log(`🔓 Ingreso: ${correo}`);
+            res.writeHead(302, { 'Set-Cookie': crearCookieSesion(req, correo), Location: '/', 'Cache-Control': 'no-store' });
+            res.end();
+        });
+        return;
+    }
+    if (pathname.startsWith('/login') && req.method === 'POST') {
+        res.writeHead(302, { Location: '/login' });
+        res.end();
         return;
     }
     if (pathname === '/logout') {
@@ -517,11 +695,21 @@ const server = http.createServer((req, res) => {
         res.end();
         return;
     }
-    if (!RUTAS_PUBLICAS.has(pathname) && !RUTAS_CON_TOKEN.has(pathname) && !sesionValida(req)) {
+    const sesion = leerSesion(req);
+    if (!RUTAS_PUBLICAS.has(pathname) && !RUTAS_CON_TOKEN.has(pathname) && !sesion) {
         if (pathname.startsWith('/api/')) return sendJson(res, 401, { error: 'Sesión vencida. Vuelve a ingresar.', login: true });
         res.writeHead(302, { Location: '/login', 'Cache-Control': 'no-store' });
         res.end();
         return;
+    }
+
+    // ---------- Usuario de la sesión ----------
+    if (pathname === '/api/me' && req.method === 'GET') {
+        return sendJson(res, 200, {
+            modo: LOGIN_MODE,
+            correo: sesion ? sesion.correo : '',
+            nombre: sesion && sesion.correo ? nombreDesdeCorreo(sesion.correo) : ''
+        });
     }
 
     // ---------- SSE ----------
@@ -555,7 +743,7 @@ const server = http.createServer((req, res) => {
             agenteConectado: IS_CLOUD ? agentOnline() : true,
             ultimaConexionAgente: agentLastSeen ? new Date(agentLastSeen).toISOString() : null,
             alertasEnCola: alertQueue.length,
-            accesoConClave: !!APP_PASSWORD,
+            acceso: LOGIN_MODE === 'correo' ? 'correo corporativo' : (APP_PASSWORD ? 'contraseña' : 'abierto'),
             buzonACR: receptorCorreo.estado,
             sharepointUrl: SHAREPOINT_ACR_URL,
             ...storage.status()
@@ -647,6 +835,7 @@ const server = http.createServer((req, res) => {
                     fecha: ahoraTexto(),
                     ts: Date.now(),
                     usuario: payload.usuario || 'Operador',
+                    correo: sesion ? sesion.correo || undefined : undefined,
                     accion: `Estado cambiado de '${antiguoEstado}' a '${payload.nuevoEstado}'. Obs: ${payload.observaciones || 'Sin cambios'}`
                 });
                 writeJson(DATA_FILE, acrs);
@@ -684,6 +873,7 @@ const server = http.createServer((req, res) => {
                         fecha: ahoraTexto(),
                         ts: ahora.getTime(),
                         usuario: payload.usuario || 'Técnico/Ingeniero',
+                        correo: sesion ? sesion.correo || undefined : undefined,
                         accion: 'Compromiso registrado en reunión diaria'
                     }]
                 };
@@ -713,6 +903,7 @@ const server = http.createServer((req, res) => {
                     fecha: ahoraTexto(),
                     ts: Date.now(),
                     usuario: payload.usuario || 'Técnico/Ingeniero',
+                    correo: sesion ? sesion.correo || undefined : undefined,
                     accion: `Estado cambiado de '${antiguoEstado}' a '${payload.nuevoEstado}'. Obs: ${payload.observaciones || 'Sin cambios'}`
                 });
                 writeJson(DAILY_DATA_FILE, tasks);
@@ -967,7 +1158,9 @@ function alEscuchar() {
     console.log('=======================================================');
     console.log(`🚀 SERVIDOR ACR DISPONIBLE EN PUERTO: ${PORT} (${IS_CLOUD ? 'nube' : 'local'})`);
     if (!IS_CLOUD) console.log(`👉 En este equipo: http://localhost:${PORT}`);
-    if (IS_CLOUD && !APP_PASSWORD) console.warn('⚠️ Falta APP_PASSWORD: la app está abierta para cualquiera con el enlace.');
+    if (LOGIN_MODE === 'correo') console.log(`🔐 Ingreso con correo corporativo (${LOGIN_EMAILS.length ? LOGIN_EMAILS.length + ' correos autorizados' : LOGIN_DOMAINS.map(d => '@' + d).join(', ')})`);
+    if (LOGIN_MODE === 'correo' && !(SMTP_USER && SMTP_PASS)) console.warn('⚠️ LOGIN_MODE=correo pero falta la cuenta de envío (IMAP_USER / IMAP_PASS): nadie podrá recibir el código.');
+    if (IS_CLOUD && !accesoProtegido()) console.warn('⚠️ La app está abierta para cualquiera con el enlace (configura LOGIN_MODE=correo o APP_PASSWORD).');
     if (IS_CLOUD && !SYNC_TOKEN) console.warn('⚠️ Falta la variable SYNC_TOKEN: el agente no podrá enviar datos.');
     console.log('=======================================================');
 }

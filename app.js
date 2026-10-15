@@ -978,3 +978,40 @@ function abrirModalAnalisis(id) {
 function cerrarModalAnalisis() {
     document.getElementById('modal-analisis').classList.remove('active');
 }
+
+// =====================================================================
+// USUARIO QUE INGRESÓ (correo corporativo): se muestra arriba y se
+// prellena en los formularios de "Usuario que actualiza"
+// =====================================================================
+let usuarioActual = { correo: '', nombre: '' };
+const CAMPOS_USUARIO = ['modal-task-user', 'modal-daily-user', 'daily-create-usuario', 'subir-usuario'];
+
+function prellenarUsuario() {
+    if (!usuarioActual.nombre) return;
+    CAMPOS_USUARIO.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && !el.value) el.value = usuarioActual.nombre;
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    fetch('/api/me').then(r => r.json()).then(me => {
+        if (!me || !me.correo) return;
+        usuarioActual = me;
+        const salir = document.querySelector('a[href="/logout"]');
+        if (salir) {
+            salir.title = `Cerrar sesión de ${me.correo}`;
+            salir.innerHTML = `🔒 Salir <span class="usuario-sesion">${escaparHTML(me.nombre)}</span>`;
+        }
+        prellenarUsuario();
+        ['abrirModalTarea', 'abrirModalDailyStatus', 'abrirModalNuevoCompromiso', 'abrirModalSubirExcel'].forEach(nombre => {
+            const original = window[nombre];
+            if (typeof original !== 'function') return;
+            window[nombre] = function (...args) {
+                const r = original.apply(this, args);
+                setTimeout(prellenarUsuario, 0);
+                return r;
+            };
+        });
+    }).catch(() => {});
+});

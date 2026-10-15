@@ -46,3 +46,10 @@ Asuntos que envía el flujo:
 - `ACR-DELETE <clave> | <nombre del archivo>`: quita el ACR.
 
 Si Render está dormido, los correos esperan en el buzón y se procesan apenas alguien abre la app.
+
+## Ingreso con correo corporativo
+
+Con `LOGIN_MODE=correo` la app pide el correo de la empresa y envía un código de 6 dígitos (desde la cuenta `IMAP_USER`/`IMAP_PASS` por SMTP de Gmail). La sesión dura `SESSION_DAYS` (30) días.
+- `LOGIN_DOMAINS`: dominios permitidos (por defecto kcc.com,kimberly-clark.com,arbex.com).
+- `LOGIN_EMAILS`: opcional, lista exacta de correos autorizados (si se define, solo ellos entran).
+- El historial de cambios guarda el correo de quien hizo cada cambio.
