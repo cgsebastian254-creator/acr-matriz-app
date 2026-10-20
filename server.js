@@ -163,18 +163,57 @@ const codigos = new Map();   // correo -> { hash, vence, intentos, enviados: [ti
 function hashCodigo(correo, codigo) {
     return crypto.createHmac('sha256', SESSION_SECRET).update(correo + '|' + codigo).digest('base64url');
 }
+// Envío de correos. En el plan gratis de Render el SMTP está bloqueado, así que se usa
+// la API HTTPS de Brevo si hay BREVO_API_KEY; si no, SMTP (útil fuera de Render).
+const BREVO_API_KEY = process.env.BREVO_API_KEY || '';
+const REMITENTE = process.env.MAIL_FROM || process.env.BREVO_SENDER || SMTP_USER;
+const puedeEnviarCorreo = () => !!(BREVO_API_KEY ? REMITENTE : (SMTP_USER && SMTP_PASS));
 let transporteCorreo = null;
-function transporte() {
+function transporteSMTP() {
     if (!transporteCorreo) {
         const nodemailer = require('nodemailer');
         transporteCorreo = nodemailer.createTransport({
             host: process.env.SMTP_HOST || 'smtp.gmail.com',
             port: Number(process.env.SMTP_PORT || 465),
             secure: (process.env.SMTP_PORT || '465') === '465',
-            auth: { user: SMTP_USER, pass: SMTP_PASS }
+            auth: { user: SMTP_USER, pass: SMTP_PASS },
+            connectionTimeout: 10000, greetingTimeout: 10000, socketTimeout: 20000
         });
     }
     return transporteCorreo;
+}
+async function enviarCorreo({ to, cc, subject, html, text }) {
+    const aLista = v => (Array.isArray(v) ? v : String(v || '').split(/[,;]+/)).map(x => String(x).trim()).filter(Boolean);
+    const para = aLista(to);
+    const copia = aLista(cc);
+    if (BREVO_API_KEY) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 20000);
+        try {
+            const r = await fetch(process.env.BREVO_API_URL || 'https://api.brevo.com/v3/smtp/email', {
+                method: 'POST',
+                headers: { 'api-key': BREVO_API_KEY, 'Content-Type': 'application/json', accept: 'application/json' },
+                body: JSON.stringify({
+                    sender: { name: 'Matriz de ACRs', email: REMITENTE },
+                    to: para.map(email => ({ email })),
+                    ...(copia.length ? { cc: copia.map(email => ({ email })) } : {}),
+                    subject, htmlContent: html, textContent: text
+                }),
+                signal: controller.signal
+            });
+            if (!r.ok) {
+                const detalle = await r.text().catch(() => '');
+                throw new Error(`Brevo respondió ${r.status}: ${detalle.slice(0, 300)}`);
+            }
+            return;
+        } catch (e) {
+            if (e.name === 'AbortError') throw new Error('Brevo no respondió en 20 segundos.');
+            throw e;
+        } finally {
+            clearTimeout(timer);
+        }
+    }
+    await transporteSMTP().sendMail({ from: `"Matriz de ACRs" <${REMITENTE}>`, to: para.join(', '), cc: copia.join(', ') || undefined, subject, html, text });
 }
 async function enviarCodigo(correo, ip) {
     const ahora = Date.now();
@@ -191,8 +230,7 @@ async function enviarCodigo(correo, ip) {
     reg.enviados.push(ahora);
     codigos.set(correo, reg);
     if (global.__ACR_TEST_CODIGOS__) { global.__ACR_TEST_CODIGOS__[correo] = codigo; return { ok: true }; }
-    await transporte().sendMail({
-        from: `"Matriz de ACRs" <${SMTP_USER}>`,
+    await enviarCorreo({
         to: correo,
         subject: `Tu código de ingreso a la Matriz de ACRs: ${codigo}`,
         text: `Tu código de ingreso es ${codigo}\n\nVence en 10 minutos. Si no lo pediste, ignora este correo.`,
@@ -543,7 +581,7 @@ let ultimoEnvioAuto = '';   // fecha (AAAA-MM-DD) del último envío automático
 function configAlertasAuto() {
     const hora = (process.env.ALERTAS_AUTO_HORA || '').trim();
     return {
-        activo: /^\d{1,2}:\d{2}$/.test(hora) && listaCorreos(process.env.ALERTAS_DESTINATARIOS).length > 0 && !!(SMTP_USER && SMTP_PASS),
+        activo: /^\d{1,2}:\d{2}$/.test(hora) && listaCorreos(process.env.ALERTAS_DESTINATARIOS).length > 0 && puedeEnviarCorreo(),
         hora,
         dias: (process.env.ALERTAS_AUTO_DIAS || '1,2,3,4,5'),
         para: listaCorreos(process.env.ALERTAS_DESTINATARIOS),
@@ -566,7 +604,7 @@ async function revisarEnvioAutomatico() {
     ultimoEnvioAuto = hoy;              // se marca antes de enviar para no duplicar
     try {
         const resumen = generarResumen(readJson(DATA_FILE), readJson(DAILY_DATA_FILE), { urlApp: urlPublica() });
-        await transporte().sendMail({ from: `"Matriz de ACRs" <${SMTP_USER}>`, to: cfg.para.join(', '), cc: cfg.cc.join(', ') || undefined, subject: resumen.asunto, html: resumen.html, text: resumen.texto });
+        await enviarCorreo({ to: cfg.para, cc: cfg.cc, subject: resumen.asunto, html: resumen.html, text: resumen.texto });
         await storage.save('alertas_auto', { ultimoEnvio: hoy });
         console.log(`📧 Alertas automáticas del ${hoy} enviadas a ${cfg.para.join(', ')}`);
     } catch (e) {
@@ -1005,11 +1043,11 @@ const server = http.createServer((req, res) => {
             if (!modoReal) {
                 return sendJson(res, 200, { success: true, output: `🧪 VISTA PREVIA (no se envió nada)\nAsunto: ${resumen.asunto}\nPara: ${para.join(', ')}${cc.length ? '\nCC: ' + cc.join(', ') : ''}\n\n${resumen.texto}`, html: resumen.html });
             }
-            if (!(SMTP_USER && SMTP_PASS)) {
-                return sendJson(res, 200, { success: false, error: 'La app no tiene cuenta de correo configurada (IMAP_USER / IMAP_PASS en Render). Usa "Abrir correo en mi Outlook".' });
+            if (!puedeEnviarCorreo()) {
+                return sendJson(res, 200, { success: false, error: 'La app no tiene cómo enviar correos (falta BREVO_API_KEY en Render). Usa "Abrir correo en mi Outlook".' });
             }
             try {
-                await transporte().sendMail({ from: `"Matriz de ACRs" <${SMTP_USER}>`, to: para.join(', '), cc: cc.join(', ') || undefined, subject: resumen.asunto, html: resumen.html, text: resumen.texto });
+                await enviarCorreo({ to: para, cc, subject: resumen.asunto, html: resumen.html, text: resumen.texto });
                 console.log(`📧 Alertas enviadas a ${para.join(', ')}${cc.length ? ' (CC ' + cc.join(', ') + ')' : ''} por ${sesion && sesion.correo ? sesion.correo : 'usuario'}`);
                 sendJson(res, 200, { success: true, output: `✅ Correo enviado.\nPara: ${para.join(', ')}${cc.length ? '\nCC: ' + cc.join(', ') : ''}\nAsunto: ${resumen.asunto}\n\n${resumen.texto}\n\nSi no aparece en la bandeja de entrada, revisa correo no deseado.` });
             } catch (e) {
@@ -1215,7 +1253,8 @@ function alEscuchar() {
     console.log(`🚀 SERVIDOR ACR DISPONIBLE EN PUERTO: ${PORT} (${IS_CLOUD ? 'nube' : 'local'})`);
     if (!IS_CLOUD) console.log(`👉 En este equipo: http://localhost:${PORT}`);
     if (LOGIN_MODE === 'correo') console.log(`🔐 Ingreso con correo corporativo (${LOGIN_EMAILS.length ? LOGIN_EMAILS.length + ' correos autorizados' : LOGIN_DOMAINS.map(d => '@' + d).join(', ')})`);
-    if (LOGIN_MODE === 'correo' && !(SMTP_USER && SMTP_PASS)) console.warn('⚠️ LOGIN_MODE=correo pero falta la cuenta de envío (IMAP_USER / IMAP_PASS): nadie podrá recibir el código.');
+    if (LOGIN_MODE === 'correo' && !puedeEnviarCorreo()) console.warn('⚠️ El ingreso es por correo pero la app no puede enviar correos: nadie podrá recibir el código.');
+    console.log(BREVO_API_KEY ? `✉️ Correos salen por Brevo desde ${REMITENTE}` : (IS_CLOUD ? '⚠️ Sin BREVO_API_KEY: en el plan gratis de Render el SMTP está bloqueado y los correos no van a salir.' : '✉️ Correos salen por SMTP'));
     if (IS_CLOUD && !accesoProtegido()) console.warn('⚠️ La app está abierta para cualquiera con el enlace (configura LOGIN_MODE=correo o APP_PASSWORD).');
     if (IS_CLOUD && !SYNC_TOKEN) console.warn('⚠️ Falta la variable SYNC_TOKEN: el agente no podrá enviar datos.');
     console.log('=======================================================');

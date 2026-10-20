@@ -62,3 +62,10 @@ El reporte (vencidas, próximas a vencer y compromisos diarios) sale desde la cu
 - `/healthz` responde sin sesión: sirve para un monitor externo que mantenga despierta la app.
 
 `LOGIN_MODE` ahora es `correo` por defecto cuando hay cuenta de envío configurada (usa `LOGIN_MODE=clave` para volver a la contraseña única).
+
+## Envío de correos (Brevo)
+
+El plan gratis de Render bloquea el SMTP, así que los correos (códigos de ingreso y alertas) salen por la API HTTPS de Brevo:
+- `BREVO_API_KEY`: clave de API de Brevo (gratis, 300 correos/día).
+- `MAIL_FROM`: remitente verificado en Brevo (por defecto `IMAP_USER`).
+Sin `BREVO_API_KEY` se intenta SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`), que solo sirve fuera de Render.
