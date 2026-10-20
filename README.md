@@ -53,3 +53,12 @@ Con `LOGIN_MODE=correo` la app pide el correo de la empresa y envía un código 
 - `LOGIN_DOMAINS`: dominios permitidos (por defecto kcc.com,kimberly-clark.com,arbex.com).
 - `LOGIN_EMAILS`: opcional, lista exacta de correos autorizados (si se define, solo ellos entran).
 - El historial de cambios guarda el correo de quien hizo cada cambio.
+
+## Correo de alertas (desde la app)
+
+El reporte (vencidas, próximas a vencer y compromisos diarios) sale desde la cuenta de la app (`IMAP_USER`/`IMAP_PASS`, SMTP de Gmail). Solo a correos de `LOGIN_DOMAINS`.
+- Envío manual: pestaña "Correo de alertas".
+- Envío automático: `ALERTAS_AUTO_HORA` (HH:MM, hora Colombia), `ALERTAS_AUTO_DIAS` (1=lunes … 7=domingo, por defecto 1,2,3,4,5), `ALERTAS_DESTINATARIOS`, `ALERTAS_CC`. Si el servidor estaba dormido, sale apenas despierte ese día.
+- `/healthz` responde sin sesión: sirve para un monitor externo que mantenga despierta la app.
+
+`LOGIN_MODE` ahora es `correo` por defecto cuando hay cuenta de envío configurada (usa `LOGIN_MODE=clave` para volver a la contraseña única).

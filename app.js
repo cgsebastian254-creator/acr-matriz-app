@@ -184,6 +184,7 @@ async function cargarDatosReunionDiaria() {
 // Global Render Router
 function renderizarTodo() {
     renderDashboard();
+    renderArchivos();
     filtrarMatriz();
     filtrarReunionDiaria();
     filtrarCatalogo();
@@ -660,40 +661,51 @@ async function guardarEstadoTarea(e) {
     }
 }
 
-// POWERSHELL O365 ALERTAS EXECUTION
-async function ejecutarScriptAlertasConfigured() {
-    const liderEmail = document.getElementById('o365-lider-email').value;
-    const modoEnvio = document.getElementById('o365-modo-envio').value;
-    const modoReal = (modoEnvio === 'real');
-
+// CORREO DE ALERTAS (sale desde la cuenta de la app)
+async function enviarAlertas(modoReal) {
+    const para = document.getElementById('alerta-para').value.trim();
+    const cc = document.getElementById('o365-lider-email').value.trim();
     const consoleBox = document.getElementById('ps-console-output');
-    consoleBox.textContent = `⏳ Ejecutando Send-ACRAlerts.ps1 (${modoReal ? 'ENVÍO REAL SMTP O365' : 'SIMULACIÓN'})...\nLíder CC: ${liderEmail}\nPor favor espere...`;
-
+    const preview = document.getElementById('alerta-preview');
+    if (modoReal && !para) { consoleBox.textContent = '⚠️ Escribe al menos un destinatario en "Para".'; return; }
+    if (modoReal && !confirm(`¿Enviar el reporte de alertas a ${para}${cc ? ' (CC ' + cc + ')' : ''}?`)) return;
+    consoleBox.textContent = modoReal ? '⏳ Enviando correo...' : '⏳ Generando vista previa...';
+    preview.style.display = 'none';
     try {
         const response = await fetch('/api/send-alerts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ liderEmail, modoReal })
+            body: JSON.stringify({ para, cc, modoReal })
         });
         const data = await response.json();
-        if (data.queued) {
-            alertaPendienteId = data.id;
-            consoleBox.textContent = data.output || 'Solicitud enviada. Esperando respuesta...';
-        } else if (data.agenteDesconectado) {
-            consoleBox.textContent = `⚠️ ${data.error}`;
-        } else {
-            consoleBox.textContent = `[SALIDA POWERSHELL O365 ALERTAS]\n${data.output || ''}${data.error ? '\n[ERRORES]:\n' + data.error : ''}`;
+        consoleBox.textContent = data.success ? data.output : '❌ ' + (data.error || 'No se pudo enviar.');
+        if (data.html) {
+            preview.innerHTML = data.html;
+            preview.style.display = 'block';
         }
+        if (data.success && modoReal) mostrarNotificacionToast('Alertas', 'Correo de alertas enviado.');
     } catch (err) {
-        consoleBox.textContent = "❌ Error al ejecutar el script de alertas por correo.";
+        consoleBox.textContent = '❌ Error de comunicación con el servidor.';
     }
 }
 
-function sendO365Alerts() {
-    switchTab('powershell');
-    ejecutarScriptAlertasConfigured();
+async function cargarConfigAlertasAuto() {
+    const caja = document.getElementById('alertas-auto-estado');
+    if (!caja) return;
+    try {
+        const cfg = await (await fetch('/api/alertas/config')).json();
+        const nombresDias = { 1: 'lun', 2: 'mar', 3: 'mié', 4: 'jue', 5: 'vie', 6: 'sáb', 7: 'dom' };
+        const dias = String(cfg.dias || '').split(',').map(d => nombresDias[d.trim()] || d).join(', ');
+        caja.innerHTML = cfg.activo
+            ? `<div style="color: var(--status-green); font-weight: 600; margin-bottom: 6px;">🟢 Activo</div>
+               Todos los <strong>${escaparHTML(dias)}</strong> a las <strong>${escaparHTML(cfg.hora)}</strong> (hora Colombia) se envía a <strong>${escaparHTML(cfg.para.join(', '))}</strong>${cfg.cc.length ? ' con copia a ' + escaparHTML(cfg.cc.join(', ')) : ''}.
+               ${cfg.ultimoEnvio ? `<div style="margin-top: 6px;">Último envío automático: ${escaparHTML(cfg.ultimoEnvio)}</div>` : ''}`
+            : `⚪ Desactivado. Para activarlo, el administrador agrega en Render las variables <code>ALERTAS_AUTO_HORA</code> (por ejemplo 07:00) y <code>ALERTAS_DESTINATARIOS</code>.`;
+    } catch (e) {
+        caja.textContent = 'No se pudo cargar la configuración.';
+    }
 }
-
+document.addEventListener('DOMContentLoaded', cargarConfigAlertasAuto);
 
 // VISTA CELULAR: cada celda recibe el nombre de su columna para mostrar las tablas como tarjetas
 function aplicarEtiquetasMoviles(raiz = document) {
@@ -733,93 +745,96 @@ document.addEventListener('DOMContentLoaded', () => {
 })();
 
 // =====================================================================
-// SUBIR EXCEL DE ACR (ingenieros)
+// ARCHIVOS ACR POR LÍNEA (carpetas)
 // =====================================================================
-function leerPreferencia(clave) {
-    try { return localStorage.getItem(clave) || ''; } catch (e) { return ''; }
-}
-function guardarPreferencia(clave, valor) {
-    try { localStorage.setItem(clave, valor); } catch (e) { /* sin almacenamiento local */ }
-}
+const archivosAbiertos = new Set();
 
-function abrirModalSubirExcel() {
-    document.getElementById('subir-resultado').textContent = '';
-    document.getElementById('subir-usuario').value = leerPreferencia('acr-subido-por');
-    const lista = document.getElementById('eliminar-acr');
-    lista.innerHTML = '<option value="">Selecciona el ACR...</option>' + acrsData
-        .map(a => `<option value="${a.id}">${a.linea} · ${a.codigoACR || a.id}</option>`).join('');
-    document.getElementById('modal-subir-excel').classList.add('active');
-    fetch('/api/status').then(r => r.json()).then(st => {
-        if (st.sharepointUrl) document.getElementById('link-sharepoint-acr').href = st.sharepointUrl;
-    }).catch(() => {});
-}
+function renderArchivos() {
+    const cont = document.getElementById('archivos-contenedor');
+    if (!cont) return;
+    const busqueda = (document.getElementById('archivos-search')?.value || '').toLowerCase();
+    const porLinea = {};
+    acrsData.forEach(acr => {
+        const texto = [acr.archivoOrigen, acr.codigoACR, acr.numeroACR, acr.equipo, acr.linea].join(' ').toLowerCase();
+        if (busqueda && !texto.includes(busqueda)) return;
+        (porLinea[acr.linea || 'Sin línea'] = porLinea[acr.linea || 'Sin línea'] || []).push(acr);
+    });
+    const lineas = Object.keys(porLinea).sort((a, b) => a.localeCompare(b, 'es'));
+    const total = lineas.reduce((n, l) => n + porLinea[l].length, 0);
+    document.getElementById('archivos-counter').textContent = `${total} archivos en ${lineas.length} líneas`;
 
-function cerrarModalSubirExcel() {
-    document.getElementById('modal-subir-excel').classList.remove('active');
-    document.getElementById('form-subir-excel').reset();
-}
-
-async function subirExcelACR(event) {
-    event.preventDefault();
-    const archivo = document.getElementById('subir-archivo').files[0];
-    const linea = document.getElementById('subir-linea').value;
-    const usuario = document.getElementById('subir-usuario').value.trim();
-    const resultado = document.getElementById('subir-resultado');
-    const boton = document.getElementById('subir-boton');
-    if (!archivo) return;
-
-    boton.disabled = true;
-    boton.textContent = '⏳ Subiendo...';
-    resultado.style.color = 'var(--text-muted)';
-    resultado.textContent = 'Procesando el Excel...';
-    try {
-        const qs = new URLSearchParams({ nombre: archivo.name, linea, usuario });
-        const response = await fetch(`/api/acrs/upload?${qs}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/octet-stream' },
-            body: archivo
-        });
-        const data = await response.json();
-        if (data.success) {
-            guardarPreferencia('acr-subido-por', usuario);
-            resultado.style.color = 'var(--status-green)';
-            resultado.textContent = `✅ ${data.reemplazado ? 'ACR actualizado' : 'ACR agregado'}: ${data.acr.codigoACR}\n${data.acr.tareas} tareas · Línea ${data.acr.linea} · ${data.acr.equipo}`;
-            document.getElementById('subir-archivo').value = '';
-        } else {
-            resultado.style.color = 'var(--status-red)';
-            resultado.textContent = '❌ ' + (data.error || 'No se pudo subir el archivo.');
-        }
-    } catch (e) {
-        resultado.style.color = 'var(--status-red)';
-        resultado.textContent = '❌ Error de comunicación con el servidor.';
-    } finally {
-        boton.disabled = false;
-        boton.textContent = 'Subir ACR';
+    if (!lineas.length) {
+        cont.innerHTML = `<div class="section-card" style="text-align: center; color: var(--text-muted);">${busqueda ? 'No hay archivos que coincidan con la búsqueda.' : 'Todavía no hay ACRs.'}</div>`;
+        return;
     }
+    cont.innerHTML = lineas.map(linea => {
+        const archivos = porLinea[linea].slice().sort((a, b) => (Number(b.numeroACR) || 0) - (Number(a.numeroACR) || 0));
+        const abierta = busqueda || archivosAbiertos.has(linea);
+        const filas = archivos.map(acr => {
+            const tareas = acr.tareas || [];
+            const cerradas = tareas.filter(t => t.estado === 'Realizado').length;
+            const origen = acr.origen === 'sharepoint' ? '☁️ SharePoint' : acr.origen === 'web' ? '⬆️ Subido a mano' : '📁 Carga inicial';
+            return `
+                <div class="archivo-fila">
+                    <div class="archivo-icono">📄</div>
+                    <div class="archivo-info">
+                        <div class="archivo-nombre">${escaparHTML(acr.archivoOrigen || acr.codigoACR || acr.id)}</div>
+                        <div class="archivo-meta">
+                            ${acr.numeroACR ? `<span>N° ${escaparHTML(acr.numeroACR)}</span>` : ''}
+                            <span>${escaparHTML(acr.equipo || '')}</span>
+                            ${acr.fechaACR ? `<span>📅 ${escaparHTML(acr.fechaACR)}</span>` : ''}
+                            <span>✅ ${cerradas}/${tareas.length} tareas</span>
+                            <span>${origen}${acr.fechaSubida ? ' · ' + escaparHTML(acr.fechaSubida) : ''}</span>
+                        </div>
+                    </div>
+                    <div class="archivo-acciones">
+                        <button class="btn btn-secondary btn-sm" onclick="abrirModalAnalisis('${acr.id}')">🔍 Ver detalle</button>
+                        <button class="btn btn-danger btn-sm" onclick="eliminarACR('${acr.id}')">🗑️ Eliminar</button>
+                    </div>
+                </div>`;
+        }).join('');
+        return `
+            <div class="section-card carpeta ${abierta ? 'abierta' : ''}">
+                <button class="carpeta-cabecera" onclick="alternarCarpeta('${escaparHTML(linea).replace(/'/g, "\\'")}')">
+                    <span class="carpeta-icono">${abierta ? '📂' : '📁'}</span>
+                    <span class="carpeta-nombre">${escaparHTML(linea)}</span>
+                    <span class="badge badge-linea">${archivos.length} ${archivos.length === 1 ? 'archivo' : 'archivos'}</span>
+                    <span class="carpeta-flecha">${abierta ? '▾' : '▸'}</span>
+                </button>
+                <div class="carpeta-contenido">${filas}</div>
+            </div>`;
+    }).join('');
 }
 
-async function eliminarACR() {
-    const id = document.getElementById('eliminar-acr').value;
-    const usuario = document.getElementById('subir-usuario').value.trim();
-    const resultado = document.getElementById('subir-resultado');
-    if (!id) { alert('Selecciona el ACR que quieres eliminar.'); return; }
+function alternarCarpeta(linea) {
+    if (archivosAbiertos.has(linea)) archivosAbiertos.delete(linea); else archivosAbiertos.add(linea);
+    renderArchivos();
+}
+
+async function eliminarACR(id) {
     const acr = acrsData.find(a => a.id === id);
-    if (!confirm(`¿Eliminar el ACR "${acr ? acr.codigoACR : id}" y todas sus tareas? Esta acción no se puede deshacer.`)) return;
+    if (!acr) return;
+    const nombre = acr.archivoOrigen || acr.codigoACR || id;
+    if (!confirm(`¿Eliminar "${nombre}" de la matriz junto con sus ${(acr.tareas || []).length} tareas y su historial?\n\nEl archivo en SharePoint no se borra.`)) return;
     try {
         const response = await fetch('/api/acrs/delete', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, usuario })
+            body: JSON.stringify({ id, usuario: (typeof usuarioActual !== 'undefined' && usuarioActual.nombre) || '' })
         });
         const data = await response.json();
-        resultado.style.color = data.success ? 'var(--status-green)' : 'var(--status-red)';
-        resultado.textContent = data.success ? '🗑️ ACR eliminado.' : '❌ ' + data.error;
-        if (data.success) abrirModalSubirExcel();
+        if (!data.success) alert('❌ ' + (data.error || 'No se pudo eliminar.'));
     } catch (e) {
-        resultado.style.color = 'var(--status-red)';
-        resultado.textContent = '❌ Error de comunicación con el servidor.';
+        alert('❌ Error de comunicación con el servidor.');
     }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    fetch('/api/status').then(r => r.json()).then(st => {
+        const link = document.getElementById('link-sharepoint-carpeta');
+        if (st.sharepointUrl && link) link.href = st.sharepointUrl;
+    }).catch(() => {});
+});
 
 // =====================================================================
 // CORREO DESDE LA CUENTA DEL USUARIO (no necesita el PC corporativo)
@@ -894,9 +909,10 @@ function textoResumenAlertas(maxCaracteres) {
 
 function abrirCorreoEnMiOutlook() {
     const cc = (document.getElementById('o365-lider-email').value || '').trim();
+    const para = (document.getElementById('alerta-para')?.value || '').trim();
     // Los enlaces de correo muy largos se cortan en algunos equipos: se limita el texto
     const { asunto, cuerpo } = textoResumenAlertas(1500);
-    const url = `mailto:?${cc ? 'cc=' + encodeURIComponent(cc) + '&' : ''}subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+    const url = `mailto:${encodeURIComponent(para).replace(/%2C/g, ',').replace(/%40/g, '@')}?${cc ? 'cc=' + encodeURIComponent(cc) + '&' : ''}subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
     document.getElementById('ps-console-output').textContent = `✉️ Se abrió tu aplicación de correo con el resumen.\nRevisa los destinatarios y dale Enviar.\n\nAsunto: ${asunto}`;
     window.location.href = url;
 }
@@ -984,7 +1000,7 @@ function cerrarModalAnalisis() {
 // prellena en los formularios de "Usuario que actualiza"
 // =====================================================================
 let usuarioActual = { correo: '', nombre: '' };
-const CAMPOS_USUARIO = ['modal-task-user', 'modal-daily-user', 'daily-create-usuario', 'subir-usuario'];
+const CAMPOS_USUARIO = ['modal-task-user', 'modal-daily-user', 'daily-create-usuario'];
 
 function prellenarUsuario() {
     if (!usuarioActual.nombre) return;
@@ -1004,7 +1020,9 @@ document.addEventListener('DOMContentLoaded', () => {
             salir.innerHTML = `🔒 Salir <span class="usuario-sesion">${escaparHTML(me.nombre)}</span>`;
         }
         prellenarUsuario();
-        ['abrirModalTarea', 'abrirModalDailyStatus', 'abrirModalNuevoCompromiso', 'abrirModalSubirExcel'].forEach(nombre => {
+        const para = document.getElementById('alerta-para');
+        if (para && !para.value) para.value = me.correo;
+        ['abrirModalTarea', 'abrirModalDailyStatus', 'abrirModalNuevoCompromiso'].forEach(nombre => {
             const original = window[nombre];
             if (typeof original !== 'function') return;
             window[nombre] = function (...args) {

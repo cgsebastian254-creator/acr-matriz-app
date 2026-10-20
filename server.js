@@ -67,7 +67,12 @@ function ahoraTexto() {
 //   (por defecto)      -> contraseña única APP_PASSWORD (si está vacía, la app queda abierta)
 // ---------------------------------------------------------------
 const crypto = require('crypto');
-const LOGIN_MODE = (process.env.LOGIN_MODE || '').toLowerCase() === 'correo' ? 'correo' : 'clave';
+const LOGIN_MODE = (() => {
+    const m = (process.env.LOGIN_MODE || '').toLowerCase();
+    if (m === 'correo' || m === 'clave') return m;
+    // Por defecto: correo corporativo si hay una cuenta para enviar códigos
+    return (process.env.SMTP_USER || process.env.IMAP_USER) && (process.env.SMTP_PASS || process.env.IMAP_PASS) ? 'correo' : 'clave';
+})();
 const LOGIN_DOMAINS = (process.env.LOGIN_DOMAINS || 'kcc.com,kimberly-clark.com,arbex.com')
     .split(',').map(d => d.trim().toLowerCase()).filter(Boolean);
 const LOGIN_EMAILS = (process.env.LOGIN_EMAILS || '')            // opcional: lista exacta de correos permitidos
@@ -281,7 +286,7 @@ function paginaLogin(mensaje, opciones = {}) {
 
 // Rutas que no necesitan sesión: la página de ingreso, lo que el navegador
 // necesita para instalar la app, y las que usan su propia clave (agente / Power Automate)
-const RUTAS_PUBLICAS = new Set(['/login', '/login/codigo', '/login/verificar', '/logout', '/manifest.json', '/arbex_logo.png']);
+const RUTAS_PUBLICAS = new Set(['/login', '/login/codigo', '/login/verificar', '/logout', '/manifest.json', '/arbex_logo.png', '/healthz']);
 const RUTAS_CON_TOKEN = new Set(['/api/acrs/push', '/api/state/sync', '/api/alerts/result', '/api/acrs/sharepoint', '/api/acrs/sharepoint-delete']);
 
 // ---------------------------------------------------------------
@@ -512,6 +517,65 @@ const receptorCorreo = crearReceptorCorreo({
 });
 
 // ---------------------------------------------------------------
+// Correo de alertas: envío automático diario
+//   ALERTAS_AUTO_HORA        hora local (Bogotá) "HH:MM", por ejemplo 07:00. Vacío = desactivado
+//   ALERTAS_AUTO_DIAS        días de la semana (1=lunes ... 7=domingo), por defecto 1,2,3,4,5
+//   ALERTAS_DESTINATARIOS    correos separados por coma (Para)
+//   ALERTAS_CC               correos en copia (opcional)
+// Si el servidor estaba dormido a esa hora, el correo sale apenas despierte ese mismo día.
+// ---------------------------------------------------------------
+const { generarResumen } = require('./alertas');
+function listaCorreos(v) {
+    return String(v || '').split(/[;,\s]+/).map(x => x.trim().toLowerCase()).filter(Boolean);
+}
+function correoCorporativo(c) {
+    if (!/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(c)) return false;
+    const d = c.split('@')[1];
+    return LOGIN_DOMAINS.some(x => d === x || d.endsWith('.' + x));
+}
+function urlPublica(req) {
+    if (process.env.APP_URL) return process.env.APP_URL;
+    if (process.env.RENDER_EXTERNAL_URL) return process.env.RENDER_EXTERNAL_URL;
+    if (req) return `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
+    return '';
+}
+let ultimoEnvioAuto = '';   // fecha (AAAA-MM-DD) del último envío automático
+function configAlertasAuto() {
+    const hora = (process.env.ALERTAS_AUTO_HORA || '').trim();
+    return {
+        activo: /^\d{1,2}:\d{2}$/.test(hora) && listaCorreos(process.env.ALERTAS_DESTINATARIOS).length > 0 && !!(SMTP_USER && SMTP_PASS),
+        hora,
+        dias: (process.env.ALERTAS_AUTO_DIAS || '1,2,3,4,5'),
+        para: listaCorreos(process.env.ALERTAS_DESTINATARIOS),
+        cc: listaCorreos(process.env.ALERTAS_CC),
+        ultimoEnvio: ultimoEnvioAuto || null
+    };
+}
+async function revisarEnvioAutomatico() {
+    const cfg = configAlertasAuto();
+    if (!cfg.activo) return;
+    const partes = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', weekday: 'short'
+    }).formatToParts(new Date()).map(p => [p.type, p.value]));
+    const hoy = `${partes.year}-${partes.month}-${partes.day}`;
+    const diaSemana = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 }[partes.weekday];
+    const dias = cfg.dias.split(',').map(Number);
+    const [hh, mm] = cfg.hora.split(':').map(Number);
+    const ahoraMin = Number(partes.hour) * 60 + Number(partes.minute);
+    if (ultimoEnvioAuto === hoy || !dias.includes(diaSemana) || ahoraMin < hh * 60 + mm) return;
+    ultimoEnvioAuto = hoy;              // se marca antes de enviar para no duplicar
+    try {
+        const resumen = generarResumen(readJson(DATA_FILE), readJson(DAILY_DATA_FILE), { urlApp: urlPublica() });
+        await transporte().sendMail({ from: `"Matriz de ACRs" <${SMTP_USER}>`, to: cfg.para.join(', '), cc: cfg.cc.join(', ') || undefined, subject: resumen.asunto, html: resumen.html, text: resumen.texto });
+        await storage.save('alertas_auto', { ultimoEnvio: hoy });
+        console.log(`📧 Alertas automáticas del ${hoy} enviadas a ${cfg.para.join(', ')}`);
+    } catch (e) {
+        ultimoEnvioAuto = '';          // se reintenta en la próxima revisión
+        console.error('❌ Falló el envío automático de alertas:', e.message);
+    }
+}
+
+// ---------------------------------------------------------------
 // Cola de correos de alerta (se ejecutan en el PC corporativo)
 // ---------------------------------------------------------------
 let alertQueue = [];            // { id, liderEmail, modoReal, solicitadoEn, entregada }
@@ -614,6 +678,12 @@ const server = http.createServer((req, res) => {
         pathname = decodeURIComponent(parsedUrl.pathname);
     } catch (e) {
         res.writeHead(400); res.end(); return;
+    }
+
+    if (pathname === '/healthz') {
+        res.writeHead(200, { 'Content-Type': 'text/plain', 'Cache-Control': 'no-store' });
+        res.end('ok');
+        return;
     }
 
     // ---------- Ingreso con contraseña ----------
@@ -745,6 +815,7 @@ const server = http.createServer((req, res) => {
             alertasEnCola: alertQueue.length,
             acceso: LOGIN_MODE === 'correo' ? 'correo corporativo' : (APP_PASSWORD ? 'contraseña' : 'abierto'),
             buzonACR: receptorCorreo.estado,
+            alertasAuto: configAlertasAuto(),
             sharepointUrl: SHAREPOINT_ACR_URL,
             ...storage.status()
         });
@@ -916,61 +987,42 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // ---------- Alertas por correo ----------
+    // ---------- Alertas por correo (enviadas desde la cuenta de la app) ----------
     if (pathname === '/api/send-alerts' && req.method === 'POST') {
-        readBody(req, 64 * 1024, body => {
+        readBody(req, 64 * 1024, async body => {
             let params = {};
             try { params = body ? JSON.parse(body) : {}; } catch (e) { params = {}; }
-            const liderEmail = String(params.liderEmail || '').trim();
             const modoReal = params.modoReal === true;
-
-            if (!validEmail(liderEmail)) {
-                return sendJson(res, 400, {
-                    success: false,
-                    error: `El correo en copia debe ser corporativo (${ALERT_DOMAINS.map(d => '@' + d).join(', ')}).`
-                });
+            const para = listaCorreos(params.para || (sesion && sesion.correo) || '');
+            const cc = listaCorreos(params.cc || params.liderEmail || '');
+            const invalidos = [...para, ...cc].filter(c => !correoCorporativo(c));
+            if (invalidos.length) {
+                return sendJson(res, 400, { success: false, error: `Solo se puede enviar a correos corporativos (${LOGIN_DOMAINS.map(d => '@' + d).join(', ')}). Revisa: ${invalidos.join(', ')}` });
             }
+            if (!para.length) return sendJson(res, 400, { success: false, error: 'Escribe al menos un destinatario.' });
 
-            // En el PC corporativo se ejecuta directamente
-            if (!IS_CLOUD) {
-                const args = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ALERT_SCRIPT, '-ModoSimulacion', modoReal ? 'false' : 'true'];
-                if (liderEmail) args.push('-LiderAreaCc', liderEmail);
-                const { execFile } = require('child_process');
-                execFile('powershell', args, { encoding: 'utf8', timeout: 180000 }, (error, stdout, stderr) => {
-                    sendJson(res, 200, { success: !error, output: stdout || '', error: stderr || (error ? error.message : '') });
-                });
-                return;
+            const resumen = generarResumen(readJson(DATA_FILE), readJson(DAILY_DATA_FILE), { urlApp: urlPublica(req) });
+            if (!modoReal) {
+                return sendJson(res, 200, { success: true, output: `🧪 VISTA PREVIA (no se envió nada)\nAsunto: ${resumen.asunto}\nPara: ${para.join(', ')}${cc.length ? '\nCC: ' + cc.join(', ') : ''}\n\n${resumen.texto}`, html: resumen.html });
             }
-
-            // En la nube: si el PC corporativo no está conectado, no tiene sentido esperar
-            if (!agentOnline()) {
-                return sendJson(res, 200, {
-                    success: false, agenteDesconectado: true,
-                    error: 'El PC corporativo no está conectado, así que no puede enviar el correo con formato. Usa "Abrir correo en mi Outlook" para enviarlo desde tu propia cuenta.'
-                });
+            if (!(SMTP_USER && SMTP_PASS)) {
+                return sendJson(res, 200, { success: false, error: 'La app no tiene cuenta de correo configurada (IMAP_USER / IMAP_PASS en Render). Usa "Abrir correo en mi Outlook".' });
             }
-            // Se deja en cola y el agente del PC corporativo lo envía con Outlook
-            const enCurso = alertQueue[0];
-            if (enCurso) {
-                return sendJson(res, 200, {
-                    success: true, queued: true, id: enCurso.id,
-                    output: '⏳ Ya hay un envío en curso. Te avisaré aquí cuando el PC corporativo lo procese.'
-                });
+            try {
+                await transporte().sendMail({ from: `"Matriz de ACRs" <${SMTP_USER}>`, to: para.join(', '), cc: cc.join(', ') || undefined, subject: resumen.asunto, html: resumen.html, text: resumen.texto });
+                console.log(`📧 Alertas enviadas a ${para.join(', ')}${cc.length ? ' (CC ' + cc.join(', ') + ')' : ''} por ${sesion && sesion.correo ? sesion.correo : 'usuario'}`);
+                sendJson(res, 200, { success: true, output: `✅ Correo enviado.\nPara: ${para.join(', ')}${cc.length ? '\nCC: ' + cc.join(', ') : ''}\nAsunto: ${resumen.asunto}\n\n${resumen.texto}\n\nSi no aparece en la bandeja de entrada, revisa correo no deseado.` });
+            } catch (e) {
+                console.error('❌ No se pudo enviar el correo de alertas:', e.message);
+                sendJson(res, 200, { success: false, error: 'No se pudo enviar el correo: ' + e.message });
             }
-            const alerta = { id: 'ALERTA-' + Date.now().toString(36), liderEmail, modoReal, solicitadoEn: ahoraTexto(), entregada: false };
-            alertQueue.push(alerta);
-            setTimeout(() => finishAlert(alerta.id, {
-                success: false,
-                error: 'El PC corporativo no respondió en 10 minutos. Verifica que el agente de sincronización (iniciar-sincronizacion.bat) esté abierto.'
-            }), ALERT_TIMEOUT_MS);
-
-            const aviso = 'El PC corporativo está conectado; el correo saldrá en menos de 1 minuto.';
-            sendJson(res, 200, {
-                success: true, queued: true, id: alerta.id,
-                output: `📨 Solicitud enviada (${modoReal ? 'envío real' : 'simulación'}${liderEmail ? ', CC: ' + liderEmail : ''}).\n${aviso}\nEsperando respuesta...`
-            });
         });
         return;
+    }
+
+    // Configuración del envío automático diario
+    if (pathname === '/api/alertas/config' && req.method === 'GET') {
+        return sendJson(res, 200, configAlertasAuto());
     }
 
     // Ingenieros: subir un Excel de ACR desde la web (PC o celular)
@@ -1155,6 +1207,10 @@ async function arrancar() {
 
 function alEscuchar() {
     receptorCorreo.iniciar();
+    storage.load('alertas_auto').then(d => { if (d && d.ultimoEnvio) ultimoEnvioAuto = d.ultimoEnvio; })
+        .catch(() => {}).finally(() => { revisarEnvioAutomatico(); setInterval(revisarEnvioAutomatico, 60 * 1000); });
+    const auto = configAlertasAuto();
+    if (auto.activo) console.log(`⏰ Alertas automáticas: ${auto.hora} (días ${auto.dias}) para ${auto.para.join(', ')}`);
     console.log('=======================================================');
     console.log(`🚀 SERVIDOR ACR DISPONIBLE EN PUERTO: ${PORT} (${IS_CLOUD ? 'nube' : 'local'})`);
     if (!IS_CLOUD) console.log(`👉 En este equipo: http://localhost:${PORT}`);

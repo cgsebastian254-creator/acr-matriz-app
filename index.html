@@ -31,8 +31,8 @@
                 🟢 Conectando Real-Time...
             </span>
  
-            <button class="btn btn-primary" onclick="sendO365Alerts()">
-                <span>📧</span> Disparar Alertas O365
+            <button class="btn btn-primary" onclick="switchTab('powershell')">
+                <span>📧</span> Alertas por correo
             </button>
             <a href="/logout" class="btn btn-secondary" title="Cerrar sesión" style="text-decoration: none;">🔒 Salir</a>
         </div>
@@ -52,11 +52,14 @@
         <button class="tab-btn" onclick="switchTab('catalogo')">
             <span>📚</span> Catálogo de Fallas
         </button>
+        <button class="tab-btn" onclick="switchTab('archivos')">
+            <span>📂</span> Archivos ACR
+        </button>
         <button class="tab-btn" onclick="switchTab('historial')">
             <span>📜</span> Trazabilidad e Historial
         </button>
         <button class="tab-btn" onclick="switchTab('powershell')">
-            <span>💻</span> PowerShell & Correo O365
+            <span>📧</span> Correo de alertas
         </button>
     </nav>
  
@@ -202,9 +205,6 @@
                         <option value="Realizado">🟢 Realizado</option>
                     </select>
  
-                    <button class="btn btn-primary" onclick="abrirModalSubirExcel()" title="Subir un formato Excel de ACR (solo ingenieros)">
-                        ⬆️ Subir Excel ACR
-                    </button>
                 </div>
                 <div>
                     <span id="counter-results" style="font-size: 13px; color: var(--text-muted); font-weight: 500;">Cargando tareas...</span>
@@ -371,60 +371,76 @@
             </div>
         </section>
  
-        <!-- TAB 7: AUTOMATIZACIÓN POWERSHELL & NOTIFICACIONES O365 -->
+        <!-- TAB: CORREO DE ALERTAS -->
         <section id="tab-powershell" class="tab-content">
-            <div style="max-width: 700px; margin: 0 auto;">
+            <div style="max-width: 760px; margin: 0 auto;">
                 <div class="section-card">
                     <div class="section-title">
-                        <span>📧 Centro de Envío de Reporte Consolidado O365</span>
+                        <span>📧 Enviar reporte de alertas</span>
                     </div>
                     <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
-                        Genera y envía un <strong>ÚNICO correo consolidado corporativo</strong> en HTML con el resumen completo de tareas vencidas y próximas a vencer para la planta.
+                        Un solo correo con las <strong>tareas vencidas</strong>, las que <strong>vencen en los próximos 7 días</strong> y los <strong>compromisos diarios pendientes</strong>. Sale desde la cuenta de la app; no necesita ningún PC prendido.
                     </p>
-                </div>
- 
-                <!-- Tarjeta 2: Notificaciones y Alertas Office 365 -->
-                <div class="section-card">
-                    <div class="section-title">
-                        <span>📧 Configuración de Alertas Office 365 / Outlook</span>
-                    </div>
                     <div class="form-group" style="margin-bottom: 10px;">
-                        <label>Correo Destino del Líder / Jefatura (Copia CC)</label>
-                        <input type="email" id="o365-lider-email" class="form-control" value="sara.s.moreno@kcc.com">
+                        <label>Para (separa varios correos con coma)</label>
+                        <input type="text" id="alerta-para" class="form-control" placeholder="nombre@kcc.com, otro@arbex.com" autocomplete="off">
                     </div>
                     <div class="form-group" style="margin-bottom: 14px;">
-                        <label>Modo de Envío</label>
-                        <select id="o365-modo-envio" class="form-control">
-                            <option value="real">🚀 Envío Real a mi Correo (Outlook / Office 365)</option>
-                            <option value="simulacion">🧪 Modo Simulación (Ver plantilla HTML en consola)</option>
-                        </select>
+                        <label>Con copia (CC) · opcional</label>
+                        <input type="text" id="o365-lider-email" class="form-control" placeholder="jefe@kcc.com" autocomplete="off">
                     </div>
-                    <button class="btn btn-success" style="width: 100%; justify-content: center;" onclick="ejecutarScriptAlertasConfigured()">
-                        <span>📧</span> Disparar Alertas Reales a mi Correo Outlook
-                    </button>
-                    <p style="font-size: 12px; color: var(--text-muted); margin: 12px 0 8px;">
-                        El botón verde usa el PC corporativo. Si no está conectado, envía el resumen desde tu propia cuenta:
-                    </p>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button class="btn btn-secondary" style="flex: 1; justify-content: center;" onclick="abrirCorreoEnMiOutlook()">
-                            ✉️ Abrir correo en mi Outlook
-                        </button>
-                        <button class="btn btn-secondary" style="flex: 1; justify-content: center;" onclick="copiarResumenAlertas()">
-                            📋 Copiar resumen completo
-                        </button>
+                    <div class="grupo-botones">
+                        <button class="btn btn-secondary" onclick="enviarAlertas(false)">👁️ Vista previa</button>
+                        <button class="btn btn-success" onclick="enviarAlertas(true)">📧 Enviar correo ahora</button>
+                    </div>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-top: 10px;">Solo se permiten correos corporativos. Si no llega a la bandeja de entrada, revisa correo no deseado.</p>
+                </div>
+
+                <div class="section-card">
+                    <div class="section-title">
+                        <span>⏰ Envío automático diario</span>
+                    </div>
+                    <div id="alertas-auto-estado" style="font-size: 13px; color: var(--text-muted);">Cargando…</div>
+                </div>
+
+                <div class="section-card">
+                    <div class="section-title">
+                        <span>✉️ Enviar desde mi propio Outlook</span>
+                    </div>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Si prefieres que salga desde tu cuenta, abre el resumen en tu programa de correo o cópialo.</p>
+                    <div class="grupo-botones">
+                        <button class="btn btn-secondary" onclick="abrirCorreoEnMiOutlook()">✉️ Abrir correo en mi Outlook</button>
+                        <button class="btn btn-secondary" onclick="copiarResumenAlertas()">📋 Copiar resumen completo</button>
                     </div>
                 </div>
-            </div>
- 
-            <!-- Consola de Salida de Scripts -->
-            <div class="section-card">
-                <div class="section-title">
-                    <span>💻 Consola de Salida de Scripts PowerShell en Tiempo Real</span>
+
+                <div class="section-card">
+                    <div class="section-title">
+                        <span>📄 Resultado</span>
+                    </div>
+                    <div class="console-box" id="ps-console-output">Elige "Vista previa" o "Enviar correo ahora".</div>
+                    <div id="alerta-preview" style="display: none; margin-top: 14px; background: #fff; border-radius: 10px; padding: 14px; max-height: 520px; overflow: auto;"></div>
                 </div>
-                <div class="console-box" id="ps-console-output">Ready. Selecciona una acción de sincronización o envío de correo.</div>
             </div>
         </section>
- 
+
+        <!-- TAB: ARCHIVOS ACR POR LÍNEA -->
+        <section id="tab-archivos" class="tab-content">
+            <div class="filter-bar">
+                <div class="filter-group">
+                    <input type="text" id="archivos-search" class="search-input" placeholder="🔍 Buscar por nombre, N° de ACR o equipo..." oninput="renderArchivos()">
+                </div>
+                <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                    <span id="archivos-counter" style="font-size: 13px; color: var(--text-muted); font-weight: 500;"></span>
+                    <a id="link-sharepoint-carpeta" class="btn btn-secondary" href="https://kimberlyclark.sharepoint.com/sites/B636" target="_blank" rel="noopener" style="text-decoration: none;">📂 Abrir en SharePoint</a>
+                </div>
+            </div>
+            <p style="font-size: 12px; color: var(--text-muted); margin: -6px 0 16px;">
+                Los ACR llegan solos desde la carpeta "ACRs 2026" de SharePoint. Eliminar aquí solo lo quita de la matriz: si el archivo sigue en SharePoint y se vuelve a modificar, reaparece.
+            </p>
+            <div id="archivos-contenedor"></div>
+        </section>
+
     </main>
  
     <!-- MODAL: ACTUALIZAR ESTADO DE TAREA -->
@@ -571,63 +587,6 @@
         </div>
     </div>
  
-    <!-- Modal Subir Excel de ACR (ingenieros) -->
-    <div id="modal-subir-excel" class="modal-backdrop">
-        <div class="modal-box" style="max-width: 540px;">
-            <div class="modal-header">
-                <h2>⬆️ Subir Excel de ACR</h2>
-                <button class="close-modal" onclick="cerrarModalSubirExcel()">&times;</button>
-            </div>
-            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
-                Sube el mismo formato que guardas en SharePoint. Si ya existe un ACR con el mismo nombre de archivo, se actualiza y se conservan los estados y observaciones de sus tareas.
-            </p>
-            <a id="link-sharepoint-acr" class="btn btn-secondary" href="https://kimberlyclark.sharepoint.com/sites/B636" target="_blank" rel="noopener"
-               style="width: 100%; justify-content: center; margin-bottom: 14px; text-decoration: none;">
-                📂 Abrir carpeta de ACRs en SharePoint
-            </a>
-            <p style="font-size: 12px; color: var(--text-muted); margin: -4px 0 16px;">
-                Guarda primero el Excel en SharePoint como siempre. Luego selecciónalo aquí: en el PC búscalo en la carpeta sincronizada de Kimberly-Clark; en el celular elige OneDrive o SharePoint al seleccionar el archivo.
-            </p>
-            <form id="form-subir-excel" onsubmit="subirExcelACR(event)">
-                <div class="form-group">
-                    <label>Archivo Excel (.xlsx, .xlsm, .xls)</label>
-                    <input type="file" id="subir-archivo" class="form-control" accept=".xlsx,.xlsm,.xls" required>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                    <div class="form-group">
-                        <label>Línea</label>
-                        <select id="subir-linea" class="form-control" required>
-                            <option value="">Selecciona...</option>
-                            <option value="Forte">Forte</option>
-                            <option value="Futura">Futura</option>
-                            <option value="Hinnli">Hinnli</option>
-                            <option value="Pocket">Pocket</option>
-                            <option value="Sincro 1">Sincro 1</option>
-                            <option value="Sincro 2">Sincro 2</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Subido por</label>
-                        <input type="text" id="subir-usuario" class="form-control" placeholder="Tu nombre" required>
-                    </div>
-                </div>
-                <div id="subir-resultado" style="font-size: 13px; margin-top: 4px; white-space: pre-wrap;"></div>
-                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px;">
-                    <button type="button" class="btn btn-secondary" onclick="cerrarModalSubirExcel()">Cerrar</button>
-                    <button type="submit" class="btn btn-primary" id="subir-boton">Subir ACR</button>
-                </div>
-            </form>
-
-            <details style="margin-top: 22px; border-top: 1px solid var(--border-color); padding-top: 14px;">
-                <summary style="cursor: pointer; font-size: 13px; color: var(--text-muted);">🗑️ Eliminar un ACR subido por error</summary>
-                <div class="form-group" style="margin-top: 12px;">
-                    <select id="eliminar-acr" class="form-control"></select>
-                </div>
-                <button type="button" class="btn btn-danger" style="width: 100%; justify-content: center;" onclick="eliminarACR()">Eliminar ACR seleccionado</button>
-            </details>
-        </div>
-    </div>
-
     <!-- Modal Análisis del ACR -->
     <div id="modal-analisis" class="modal-backdrop" onclick="if (event.target === this) cerrarModalAnalisis()">
         <div class="modal-box" style="max-width: 760px;">
