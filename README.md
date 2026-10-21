@@ -69,3 +69,7 @@ El plan gratis de Render bloquea el SMTP, así que los correos (códigos de ingr
 - `BREVO_API_KEY`: clave de API de Brevo (gratis, 300 correos/día).
 - `MAIL_FROM`: remitente verificado en Brevo (por defecto `IMAP_USER`).
 Sin `BREVO_API_KEY` se intenta SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`), que solo sirve fuera de Render.
+
+## Ingreso enviando un correo (predeterminado)
+
+Como los filtros de la empresa pueden retener correos externos, el ingreso por defecto (`LOGIN_METODO=enviar`) funciona al revés: la persona envía desde su correo corporativo un mensaje con asunto `ACR-LOGIN 123456` al buzón de la app (`IMAP_USER`). La app lo lee y abre la sesión solo si Gmail verificó que el correo viene de ese dominio (DMARC o DKIM aprobados). `LOGIN_METODO=codigo` vuelve al código enviado por correo.

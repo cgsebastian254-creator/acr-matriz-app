@@ -254,6 +254,35 @@ function verificarCodigo(correo, codigo) {
     return '';
 }
 
+// ---- Ingreso enviando un correo desde la cuenta corporativa (no depende de recibir correos) ----
+// La persona envía "ACR-LOGIN 123456" desde su correo al buzón de la app; la app lo lee,
+// confirma con las firmas de Gmail (DMARC/DKIM) que viene de ese correo y abre la sesión.
+const BUZON_APP = process.env.IMAP_USER || '';
+const LOGIN_METODO = (() => {
+    const m = (process.env.LOGIN_METODO || '').toLowerCase();
+    if (m === 'codigo' || m === 'enviar') return m;
+    return BUZON_APP && process.env.IMAP_PASS ? 'enviar' : 'codigo';
+})();
+const pendientes = new Map();   // id -> { correo, codigo, vence, confirmado }
+function crearPendiente(correo) {
+    const ahora = Date.now();
+    for (const [id, p] of pendientes) if (p.vence < ahora) pendientes.delete(id);
+    const recientes = [...pendientes.values()].filter(p => p.correo === correo);
+    if (recientes.length >= 10) return null;
+    let codigo;
+    do { codigo = String(crypto.randomInt(100000, 1000000)); } while ([...pendientes.values()].some(p => p.codigo === codigo));
+    const id = crypto.randomBytes(24).toString('base64url');
+    pendientes.set(id, { correo, codigo, vence: ahora + 15 * 60 * 1000, confirmado: false });
+    return { id, codigo };
+}
+function confirmarIngreso(codigo, correo) {
+    for (const p of pendientes.values()) {
+        if (p.codigo === codigo && p.correo === correo && p.vence > Date.now()) { p.confirmado = true; return true; }
+    }
+    return false;
+}
+let ultimaRevisionLogin = 0;
+
 function escHtml(v) {
     return String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 }
@@ -272,6 +301,33 @@ function paginaLogin(mensaje, opciones = {}) {
   <input id="correo" name="correo" type="email" inputmode="email" autocomplete="email" placeholder="nombre@kcc.com" value="${correo}" autofocus required>
   <button type="submit">Enviarme un código</button>
   <p class="nota">Te enviaremos un código de 6 dígitos a tu correo de la empresa.</p></form>`;
+    } else if (paso === 'enviar') {
+        const codigo = escHtml(opciones.codigo || '');
+        const asunto = `ACR-LOGIN ${opciones.codigo || ''}`;
+        const mailto = `mailto:${encodeURIComponent(BUZON_APP).replace(/%40/g, '@')}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent('Ingreso a la Matriz de ACRs')}`;
+        formulario = `<p class="ok">Para confirmar que eres <strong>${correo}</strong>, envía este correo <strong>desde esa cuenta</strong>. La app entra sola cuando lo reciba.</p>
+  <div class="pasos">
+    <div><span>Para</span><code id="c-para">${escHtml(BUZON_APP)}</code></div>
+    <div><span>Asunto</span><code id="c-asunto">${escHtml(asunto)}</code></div>
+  </div>
+  <a class="boton" href="${mailto}">✉️ Abrir Outlook con el correo listo</a>
+  <button type="button" class="link copiar" onclick="navigator.clipboard && navigator.clipboard.writeText('${escHtml(asunto)}').then(()=>{this.textContent='✓ Asunto copiado'})">Copiar asunto</button>
+  <div class="espera"><span class="punto"></span><span id="estado">Esperando tu correo… (puede tardar hasta 30 segundos)</span></div>
+  <form method="POST" action="/login/codigo" class="secundario">
+    <input type="hidden" name="correo" value="${correo}">
+    <input type="hidden" name="metodo" value="codigo">
+    <button type="submit" class="link">Prefiero recibir un código</button>
+    <a href="/login" class="link">Usar otro correo</a>
+  </form>
+  <script>
+    (function revisar(){
+      fetch('/login/estado',{cache:'no-store'}).then(r=>r.json()).then(d=>{
+        if(d.ok){document.getElementById('estado').textContent='¡Listo! Entrando…';location.href='/';return;}
+        if(d.vencido){document.getElementById('estado').textContent='El tiempo se acabó. Vuelve a empezar.';return;}
+        setTimeout(revisar,3000);
+      }).catch(()=>setTimeout(revisar,5000));
+    })();
+  </script>`;
     } else {
         formulario = `<form method="POST" action="/login/verificar">
   <input type="hidden" name="correo" value="${correo}">
@@ -311,6 +367,15 @@ function paginaLogin(mensaje, opciones = {}) {
   .secundario{display:flex;justify-content:space-between;align-items:center;margin-top:14px;gap:10px}
   .link{background:none;border:0;color:#93c5fd;font-size:13px;font-weight:500;padding:0;margin:0;width:auto;cursor:pointer;text-decoration:none}
   .link:hover{background:none;text-decoration:underline}
+  .pasos{display:grid;gap:8px;margin:0 0 14px}
+  .pasos div{display:grid;grid-template-columns:62px 1fr;align-items:center;gap:8px;font-size:12px;color:#94a3b8}
+  .pasos code{background:#0f172a;border:1px solid #334155;border-radius:8px;padding:8px 10px;color:#f1f5f9;font-size:14px;word-break:break-all;user-select:all}
+  .boton{display:block;text-align:center;padding:12px;border-radius:10px;background:#3b82f6;color:#fff;font-size:15px;font-weight:600;text-decoration:none}
+  .boton:hover{background:#2563eb}
+  .copiar{display:block;margin:10px auto 0}
+  .espera{display:flex;align-items:center;gap:10px;margin-top:16px;font-size:13px;color:#cbd5e1}
+  .punto{width:10px;height:10px;border-radius:50%;background:#3b82f6;animation:lat 1.2s infinite}
+  @keyframes lat{0%,100%{opacity:.3}50%{opacity:1}}
   .error{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.5);color:#fca5a5;border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:14px}
 </style></head>
 <body><div class="caja">
@@ -324,7 +389,7 @@ function paginaLogin(mensaje, opciones = {}) {
 
 // Rutas que no necesitan sesión: la página de ingreso, lo que el navegador
 // necesita para instalar la app, y las que usan su propia clave (agente / Power Automate)
-const RUTAS_PUBLICAS = new Set(['/login', '/login/codigo', '/login/verificar', '/logout', '/manifest.json', '/arbex_logo.png', '/healthz']);
+const RUTAS_PUBLICAS = new Set(['/login', '/login/codigo', '/login/verificar', '/login/estado', '/logout', '/manifest.json', '/arbex_logo.png', '/healthz']);
 const RUTAS_CON_TOKEN = new Set(['/api/acrs/push', '/api/state/sync', '/api/alerts/result', '/api/acrs/sharepoint', '/api/acrs/sharepoint-delete']);
 
 // ---------------------------------------------------------------
@@ -551,7 +616,8 @@ const receptorCorreo = crearReceptorCorreo({
         const limpio = path.basename(String(nombre)).replace(/[^\w.\- áéíóúÁÉÍÓÚñÑ()]/g, '_');
         return procesarExcelACR(buffer, limpio, lineaDesdeCarpeta(carpeta), usuario, 'sharepoint');
     },
-    eliminarACR: nombre => eliminarACRPorArchivo(nombre)
+    eliminarACR: nombre => eliminarACRPorArchivo(nombre),
+    confirmarIngreso: (codigo, correo) => correoPermitido(correo) && confirmarIngreso(codigo, correo)
 });
 
 // ---------------------------------------------------------------
@@ -763,6 +829,16 @@ const server = http.createServer((req, res) => {
                     : `Usa tu correo corporativo (${LOGIN_DOMAINS.map(d => '@' + d).join(', ')}).`;
                 return responderLogin(msg, 400, { paso: 'correo', correo });
             }
+            const metodo = new URLSearchParams(body).get('metodo') || LOGIN_METODO;
+            if (metodo === 'enviar' && BUZON_APP) {
+                const p = crearPendiente(correo);
+                if (!p) return responderLogin('Demasiados intentos con este correo. Espera unos minutos.', 429, { paso: 'correo', correo });
+                const seguro = (req.headers['x-forwarded-proto'] || '').includes('https') ? '; Secure' : '';
+                res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store',
+                    'Set-Cookie': `acr_pend=${p.id}; Path=/login; HttpOnly; SameSite=Lax; Max-Age=900${seguro}` });
+                res.end(paginaLogin('', { paso: 'enviar', correo, codigo: p.codigo }));
+                return;
+            }
             try {
                 const r = await enviarCodigo(correo, ip);
                 if (!r.ok) return responderLogin(r.error, 429, { paso: 'correo', correo });
@@ -792,6 +868,20 @@ const server = http.createServer((req, res) => {
             res.end();
         });
         return;
+    }
+    if (pathname === '/login/estado' && req.method === 'GET') {
+        const p = pendientes.get(leerCookie(req, 'acr_pend'));
+        if (!p || p.vence < Date.now()) return sendJson(res, 200, { ok: false, vencido: true });
+        if (p.confirmado) {
+            pendientes.delete(leerCookie(req, 'acr_pend'));
+            res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store',
+                'Set-Cookie': [crearCookieSesion(req, p.correo), 'acr_pend=; Path=/login; HttpOnly; SameSite=Lax; Max-Age=0'] });
+            res.end(JSON.stringify({ ok: true }));
+            return;
+        }
+        // Mientras alguien espera, el buzón se revisa cada ~8 segundos
+        if (Date.now() - ultimaRevisionLogin > 8000) { ultimaRevisionLogin = Date.now(); receptorCorreo.revisar(); }
+        return sendJson(res, 200, { ok: false });
     }
     if (pathname.startsWith('/login') && req.method === 'POST') {
         res.writeHead(302, { Location: '/login' });
@@ -1252,8 +1342,9 @@ function alEscuchar() {
     console.log('=======================================================');
     console.log(`🚀 SERVIDOR ACR DISPONIBLE EN PUERTO: ${PORT} (${IS_CLOUD ? 'nube' : 'local'})`);
     if (!IS_CLOUD) console.log(`👉 En este equipo: http://localhost:${PORT}`);
+    if (LOGIN_MODE === 'correo') console.log(`🔑 Método de ingreso: ${LOGIN_METODO === 'enviar' ? 'la persona envía un correo a ' + BUZON_APP : 'código enviado al correo'}`);
     if (LOGIN_MODE === 'correo') console.log(`🔐 Ingreso con correo corporativo (${LOGIN_EMAILS.length ? LOGIN_EMAILS.length + ' correos autorizados' : LOGIN_DOMAINS.map(d => '@' + d).join(', ')})`);
-    if (LOGIN_MODE === 'correo' && !puedeEnviarCorreo()) console.warn('⚠️ El ingreso es por correo pero la app no puede enviar correos: nadie podrá recibir el código.');
+    if (LOGIN_MODE === 'correo' && LOGIN_METODO === 'codigo' && !puedeEnviarCorreo()) console.warn('⚠️ El ingreso es por correo pero la app no puede enviar correos: nadie podrá recibir el código.');
     if (BREVO_API_KEY && !BREVO_API_KEY.startsWith('xkeysib-')) console.warn(`⚠️ BREVO_API_KEY no parece una clave de API de Brevo (debe empezar por "xkeysib-", la tuya empieza por "${BREVO_API_KEY.slice(0, 9)}"). ${BREVO_API_KEY.startsWith('xsmtpsib-') ? 'Esa es una clave SMTP: genera una en SMTP & API → API Keys.' : ''}`);
     console.log(BREVO_API_KEY ? `✉️ Correos salen por Brevo desde ${REMITENTE}` : (IS_CLOUD ? '⚠️ Sin BREVO_API_KEY: en el plan gratis de Render el SMTP está bloqueado y los correos no van a salir.' : '✉️ Correos salen por SMTP'));
     if (IS_CLOUD && !accesoProtegido()) console.warn('⚠️ La app está abierta para cualquiera con el enlace (configura LOGIN_MODE=correo o APP_PASSWORD).');

@@ -19,7 +19,7 @@
 const { ImapFlow } = require('imapflow');
 const { simpleParser } = require('mailparser');
 
-function crearReceptorCorreo({ procesarExcel, eliminarACR, log = console.log }) {
+function crearReceptorCorreo({ procesarExcel, eliminarACR, confirmarIngreso, log = console.log }) {
     const user = process.env.IMAP_USER || '';
     const pass = process.env.IMAP_PASS || '';
     const token = process.env.MAIL_TOKEN || process.env.SYNC_TOKEN || '';
@@ -49,9 +49,38 @@ function crearReceptorCorreo({ procesarExcel, eliminarACR, log = console.log }) 
         return { accion: m[1].toUpperCase(), clave: m[2], dato: m[3].trim() };
     }
 
+    // Lee la verificación que hizo Gmail al recibir el correo (SPF / DKIM / DMARC).
+    // Solo se confía en el primer encabezado Authentication-Results, que es el que agrega Gmail.
+    function autenticacion(correo, dominio) {
+        const lineas = (correo.headerLines || []).filter(h => h.key === 'authentication-results').map(h => h.line);
+        const gmail = lineas[0] || '';
+        if (!/mx\.google\.com/i.test(gmail)) return { ok: false, detalle: 'sin verificación de Gmail' };
+        const t = gmail.replace(/\s+/g, ' ').toLowerCase();
+        const d = dominio.toLowerCase();
+        const dmarc = new RegExp(`dmarc=pass[^;]*header\\.from=([a-z0-9.-]*\\.)?${d.replace(/\./g, '\\.')}(?![a-z0-9.-])`).test(t);
+        const dkim = new RegExp(`dkim=pass[^;]*header\\.(i|d)=@?([a-z0-9.-]*\\.)?${d.replace(/\./g, '\\.')}(?![a-z0-9.-])`).test(t);
+        return { ok: dmarc || dkim, detalle: (gmail.match(/(spf|dkim|dmarc)=\w+/gi) || []).join(' ') };
+    }
+
     async function procesarMensaje(fuente) {
         const correo = await simpleParser(fuente);
         const de = correo.from && correo.from.value && correo.from.value[0] ? correo.from.value[0] : {};
+
+        // Ingreso a la app: "ACR-LOGIN 123456" enviado desde el correo corporativo
+        const login = String(correo.subject || '').match(/ACR-LOGIN\s+(\d{6})/i);
+        if (login) {
+            if (!confirmarIngreso) return { ignorado: true };
+            const direccion = String(de.address || '').toLowerCase();
+            const auth = autenticacion(correo, direccion.split('@')[1] || '');
+            if (!auth.ok) {
+                log(`🚫 Ingreso rechazado para ${direccion}: el correo no pasó la verificación (${auth.detalle})`);
+                return { rechazado: true };
+            }
+            const r = confirmarIngreso(login[1], direccion);
+            log(r ? `🔓 Ingreso confirmado por correo: ${direccion}` : `📭 Código de ingreso ${login[1]} no encontrado o vencido (${direccion})`);
+            return { ingreso: r };
+        }
+
         const pedido = interpretarAsunto(correo.subject);
         if (!pedido) return { ignorado: true };
         if (pedido.clave !== token || !remitenteValido(de.address)) {
