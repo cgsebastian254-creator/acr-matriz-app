@@ -316,7 +316,7 @@ function paginaLogin(mensaje, opciones = {}) {
   <form method="POST" action="/login/codigo" class="secundario">
     <input type="hidden" name="correo" value="${correo}">
     <input type="hidden" name="metodo" value="codigo">
-    <button type="submit" class="link">Prefiero recibir un código</button>
+    ${process.env.LOGIN_CODIGO_OPCIONAL === 'true' ? '<button type="submit" class="link">Prefiero recibir un código</button>' : '<span></span>'}
     <a href="/login" class="link">Usar otro correo</a>
   </form>
   <script>
@@ -389,7 +389,7 @@ function paginaLogin(mensaje, opciones = {}) {
 
 // Rutas que no necesitan sesión: la página de ingreso, lo que el navegador
 // necesita para instalar la app, y las que usan su propia clave (agente / Power Automate)
-const RUTAS_PUBLICAS = new Set(['/login', '/login/codigo', '/login/verificar', '/login/estado', '/logout', '/manifest.json', '/arbex_logo.png', '/healthz']);
+const RUTAS_PUBLICAS = new Set(['/feeds/envios.xml', '/feeds/alertas.xml', '/login', '/login/codigo', '/login/verificar', '/login/estado', '/logout', '/manifest.json', '/arbex_logo.png', '/healthz']);
 const RUTAS_CON_TOKEN = new Set(['/api/acrs/push', '/api/state/sync', '/api/alerts/result', '/api/acrs/sharepoint', '/api/acrs/sharepoint-delete']);
 
 // ---------------------------------------------------------------
@@ -680,6 +680,53 @@ async function revisarEnvioAutomatico() {
 }
 
 // ---------------------------------------------------------------
+// Correos que salen desde Outlook corporativo vía Power Automate (conector RSS, estándar)
+//   /feeds/envios.xml?token=...  -> cola de envíos pedidos desde la app (un ítem por envío)
+//   /feeds/alertas.xml?token=... -> reporte del día (para un flujo programado)
+// En cada ítem: título = asunto, resumen = HTML, categorías = destinatarios (Para + CC)
+// ---------------------------------------------------------------
+const ALERTAS_VIA = (process.env.ALERTAS_VIA || 'powerautomate').toLowerCase() === 'brevo' ? 'brevo' : 'powerautomate';
+const FEED_TOKEN = process.env.FEED_TOKEN || SYNC_TOKEN;
+let colaEnvios = [];
+const feedLecturas = { envios: 0, alertas: 0 };
+async function cargarColaEnvios() {
+    try { const d = await storage.load('envios_feed'); if (Array.isArray(d)) colaEnvios = d; } catch (e) { /* sin base de datos */ }
+}
+async function encolarEnvio({ para, cc, asunto, html, solicitadoPor }) {
+    const envio = { id: 'envio-' + Date.now().toString(36) + '-' + crypto.randomBytes(3).toString('hex'), para, cc: cc || [], asunto, html, fecha: new Date().toISOString(), solicitadoPor: solicitadoPor || '' };
+    colaEnvios.unshift(envio);
+    colaEnvios = colaEnvios.slice(0, 20);
+    await storage.save('envios_feed', colaEnvios);
+    return envio;
+}
+function xmlEsc(v) {
+    return String(v == null ? '' : v).replace(/[<>&'"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]));
+}
+function cdata(v) {
+    return '<![CDATA[' + String(v || '').replace(/]]>/g, ']]]]><![CDATA[>') + ']]>';
+}
+function rss(titulo, items, req) {
+    const base = urlPublica(req);
+    const cuerpo = items.map(it => `
+    <item>
+      <title>${xmlEsc(it.titulo)}</title>
+      <link>${xmlEsc(base)}</link>
+      <guid isPermaLink="false">${xmlEsc(it.id)}</guid>
+      <pubDate>${new Date(it.fecha).toUTCString()}</pubDate>
+      ${(it.para || []).map(c => `<category>${xmlEsc(c)}</category>`).join('')}
+      <description>${cdata(it.html)}</description>
+    </item>`).join('');
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>${xmlEsc(titulo)}</title>
+    <link>${xmlEsc(base)}</link>
+    <description>Matriz de ACRs</description>${cuerpo}
+  </channel>
+</rss>`;
+}
+
+// ---------------------------------------------------------------
 // Cola de correos de alerta (se ejecutan en el PC corporativo)
 // ---------------------------------------------------------------
 let alertQueue = [];            // { id, liderEmail, modoReal, solicitadoEn, entregada }
@@ -784,6 +831,27 @@ const server = http.createServer((req, res) => {
         res.writeHead(400); res.end(); return;
     }
 
+    if ((pathname === '/feeds/envios.xml' || pathname === '/feeds/alertas.xml') && req.method === 'GET') {
+        if (!FEED_TOKEN || !igualSeguro(parsedUrl.searchParams.get('token') || '', FEED_TOKEN)) {
+            res.writeHead(401, { 'Content-Type': 'text/plain' }); res.end('No autorizado'); return;
+        }
+        let xml;
+        if (pathname === '/feeds/envios.xml') {
+            feedLecturas.envios = Date.now();
+            // Solo los envíos de los últimos 2 días, para no repetir correos viejos
+            const recientes = colaEnvios.filter(e => Date.now() - new Date(e.fecha).getTime() < 2 * 86400000);
+            xml = rss('Envíos de alertas ACR', recientes.map(e => ({ id: e.id, titulo: e.asunto, html: e.html, fecha: e.fecha, para: [...e.para, ...(e.cc || [])] })), req);
+        } else {
+            feedLecturas.alertas = Date.now();
+            const resumen = generarResumen(readJson(DATA_FILE), readJson(DAILY_DATA_FILE), { urlApp: urlPublica(req) });
+            const hoy = new Date().toISOString().slice(0, 10);
+            const para = listaCorreos(parsedUrl.searchParams.get('para') || process.env.ALERTAS_DESTINATARIOS || '');
+            xml = rss('Reporte diario de alertas ACR', [{ id: 'alertas-' + hoy + '-' + Date.now(), titulo: resumen.asunto, html: resumen.html, fecha: new Date().toISOString(), para }], req);
+        }
+        res.writeHead(200, { 'Content-Type': 'application/rss+xml; charset=utf-8', 'Cache-Control': 'no-store' });
+        res.end(xml);
+        return;
+    }
     if (pathname === '/healthz') {
         res.writeHead(200, { 'Content-Type': 'text/plain', 'Cache-Control': 'no-store' });
         res.end('ok');
@@ -1133,6 +1201,12 @@ const server = http.createServer((req, res) => {
             if (!modoReal) {
                 return sendJson(res, 200, { success: true, output: `🧪 VISTA PREVIA (no se envió nada)\nAsunto: ${resumen.asunto}\nPara: ${para.join(', ')}${cc.length ? '\nCC: ' + cc.join(', ') : ''}\n\n${resumen.texto}`, html: resumen.html });
             }
+            if (ALERTAS_VIA === 'powerautomate') {
+                const envio = await encolarEnvio({ para, cc, asunto: resumen.asunto, html: resumen.html, solicitadoPor: sesion && sesion.correo });
+                const conectado = feedLecturas.envios && Date.now() - feedLecturas.envios < 30 * 60 * 1000;
+                console.log(`📨 Alertas en cola para Power Automate (${envio.id}) → ${para.join(', ')}${cc.length ? ' CC ' + cc.join(', ') : ''}`);
+                return sendJson(res, 200, { success: true, output: `📨 Listo. El correo saldrá desde Outlook corporativo (flujo de Power Automate) en 1 a 5 minutos.\nPara: ${para.join(', ')}${cc.length ? '\nCC: ' + cc.join(', ') : ''}\nAsunto: ${resumen.asunto}` + (conectado ? '' : '\n\n⚠️ El flujo de Power Automate no ha revisado la app en los últimos 30 minutos. Si aún no lo creaste, el correo no saldrá.') });
+            }
             if (!puedeEnviarCorreo()) {
                 return sendJson(res, 200, { success: false, error: 'La app no tiene cómo enviar correos (falta BREVO_API_KEY en Render). Usa "Abrir correo en mi Outlook".' });
             }
@@ -1150,7 +1224,15 @@ const server = http.createServer((req, res) => {
 
     // Configuración del envío automático diario
     if (pathname === '/api/alertas/config' && req.method === 'GET') {
-        return sendJson(res, 200, configAlertasAuto());
+        return sendJson(res, 200, {
+            ...configAlertasAuto(),
+            via: ALERTAS_VIA,
+            powerAutomate: {
+                ultimaLecturaEnvios: feedLecturas.envios ? new Date(feedLecturas.envios).toISOString() : null,
+                ultimaLecturaReporte: feedLecturas.alertas ? new Date(feedLecturas.alertas).toISOString() : null,
+                ultimosEnvios: colaEnvios.slice(0, 5).map(e => ({ fecha: e.fecha, para: e.para, asunto: e.asunto }))
+            }
+        });
     }
 
     // Ingenieros: subir un Excel de ACR desde la web (PC o celular)
@@ -1335,6 +1417,8 @@ async function arrancar() {
 
 function alEscuchar() {
     receptorCorreo.iniciar();
+    cargarColaEnvios();
+    if (ALERTAS_VIA === 'powerautomate') console.log('📨 Correos de alerta: salen desde Outlook corporativo con Power Automate (conector RSS).');
     storage.load('alertas_auto').then(d => { if (d && d.ultimoEnvio) ultimoEnvioAuto = d.ultimoEnvio; })
         .catch(() => {}).finally(() => { revisarEnvioAutomatico(); setInterval(revisarEnvioAutomatico, 60 * 1000); });
     const auto = configAlertasAuto();

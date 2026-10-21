@@ -694,15 +694,23 @@ async function cargarConfigAlertasAuto() {
     if (!caja) return;
     try {
         const cfg = await (await fetch('/api/alertas/config')).json();
-        const nombresDias = { 1: 'lun', 2: 'mar', 3: 'mié', 4: 'jue', 5: 'vie', 6: 'sáb', 7: 'dom' };
-        const dias = String(cfg.dias || '').split(',').map(d => nombresDias[d.trim()] || d).join(', ');
-        caja.innerHTML = cfg.activo
-            ? `<div style="color: var(--status-green); font-weight: 600; margin-bottom: 6px;">🟢 Activo</div>
-               Todos los <strong>${escaparHTML(dias)}</strong> a las <strong>${escaparHTML(cfg.hora)}</strong> (hora Colombia) se envía a <strong>${escaparHTML(cfg.para.join(', '))}</strong>${cfg.cc.length ? ' con copia a ' + escaparHTML(cfg.cc.join(', ')) : ''}.
-               ${cfg.ultimoEnvio ? `<div style="margin-top: 6px;">Último envío automático: ${escaparHTML(cfg.ultimoEnvio)}</div>` : ''}`
-            : `⚪ Desactivado. Para activarlo, el administrador agrega en Render las variables <code>ALERTAS_AUTO_HORA</code> (por ejemplo 07:00) y <code>ALERTAS_DESTINATARIOS</code>.`;
+        const fecha = iso => iso ? new Date(iso).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }) : 'nunca';
+        if (cfg.via !== 'powerautomate') {
+            caja.textContent = 'Los correos salen directamente desde la app (Brevo).';
+            return;
+        }
+        const pa = cfg.powerAutomate || {};
+        const reciente = pa.ultimaLecturaEnvios && Date.now() - new Date(pa.ultimaLecturaEnvios) < 30 * 60 * 1000;
+        const envios = (pa.ultimosEnvios || []).map(e => `<li>${escaparHTML(fecha(e.fecha))} → ${escaparHTML(e.para.join(', '))}</li>`).join('');
+        caja.innerHTML = `
+            <div style="font-weight: 600; margin-bottom: 6px; color: ${reciente ? 'var(--status-green)' : 'var(--status-yellow)'};">
+                ${reciente ? '🟢 Flujo de envíos conectado' : '🟡 El flujo de envíos no ha revisado la app en los últimos 30 minutos'}
+            </div>
+            <div>Última revisión del flujo de envíos: <strong>${escaparHTML(fecha(pa.ultimaLecturaEnvios))}</strong></div>
+            <div>Última lectura del reporte diario: <strong>${escaparHTML(fecha(pa.ultimaLecturaReporte))}</strong></div>
+            ${envios ? `<div style="margin-top: 8px;">Últimos envíos pedidos:</div><ul style="margin: 4px 0 0 18px;">${envios}</ul>` : ''}`;
     } catch (e) {
-        caja.textContent = 'No se pudo cargar la configuración.';
+        caja.textContent = 'No se pudo cargar el estado.';
     }
 }
 document.addEventListener('DOMContentLoaded', cargarConfigAlertasAuto);

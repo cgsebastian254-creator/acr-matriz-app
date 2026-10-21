@@ -73,3 +73,10 @@ Sin `BREVO_API_KEY` se intenta SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMT
 ## Ingreso enviando un correo (predeterminado)
 
 Como los filtros de la empresa pueden retener correos externos, el ingreso por defecto (`LOGIN_METODO=enviar`) funciona al revés: la persona envía desde su correo corporativo un mensaje con asunto `ACR-LOGIN 123456` al buzón de la app (`IMAP_USER`). La app lo lee y abre la sesión solo si Gmail verificó que el correo viene de ese dominio (DMARC o DKIM aprobados). `LOGIN_METODO=codigo` vuelve al código enviado por correo.
+
+## Correos de alerta por Power Automate (predeterminado)
+
+Los filtros de la empresa retienen los correos externos, así que las alertas salen desde Outlook corporativo con Power Automate, leyendo la app con el conector RSS (estándar):
+- `/feeds/envios.xml?token=<SYNC_TOKEN>`: un ítem por cada "Enviar correo ahora" (título = asunto, resumen = HTML, categorías = destinatarios). Flujo: desencadenador RSS "Cuando se publica un elemento de fuente" → Outlook "Enviar un correo electrónico (V2)".
+- `/feeds/alertas.xml?token=<SYNC_TOKEN>&para=correo1,correo2`: reporte del día para un flujo programado (Periodicidad → RSS "Enumerar todos los elementos de fuente RSS" → Outlook).
+- `FEED_TOKEN` opcional (por defecto `SYNC_TOKEN`); `ALERTAS_VIA=brevo` vuelve al envío directo.

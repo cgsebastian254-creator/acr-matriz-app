@@ -379,7 +379,7 @@
                         <span>📧 Enviar reporte de alertas</span>
                     </div>
                     <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
-                        Un solo correo con las <strong>tareas vencidas</strong>, las que <strong>vencen en los próximos 7 días</strong> y los <strong>compromisos diarios pendientes</strong>. Sale desde la cuenta de la app; no necesita ningún PC prendido.
+                        Un solo correo con las <strong>tareas vencidas</strong>, las que <strong>vencen en los próximos 7 días</strong> y los <strong>compromisos diarios pendientes</strong>. Sale desde <strong>Outlook corporativo</strong> mediante un flujo de Power Automate, así llega como correo interno (1 a 5 minutos).
                     </p>
                     <div class="form-group" style="margin-bottom: 10px;">
                         <label>Para (separa varios correos con coma)</label>
@@ -393,12 +393,12 @@
                         <button class="btn btn-secondary" onclick="enviarAlertas(false)">👁️ Vista previa</button>
                         <button class="btn btn-success" onclick="enviarAlertas(true)">📧 Enviar correo ahora</button>
                     </div>
-                    <p style="font-size: 12px; color: var(--text-muted); margin-top: 10px;">Solo se permiten correos corporativos. Si no llega a la bandeja de entrada, revisa correo no deseado.</p>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-top: 10px;">Solo se permiten correos corporativos. Los que pongas en CC también reciben el correo.</p>
                 </div>
 
                 <div class="section-card">
                     <div class="section-title">
-                        <span>⏰ Envío automático diario</span>
+                        <span>🔗 Conexión con Power Automate</span>
                     </div>
                     <div id="alertas-auto-estado" style="font-size: 13px; color: var(--text-muted);">Cargando…</div>
                 </div>
