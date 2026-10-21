@@ -165,7 +165,7 @@ function hashCodigo(correo, codigo) {
 }
 // Envío de correos. En el plan gratis de Render el SMTP está bloqueado, así que se usa
 // la API HTTPS de Brevo si hay BREVO_API_KEY; si no, SMTP (útil fuera de Render).
-const BREVO_API_KEY = process.env.BREVO_API_KEY || '';
+const BREVO_API_KEY = (process.env.BREVO_API_KEY || '').trim().replace(/^['"]|['"]$/g, '');
 const REMITENTE = process.env.MAIL_FROM || process.env.BREVO_SENDER || SMTP_USER;
 const puedeEnviarCorreo = () => !!(BREVO_API_KEY ? REMITENTE : (SMTP_USER && SMTP_PASS));
 let transporteCorreo = null;
@@ -1254,6 +1254,7 @@ function alEscuchar() {
     if (!IS_CLOUD) console.log(`👉 En este equipo: http://localhost:${PORT}`);
     if (LOGIN_MODE === 'correo') console.log(`🔐 Ingreso con correo corporativo (${LOGIN_EMAILS.length ? LOGIN_EMAILS.length + ' correos autorizados' : LOGIN_DOMAINS.map(d => '@' + d).join(', ')})`);
     if (LOGIN_MODE === 'correo' && !puedeEnviarCorreo()) console.warn('⚠️ El ingreso es por correo pero la app no puede enviar correos: nadie podrá recibir el código.');
+    if (BREVO_API_KEY && !BREVO_API_KEY.startsWith('xkeysib-')) console.warn(`⚠️ BREVO_API_KEY no parece una clave de API de Brevo (debe empezar por "xkeysib-", la tuya empieza por "${BREVO_API_KEY.slice(0, 9)}"). ${BREVO_API_KEY.startsWith('xsmtpsib-') ? 'Esa es una clave SMTP: genera una en SMTP & API → API Keys.' : ''}`);
     console.log(BREVO_API_KEY ? `✉️ Correos salen por Brevo desde ${REMITENTE}` : (IS_CLOUD ? '⚠️ Sin BREVO_API_KEY: en el plan gratis de Render el SMTP está bloqueado y los correos no van a salir.' : '✉️ Correos salen por SMTP'));
     if (IS_CLOUD && !accesoProtegido()) console.warn('⚠️ La app está abierta para cualquiera con el enlace (configura LOGIN_MODE=correo o APP_PASSWORD).');
     if (IS_CLOUD && !SYNC_TOKEN) console.warn('⚠️ Falta la variable SYNC_TOKEN: el agente no podrá enviar datos.');
