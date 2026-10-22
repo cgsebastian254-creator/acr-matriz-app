@@ -264,8 +264,9 @@ function verificarCodigo(correo, codigo) {
 const BUZON_APP = process.env.IMAP_USER || '';
 const LOGIN_METODO = (() => {
     const m = (process.env.LOGIN_METODO || '').toLowerCase();
-    if (m === 'codigo' || m === 'enviar') return m;
-    return BUZON_APP && process.env.IMAP_PASS ? 'enviar' : 'codigo';
+    if (m === 'codigo' || m === 'enviar' || m === 'simple') return m;
+    // Por defecto: solo el correo corporativo (y la contraseña APP_PASSWORD si está configurada)
+    return 'simple';
 })();
 const pendientes = new Map();   // id -> { correo, codigo, vence, confirmado }
 function crearPendiente(correo) {
@@ -299,6 +300,14 @@ function paginaLogin(mensaje, opciones = {}) {
   <label for="clave">Contraseña</label>
   <input id="clave" name="clave" type="password" autocomplete="current-password" autofocus required>
   <button type="submit">Entrar</button></form>`;
+    } else if (paso === 'correo' && LOGIN_METODO === 'simple') {
+        formulario = `<form method="POST" action="/login/codigo">
+  <label for="correo">Correo corporativo</label>
+  <input id="correo" name="correo" type="email" inputmode="email" autocomplete="email" placeholder="nombre@kcc.com" value="${correo}" ${correo ? '' : 'autofocus'} required>
+  ${APP_PASSWORD ? `<label for="clave" style="margin-top:14px">Contraseña</label>
+  <input id="clave" name="clave" type="password" autocomplete="current-password" ${correo ? 'autofocus' : ''} required>` : ''}
+  <button type="submit">Entrar</button>
+  <p class="nota">Solo correos ${LOGIN_DOMAINS.map(d => '@' + d).join(', ')}.</p></form>`;
     } else if (paso === 'correo') {
         formulario = `<form method="POST" action="/login/codigo">
   <label for="correo">Correo corporativo</label>
@@ -930,7 +939,19 @@ const server = http.createServer((req, res) => {
                     : `Usa tu correo corporativo (${LOGIN_DOMAINS.map(d => '@' + d).join(', ')}).`;
                 return responderLogin(msg, 400, { paso: 'correo', correo });
             }
-            const metodo = new URLSearchParams(body).get('metodo') || LOGIN_METODO;
+            const metodo = LOGIN_METODO === 'simple' ? 'simple' : (new URLSearchParams(body).get('metodo') || LOGIN_METODO);
+            if (metodo === 'simple') {
+                const clave = new URLSearchParams(body).get('clave') || '';
+                if (APP_PASSWORD && !igualSeguro(clave, APP_PASSWORD)) {
+                    registrarFallo(ip);
+                    return responderLogin('Contraseña incorrecta.', 401, { paso: 'correo', correo });
+                }
+                intentos.delete(ip);
+                console.log(`🔓 Ingreso: ${correo}`);
+                res.writeHead(302, { 'Set-Cookie': crearCookieSesion(req, correo), Location: '/', 'Cache-Control': 'no-store' });
+                res.end();
+                return;
+            }
             if (metodo === 'enviar' && BUZON_APP) {
                 const p = crearPendiente(correo);
                 if (!p) return responderLogin('Demasiados intentos con este correo. Espera unos minutos.', 429, { paso: 'correo', correo });
@@ -1483,7 +1504,7 @@ function alEscuchar() {
     console.log('=======================================================');
     console.log(`🚀 SERVIDOR ACR DISPONIBLE EN PUERTO: ${PORT} (${IS_CLOUD ? 'nube' : 'local'})`);
     if (!IS_CLOUD) console.log(`👉 En este equipo: http://localhost:${PORT}`);
-    if (LOGIN_MODE === 'correo') console.log(`🔑 Método de ingreso: ${LOGIN_METODO === 'enviar' ? 'la persona envía un correo a ' + BUZON_APP : 'código enviado al correo'}`);
+    if (LOGIN_MODE === 'correo') console.log(`🔑 Método de ingreso: ${LOGIN_METODO === 'simple' ? 'solo correo corporativo' + (APP_PASSWORD ? ' + contraseña' : '') : LOGIN_METODO === 'enviar' ? 'la persona envía un correo a ' + BUZON_APP : 'código enviado al correo'}`);
     if (LOGIN_MODE === 'correo') console.log(`🔐 Ingreso con correo corporativo (${LOGIN_EMAILS.length ? LOGIN_EMAILS.length + ' correos autorizados' : LOGIN_DOMAINS.map(d => '@' + d).join(', ')})`);
     if (LOGIN_MODE === 'correo' && LOGIN_METODO === 'codigo' && !puedeEnviarCorreo()) console.warn('⚠️ El ingreso es por correo pero la app no puede enviar correos: nadie podrá recibir el código.');
     if (BREVO_API_KEY && !BREVO_API_KEY.startsWith('xkeysib-')) console.warn(`⚠️ BREVO_API_KEY no parece una clave de API de Brevo (debe empezar por "xkeysib-", la tuya empieza por "${BREVO_API_KEY.slice(0, 9)}"). ${BREVO_API_KEY.startsWith('xsmtpsib-') ? 'Esa es una clave SMTP: genera una en SMTP & API → API Keys.' : ''}`);
