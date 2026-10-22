@@ -92,10 +92,14 @@ function iniciarRealtimeSSE() {
                     }
                     mostrarNotificacionToast('Alertas O365', data.success ? 'Correo procesado en el PC corporativo.' : 'No se pudo enviar el correo. Revisa la consola.');
                 }
+            } else if (data.type === 'tecnicos_updated' || data.type === 'turnos_updated') {
+                if (typeof recargarTecnicos === 'function') recargarTecnicos(data.type);
+                if (data.user && data.message) mostrarNotificacionToast(data.user, data.message);
             } else if (data.type === 'daily_updated') {
                 console.log('⚡ Evento Reunión Diaria recibido:', data.message);
                 dailyTasksData = data.dailyTasks;
                 filtrarReunionDiaria();
+                if (typeof renderTurnoHoy === 'function') renderTurnoHoy();
                 mostrarNotificacionToast(data.user, data.message);
             }
         } catch (e) {
@@ -387,109 +391,200 @@ function filtrarMatriz() {
     if (countElem) countElem.textContent = `${contadorResultados} acciones mostradas`;
 }
 
-// REUNIÓN DIARIA (DDS / TECNICOS E INGENIEROS)
+// =====================================================================
+// REUNIÓN DIARIA: pendientes del día, no realizados, eliminar e historial
+// =====================================================================
+function hoyLocalISO() {
+    const p = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    return p;
+}
+function fechaTxt(iso) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return iso || '';
+    const [a, m, d] = iso.split('-');
+    return `${d}/${m}/${a}`;
+}
+function fechaPend(d) { return d.fechaCompromiso || d.fechaISO || ''; }
+function pendAbierto(d) { return !d.eliminado && d.estado !== 'Realizado'; }
+function pendNoRealizado(d, hoy) { return pendAbierto(d) && fechaPend(d) && fechaPend(d) < (hoy || hoyLocalISO()); }
+function attr(v) { return escaparHTML(v).replace(/`/g, '&#96;'); }
+
+function badgeEstadoPendiente(d) {
+    if (d.eliminado) return '<span class="badge badge-gris">🗑️ Eliminado</span>';
+    if (pendNoRealizado(d)) return `<span class="badge badge-vencido">⚠️ No realizado</span> <span class="badge badge-pendiente">${escaparHTML(d.estado)}</span>`;
+    const cls = d.estado === 'Realizado' ? 'badge-realizado' : d.estado === 'En Proceso' ? 'badge-en-proceso' : 'badge-pendiente';
+    return `<span class="badge ${cls}">${escaparHTML(d.estado)}</span>`;
+}
+function badgePrioridad(p) {
+    const cls = p === 'Alta' ? 'badge-vencido' : p === 'Media' ? 'badge-en-proceso' : 'badge-linea';
+    return `<span class="badge ${cls}">${escaparHTML(p || 'Alta')}</span>`;
+}
+
 function filtrarReunionDiaria() {
+    const tbody = document.getElementById('daily-tbody');
+    if (!tbody) return;
+    const campoFecha = document.getElementById('daily-fecha');
+    if (campoFecha && !campoFecha.value) campoFecha.value = hoyLocalISO();
+    const dia = campoFecha ? campoFecha.value : hoyLocalISO();
     const busqueda = (document.getElementById('daily-search')?.value || '').toLowerCase();
     const filtroLinea = document.getElementById('daily-filter-linea')?.value || 'TODAS';
     const filtroEstado = document.getElementById('daily-filter-estado')?.value || 'TODOS';
 
-    const tbody = document.getElementById('daily-tbody');
-    if (!tbody) return;
-    tbody.innerHTML = '';
+    // Del día elegido + los de días anteriores que siguen abiertos
+    const delDia = dailyTasksData.filter(d => !d.eliminado && (fechaPend(d) === dia || (pendAbierto(d) && fechaPend(d) < dia)));
+    const lista = delDia.filter(d => {
+        if (filtroLinea !== 'TODAS' && d.linea !== filtroLinea) return false;
+        if (filtroEstado === 'ABIERTOS' && !pendAbierto(d)) return false;
+        if (filtroEstado === 'NOREALIZADO' && !pendNoRealizado(d, dia)) return false;
+        if (!['TODOS', 'ABIERTOS', 'NOREALIZADO'].includes(filtroEstado) && d.estado !== filtroEstado) return false;
+        const texto = [d.equipo, d.compromiso, d.responsable, d.observaciones, d.linea].join(' ').toLowerCase();
+        return !busqueda || texto.includes(busqueda);
+    }).sort((a, b) => (pendAbierto(b) - pendAbierto(a)) || fechaPend(a).localeCompare(fechaPend(b)) || ({ Alta: 0, Media: 1, Baja: 2 }[a.prioridad] ?? 0) - ({ Alta: 0, Media: 1, Baja: 2 }[b.prioridad] ?? 0));
 
-    let contador = 0;
-
-    dailyTasksData.forEach(item => {
-        if (filtroLinea !== 'TODAS' && item.linea !== filtroLinea) return;
-        if (filtroEstado !== 'TODOS' && item.estado !== filtroEstado) return;
-
-        const coincideBusqueda = 
-            item.equipo.toLowerCase().includes(busqueda) ||
-            item.compromiso.toLowerCase().includes(busqueda) ||
-            item.responsable.toLowerCase().includes(busqueda) ||
-            (item.observaciones && item.observaciones.toLowerCase().includes(busqueda));
-
-        if (!coincideBusqueda) return;
-
-        contador++;
-
-        let badgeClass = 'badge-pendiente';
-        if (item.estado === 'En Proceso') badgeClass = 'badge-en-proceso';
-        else if (item.estado === 'Realizado') badgeClass = 'badge-realizado';
-
-        let badgePrioridad = 'badge-linea';
-        if (item.prioridad === 'Alta') badgePrioridad = 'badge-vencido';
-        else if (item.prioridad === 'Media') badgePrioridad = 'badge-en-proceso';
-
-        tbody.innerHTML += `
-            <tr>
-                <td style="white-space: nowrap; font-size: 12px; color: var(--text-muted);">${item.fecha}</td>
-                <td><span class="badge badge-linea">${item.linea}</span></td>
-                <td><strong>${item.equipo}</strong></td>
-                <td>${item.compromiso}</td>
-                <td>${renderResponsableBadge(item.responsable)}</td>
-                <td><span class="badge ${badgePrioridad}">${item.prioridad || 'Alta'}</span></td>
-                <td><span class="badge ${badgeClass}">${item.estado}</span></td>
-                <td>
-                    <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;" 
-                        onclick="abrirModalDailyStatus('${item.id}', '${item.compromiso.replace(/'/g, "\\'")}', '${item.estado}', '${(item.observaciones || '').replace(/'/g, "\\'")}')">
-                        ✏️ Actualizar
-                    </button>
-                </td>
-            </tr>
-        `;
-    });
+    tbody.innerHTML = lista.length ? lista.map(d => `
+        <tr class="${pendNoRealizado(d, dia) ? 'fila-alerta' : ''}">
+            <td style="white-space: nowrap; font-size: 12px;">${fechaTxt(fechaPend(d))}${fechaPend(d) < dia && pendAbierto(d) ? `<div style="color: var(--status-red); font-weight: 600;">${Math.round((new Date(dia) - new Date(fechaPend(d))) / 86400000)} día(s) de atraso</div>` : ''}</td>
+            <td><span class="badge badge-linea">${escaparHTML(d.linea)}</span></td>
+            <td><strong>${escaparHTML(d.equipo)}</strong></td>
+            <td>${escaparHTML(d.compromiso)}${d.observaciones && d.observaciones !== 'Acordado en reunión diaria' ? `<div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">💬 ${escaparHTML(d.observaciones)}</div>` : ''}</td>
+            <td>${renderResponsableBadge(escaparHTML(d.responsable))}</td>
+            <td>${badgePrioridad(d.prioridad)}</td>
+            <td>${badgeEstadoPendiente(d)}</td>
+            <td>
+                <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="abrirModalDailyStatus('${attr(d.id)}')">✏️ Actualizar</button>
+                <button class="btn btn-danger" style="padding: 4px 10px; font-size: 11px;" onclick="abrirEliminarPendiente('${attr(d.id)}')">🗑️ Eliminar</button>
+            </td>
+        </tr>`).join('') : `<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">No hay pendientes para este día con esos filtros.</td></tr>`;
 
     const countElem = document.getElementById('daily-counter');
-    if (countElem) countElem.textContent = `${contador} compromisos de reunión diaria`;
+    if (countElem) countElem.textContent = `${lista.length} pendientes`;
+
+    const resumen = document.getElementById('daily-resumen');
+    if (resumen) {
+        const base = delDia.filter(d => filtroLinea === 'TODAS' || d.linea === filtroLinea);
+        const n = {
+            total: base.length,
+            abiertos: base.filter(pendAbierto).length,
+            noRealizados: base.filter(d => pendNoRealizado(d, dia)).length,
+            realizados: base.filter(d => d.estado === 'Realizado').length
+        };
+        resumen.innerHTML = `
+            <div class="kpi-mini"><span>${n.total}</span>Pendientes del día</div>
+            <div class="kpi-mini amarillo"><span>${n.abiertos}</span>Sin cerrar</div>
+            <div class="kpi-mini rojo"><span>${n.noRealizados}</span>No realizados a tiempo</div>
+            <div class="kpi-mini verde"><span>${n.realizados}</span>Realizados</div>`;
+    }
+    renderInmediatas();
+    actualizarListasSugeridas();
+}
+
+function renderInmediatas() {
+    const tbody = document.getElementById('inmediatas-tbody');
+    if (!tbody) return;
+    const filtroLinea = document.getElementById('daily-filter-linea')?.value || 'TODAS';
+    const hoy = hoyLocalISO();
+    const filas = [];
+    acrsData.forEach(acr => {
+        if (filtroLinea !== 'TODAS' && acr.linea !== filtroLinea) return;
+        (acr.tareas || []).forEach(t => {
+            if (t.tipo !== 'Accion Inmediata' || t.estado === 'Realizado') return;
+            filas.push({ acr, t, f: aIsoCliente(t.fechaCompromiso) });
+        });
+    });
+    filas.sort((a, b) => (a.f || '9').localeCompare(b.f || '9'));
+    document.getElementById('inmediatas-counter').textContent = `${filas.length} abiertas`;
+    tbody.innerHTML = filas.length ? filas.map(({ acr, t, f }) => {
+        const vencida = t.estado === 'Vencido' || (f && f < hoy);
+        const cls = vencida ? 'badge-vencido' : t.estado === 'En Proceso' ? 'badge-en-proceso' : 'badge-pendiente';
+        return `<tr>
+            <td><span class="badge badge-linea">${escaparHTML(acr.linea)}</span></td>
+            <td><code>${acr.numeroACR ? 'N° ' + escaparHTML(acr.numeroACR) : escaparHTML(acr.codigoACR || acr.id)}</code></td>
+            <td><strong>${escaparHTML(acr.equipo)}</strong></td>
+            <td>${escaparHTML(t.descripcion)}</td>
+            <td>${renderResponsableBadge(escaparHTML(t.responsable))}</td>
+            <td><strong style="color: ${vencida ? 'var(--status-red)' : 'inherit'};">${escaparHTML(t.fechaCompromiso || 'Sin fecha')}</strong></td>
+            <td><span class="badge ${cls}">${vencida && t.estado !== 'Vencido' ? 'Vencida' : escaparHTML(t.estado)}</span></td>
+            <td><button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="abrirModalTarea('${attr(acr.id)}', '${attr(t.idTarea)}', '${attr(String(t.descripcion).replace(/'/g, "\\'"))}', '${attr(t.estado)}', '${attr(String(t.observaciones || '').replace(/'/g, "\\'"))}')">✏️ Editar</button></td>
+        </tr>`;
+    }).join('') : `<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">🎉 No hay acciones inmediatas abiertas${filtroLinea !== 'TODAS' ? ' en ' + escaparHTML(filtroLinea) : ''}.</td></tr>`;
+}
+
+function aIsoCliente(v) {
+    const t = String(v || '').trim();
+    let m = t.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+    m = t.match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/);
+    if (m) return `${m[3].length === 2 ? '20' + m[3] : m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+    return '';
+}
+
+// Máquinas (de los ACR y pendientes anteriores) y técnicos para autocompletar
+function actualizarListasSugeridas() {
+    const maquinas = new Set();
+    acrsData.forEach(a => a.equipo && maquinas.add(a.equipo.trim()));
+    dailyTasksData.forEach(d => d.equipo && maquinas.add(d.equipo.trim()));
+    const dl = document.getElementById('lista-maquinas');
+    if (dl) dl.innerHTML = [...maquinas].sort((a, b) => a.localeCompare(b, 'es')).map(m => `<option value="${attr(m)}">`).join('');
+}
+
+function vistaDaily(vista) {
+    document.querySelectorAll('#tab-daily .subtab').forEach(b => b.classList.toggle('activo', b.dataset.vista === vista));
+    document.getElementById('daily-vista-hoy').style.display = vista === 'hoy' ? '' : 'none';
+    document.getElementById('daily-vista-historial').style.display = vista === 'historial' ? '' : 'none';
+    if (vista === 'historial' && !historialPend.cargado) cargarHistorialPendientes();
 }
 
 function abrirModalNuevoCompromiso() {
+    const f = document.getElementById('daily-create-fecha');
+    if (f) f.value = document.getElementById('daily-fecha')?.value || hoyLocalISO();
+    const linea = document.getElementById('daily-filter-linea')?.value;
+    if (linea && linea !== 'TODAS') document.getElementById('daily-create-linea').value = linea;
+    if (typeof sugerirResponsables === 'function') sugerirResponsables();
     document.getElementById('modal-daily-create').classList.add('active');
 }
 
 function cerrarModalNuevoCompromiso() {
     document.getElementById('modal-daily-create').classList.remove('active');
 }
+function cerrarModal(id) { document.getElementById(id).classList.remove('active'); }
 
 async function guardarNuevoCompromiso(e) {
     e.preventDefault();
-
     const payload = {
         linea: document.getElementById('daily-create-linea').value,
-        equipo: document.getElementById('daily-create-equipo').value,
-        compromiso: document.getElementById('daily-create-compromiso').value,
-        responsable: document.getElementById('daily-create-responsable').value,
+        fechaCompromiso: document.getElementById('daily-create-fecha').value,
+        equipo: document.getElementById('daily-create-equipo').value.trim(),
+        compromiso: document.getElementById('daily-create-compromiso').value.trim(),
+        responsable: document.getElementById('daily-create-responsable').value.trim(),
         prioridad: document.getElementById('daily-create-prioridad').value,
         usuario: document.getElementById('daily-create-usuario').value
     };
-
     try {
-        const response = await fetch('/api/daily-tasks/create', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
+        const response = await fetch('/api/daily-tasks/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         const resData = await response.json();
         if (resData.success) {
             cerrarModalNuevoCompromiso();
+            const usuario = payload.usuario;
             document.getElementById('form-daily-create').reset();
+            document.getElementById('daily-create-usuario').value = usuario;
             cargarDatosReunionDiaria();
         } else {
             alert('❌ Error: ' + resData.error);
         }
     } catch (err) {
-        console.error('Error al guardar compromiso diario:', err);
         alert('❌ Error de comunicación con el servidor.');
     }
 }
 
-function abrirModalDailyStatus(id, compromiso, estado, obs) {
+function abrirModalDailyStatus(id) {
+    const d = dailyTasksData.find(x => x.id === id);
+    if (!d) return;
     document.getElementById('modal-daily-id').value = id;
-    document.getElementById('modal-daily-desc').value = compromiso;
-    document.getElementById('modal-daily-status-val').value = estado;
-    document.getElementById('modal-daily-obs').value = obs || '';
+    document.getElementById('modal-daily-desc').value = `${d.equipo} · ${d.compromiso}`;
+    document.getElementById('modal-daily-status-val').value = d.estado;
+    document.getElementById('modal-daily-fecha').value = fechaPend(d);
+    document.getElementById('modal-daily-obs').value = '';
+    document.getElementById('modal-daily-historial').innerHTML = (d.historial || []).slice(0, 6).map(h =>
+        `<div><span>${escaparHTML(h.fecha)}</span> · <strong>${escaparHTML(h.usuario)}</strong>: ${escaparHTML(h.accion)}</div>`).join('');
     document.getElementById('modal-daily-status').classList.add('active');
 }
 
@@ -499,21 +594,15 @@ function cerrarModalDailyStatus() {
 
 async function guardarEstadoDailyTask(e) {
     e.preventDefault();
-
     const payload = {
         id: document.getElementById('modal-daily-id').value,
         nuevoEstado: document.getElementById('modal-daily-status-val').value,
+        fechaCompromiso: document.getElementById('modal-daily-fecha').value,
         usuario: document.getElementById('modal-daily-user').value,
         observaciones: document.getElementById('modal-daily-obs').value
     };
-
     try {
-        const response = await fetch('/api/daily-tasks/status', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
+        const response = await fetch('/api/daily-tasks/status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         const resData = await response.json();
         if (resData.success) {
             cerrarModalDailyStatus();
@@ -522,9 +611,133 @@ async function guardarEstadoDailyTask(e) {
             alert('❌ Error: ' + resData.error);
         }
     } catch (err) {
-        console.error('Error al guardar estado de compromiso:', err);
         alert('❌ Error de comunicación con el servidor.');
     }
+}
+
+function abrirEliminarPendiente(id) {
+    const d = dailyTasksData.find(x => x.id === id);
+    if (!d) return;
+    document.getElementById('eliminar-daily-id').value = id;
+    document.getElementById('eliminar-daily-texto').innerHTML = `<strong>${escaparHTML(d.equipo)}</strong> · ${escaparHTML(d.compromiso)}`;
+    document.getElementById('eliminar-daily-motivo').value = '';
+    document.getElementById('modal-daily-eliminar').classList.add('active');
+}
+
+async function confirmarEliminarPendiente(e) {
+    e.preventDefault();
+    const id = document.getElementById('eliminar-daily-id').value;
+    const motivo = document.getElementById('eliminar-daily-motivo').value;
+    try {
+        const r = await (await fetch('/api/daily-tasks/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, motivo, usuario: usuarioActual.nombre }) })).json();
+        if (!r.success) return alert('❌ ' + (r.error || 'No se pudo eliminar.'));
+        cerrarModal('modal-daily-eliminar');
+        cargarDatosReunionDiaria();
+        if (historialPend.cargado) cargarHistorialPendientes();
+    } catch (err) {
+        alert('❌ Error de comunicación con el servidor.');
+    }
+}
+
+async function restaurarPendiente(id) {
+    if (!confirm('¿Restaurar este pendiente?')) return;
+    const r = await (await fetch('/api/daily-tasks/restaurar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, usuario: usuarioActual.nombre }) })).json();
+    if (!r.success) return alert('❌ ' + (r.error || 'No se pudo restaurar.'));
+    cargarDatosReunionDiaria();
+    cargarHistorialPendientes();
+}
+
+// ---------- Historial por máquina y fecha ----------
+const historialPend = { cargado: false, lista: [] };
+
+async function cargarHistorialPendientes() {
+    const hasta = document.getElementById('hist-hasta');
+    const desde = document.getElementById('hist-desde');
+    if (!hasta.value) hasta.value = hoyLocalISO();
+    if (!desde.value) { const d = new Date(hasta.value + 'T12:00:00'); d.setDate(d.getDate() - 30); desde.value = d.toISOString().slice(0, 10); }
+    document.getElementById('hist-tbody').innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Buscando…</td></tr>';
+    try {
+        const r = await (await fetch(`/api/daily-tasks/historial?desde=${desde.value}&hasta=${hasta.value}`)).json();
+        historialPend.lista = r.pendientes || [];
+        historialPend.cargado = true;
+        renderHistorialPendientes();
+    } catch (e) {
+        document.getElementById('hist-tbody').innerHTML = '<tr><td colspan="8">❌ No se pudo cargar el historial.</td></tr>';
+    }
+}
+
+function historialFiltrado() {
+    const texto = (document.getElementById('hist-maquina').value || '').toLowerCase();
+    const linea = document.getElementById('hist-linea').value;
+    const estado = document.getElementById('hist-estado').value;
+    const hoy = hoyLocalISO();
+    return historialPend.lista.filter(d => {
+        if (linea !== 'TODAS' && d.linea !== linea) return false;
+        if (estado === 'Realizado' && (d.eliminado || d.estado !== 'Realizado')) return false;
+        if (estado === 'ABIERTOS' && !pendAbierto(d)) return false;
+        if (estado === 'ELIMINADO' && !d.eliminado) return false;
+        if (estado === 'NOREALIZADO' && !(d.avisoNoRealizado || pendNoRealizado(d, hoy) || (d.fechaCierre && d.fechaCierre > fechaPend(d)))) return false;
+        return !texto || [d.equipo, d.compromiso, d.responsable, d.observaciones].join(' ').toLowerCase().includes(texto);
+    }).sort((a, b) => fechaPend(b).localeCompare(fechaPend(a)) || (a.equipo || '').localeCompare(b.equipo || ''));
+}
+
+function renderHistorialPendientes() {
+    const lista = historialFiltrado();
+    const porMaquina = {};
+    lista.forEach(d => {
+        const m = porMaquina[d.equipo || 'Sin máquina'] = porMaquina[d.equipo || 'Sin máquina'] || { total: 0, hechos: 0, tarde: 0 };
+        m.total++;
+        if (d.estado === 'Realizado' && !d.eliminado) m.hechos++;
+        if (d.avisoNoRealizado || (d.fechaCierre && d.fechaCierre > fechaPend(d))) m.tarde++;
+    });
+    document.getElementById('hist-por-maquina').innerHTML = Object.entries(porMaquina).sort((a, b) => b[1].total - a[1].total).slice(0, 24).map(([m, n]) =>
+        `<button class="chip-maquina" onclick="document.getElementById('hist-maquina').value='${attr(m.replace(/'/g, "\\'"))}'; renderHistorialPendientes();">
+            <strong>${escaparHTML(m)}</strong><span>${n.total} pendientes · ✅ ${n.hechos}${n.tarde ? ' · ⚠️ ' + n.tarde + ' tarde' : ''}</span></button>`).join('');
+    document.getElementById('hist-counter').textContent = `${lista.length} registros`;
+    document.getElementById('hist-tbody').innerHTML = lista.length ? lista.map(d => {
+        const cierre = d.eliminado
+            ? `Eliminado por ${escaparHTML(d.eliminado.por)}${d.eliminado.motivo ? ': ' + escaparHTML(d.eliminado.motivo) : ''}`
+            : d.estado === 'Realizado'
+                ? `✅ ${d.fechaCierre ? fechaTxt(d.fechaCierre) : ''}${d.cerradoPor ? ' · ' + escaparHTML(d.cerradoPor) : ''}${d.fechaCierre && d.fechaCierre > fechaPend(d) ? ' <span class="badge badge-vencido">fuera de fecha</span>' : ''}`
+                : (d.observaciones ? escaparHTML(d.observaciones) : '');
+        return `<tr>
+            <td style="white-space: nowrap; font-size: 12px;">${fechaTxt(fechaPend(d))}${d.fechaISO && d.fechaISO !== fechaPend(d) ? `<div style="color: var(--text-muted);">reg. ${fechaTxt(d.fechaISO)}</div>` : ''}</td>
+            <td><strong>${escaparHTML(d.equipo)}</strong></td>
+            <td><span class="badge badge-linea">${escaparHTML(d.linea)}</span></td>
+            <td>${escaparHTML(d.compromiso)}</td>
+            <td>${escaparHTML(d.responsable)}</td>
+            <td>${badgeEstadoPendiente(d)}</td>
+            <td style="font-size: 12px;">${cierre}</td>
+            <td>${d.eliminado ? `<button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="restaurarPendiente('${attr(d.id)}')">↩️ Restaurar</button>` : `<button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="verHistorialPendiente('${attr(d.id)}')">📜 Ver historial</button>`}</td>
+        </tr>`;
+    }).join('') : '<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">No hay actividades en ese rango con esos filtros.</td></tr>';
+}
+
+function verHistorialPendiente(id) {
+    const d = historialPend.lista.find(x => x.id === id) || dailyTasksData.find(x => x.id === id);
+    if (!d) return;
+    document.getElementById('analisis-titulo').textContent = `${d.equipo} · ${fechaTxt(fechaPend(d))}`;
+    document.getElementById('analisis-contenido').innerHTML = `
+        <p style="margin-bottom: 12px;">${escaparHTML(d.compromiso)}</p>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;">
+            <span class="badge badge-linea">${escaparHTML(d.linea)}</span>${badgeEstadoPendiente(d)}<span class="badge badge-purple">👤 ${escaparHTML(d.responsable)}</span>
+        </div>
+        <div class="mini-historial">${(d.historial || []).map(h => `<div><span>${escaparHTML(h.fecha)}</span> · <strong>${escaparHTML(h.usuario)}</strong>: ${escaparHTML(h.accion)}</div>`).join('') || 'Sin movimientos.'}</div>`;
+    document.getElementById('modal-analisis').classList.add('active');
+}
+
+function exportarHistorialPendientes() {
+    const lista = historialFiltrado();
+    if (!lista.length) return alert('No hay registros para exportar.');
+    const cols = ['Fecha compromiso', 'Fecha registro', 'Máquina', 'Línea', 'Pendiente', 'Responsable', 'Prioridad', 'Estado', 'Fecha cierre', 'Cerrado por', 'Eliminado', 'Observaciones'];
+    const filas = lista.map(d => [fechaTxt(fechaPend(d)), fechaTxt(d.fechaISO), d.equipo, d.linea, d.compromiso, d.responsable, d.prioridad, d.eliminado ? 'Eliminado' : d.estado,
+        d.fechaCierre ? fechaTxt(d.fechaCierre) : '', d.cerradoPor || '', d.eliminado ? `${d.eliminado.por}: ${d.eliminado.motivo || ''}` : '', d.observaciones || '']);
+    const csv = '﻿' + [cols, ...filas].map(f => f.map(v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`).join(';')).join('\r\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = `historial_pendientes_${document.getElementById('hist-desde').value}_a_${document.getElementById('hist-hasta').value}.csv`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 
 // CATÁLOGO DE FALLAS CON FILTROS DINÁMICOS
@@ -554,7 +767,7 @@ function filtrarCatalogo() {
 
         contador++;
 
-        const sinDato = '<span style="color: var(--text-muted); font-style: italic;">Vuelve a subir el Excel para leerlo</span>';
+        const sinDato = '<span style="color: var(--text-muted); font-style: italic;">Sin dato en el Excel</span>';
         const causa = acr.causaRaiz && !/^Sin causa ra/i.test(acr.causaRaiz) ? escaparHTML(acr.causaRaiz) : sinDato;
         tbody.innerHTML += `
             <tr>
@@ -660,60 +873,6 @@ async function guardarEstadoTarea(e) {
         alert('❌ Error de comunicación con el servidor.');
     }
 }
-
-// CORREO DE ALERTAS (sale desde la cuenta de la app)
-async function enviarAlertas(modoReal) {
-    const para = document.getElementById('alerta-para').value.trim();
-    const cc = document.getElementById('o365-lider-email').value.trim();
-    const consoleBox = document.getElementById('ps-console-output');
-    const preview = document.getElementById('alerta-preview');
-    if (modoReal && !para) { consoleBox.textContent = '⚠️ Escribe al menos un destinatario en "Para".'; return; }
-    if (modoReal && !confirm(`¿Enviar el reporte de alertas a ${para}${cc ? ' (CC ' + cc + ')' : ''}?`)) return;
-    consoleBox.textContent = modoReal ? '⏳ Enviando correo...' : '⏳ Generando vista previa...';
-    preview.style.display = 'none';
-    try {
-        const response = await fetch('/api/send-alerts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ para, cc, modoReal })
-        });
-        const data = await response.json();
-        consoleBox.textContent = data.success ? data.output : '❌ ' + (data.error || 'No se pudo enviar.');
-        if (data.html) {
-            preview.innerHTML = data.html;
-            preview.style.display = 'block';
-        }
-        if (data.success && modoReal) mostrarNotificacionToast('Alertas', 'Correo de alertas enviado.');
-    } catch (err) {
-        consoleBox.textContent = '❌ Error de comunicación con el servidor.';
-    }
-}
-
-async function cargarConfigAlertasAuto() {
-    const caja = document.getElementById('alertas-auto-estado');
-    if (!caja) return;
-    try {
-        const cfg = await (await fetch('/api/alertas/config')).json();
-        const fecha = iso => iso ? new Date(iso).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }) : 'nunca';
-        if (cfg.via !== 'powerautomate') {
-            caja.textContent = 'Los correos salen directamente desde la app (Brevo).';
-            return;
-        }
-        const pa = cfg.powerAutomate || {};
-        const reciente = pa.ultimaLecturaEnvios && Date.now() - new Date(pa.ultimaLecturaEnvios) < 30 * 60 * 1000;
-        const envios = (pa.ultimosEnvios || []).map(e => `<li>${escaparHTML(fecha(e.fecha))} → ${escaparHTML(e.para.join(', '))}</li>`).join('');
-        caja.innerHTML = `
-            <div style="font-weight: 600; margin-bottom: 6px; color: ${reciente ? 'var(--status-green)' : 'var(--status-yellow)'};">
-                ${reciente ? '🟢 Flujo de envíos conectado' : '🟡 El flujo de envíos no ha revisado la app en los últimos 30 minutos'}
-            </div>
-            <div>Última revisión del flujo de envíos: <strong>${escaparHTML(fecha(pa.ultimaLecturaEnvios))}</strong></div>
-            <div>Última lectura del reporte diario: <strong>${escaparHTML(fecha(pa.ultimaLecturaReporte))}</strong></div>
-            ${envios ? `<div style="margin-top: 8px;">Últimos envíos pedidos:</div><ul style="margin: 4px 0 0 18px;">${envios}</ul>` : ''}`;
-    } catch (e) {
-        caja.textContent = 'No se pudo cargar el estado.';
-    }
-}
-document.addEventListener('DOMContentLoaded', cargarConfigAlertasAuto);
 
 // VISTA CELULAR: cada celda recibe el nombre de su columna para mostrar las tablas como tarjetas
 function aplicarEtiquetasMoviles(raiz = document) {
@@ -844,99 +1003,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }).catch(() => {});
 });
 
-// =====================================================================
-// CORREO DESDE LA CUENTA DEL USUARIO (no necesita el PC corporativo)
-// =====================================================================
-function convertirFechaACR(texto) {
-    const t = String(texto || '').trim().split(' ')[0].split('T')[0];
-    let m = t.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/);
-    if (m) {
-        const anio = m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]);
-        return new Date(anio, Number(m[2]) - 1, Number(m[1]));
-    }
-    m = t.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-    return null;
-}
-
-function calcularResumenAlertas(diasProximos = 7) {
-    const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
-    const limite = new Date(hoy); limite.setDate(limite.getDate() + diasProximos);
-    const vencidas = [];
-    const proximas = [];
-    for (const acr of acrsData) {
-        for (const t of acr.tareas || []) {
-            if (t.estado === 'Realizado') continue;
-            const f = convertirFechaACR(t.fechaCompromiso);
-            const fila = { linea: acr.linea, tarea: t.descripcion, responsable: t.responsable, fecha: t.fechaCompromiso || 'sin fecha', f };
-            if (t.estado === 'Vencido' || (f && f < hoy)) vencidas.push(fila);
-            else if (f && f <= limite) proximas.push(fila);
-        }
-    }
-    vencidas.sort((a, b) => (a.f || 0) - (b.f || 0));
-    proximas.sort((a, b) => (a.f || 0) - (b.f || 0));
-    const compromisos = dailyTasksData.filter(d => d.estado !== 'Realizado');
-    return { vencidas, proximas, compromisos, diasProximos, hoy };
-}
-
-function textoResumenAlertas(maxCaracteres) {
-    const r = calcularResumenAlertas();
-    const fecha = r.hoy.toLocaleDateString('es-CO');
-    const asunto = `Alertas ACR Planta Conversión - ${fecha} - ${r.vencidas.length} vencidas, ${r.proximas.length} próximas a vencer`;
-    const enlace = location.origin;
-    const lineas = [
-        `Resumen de la Matriz de ACRs al ${fecha}:`,
-        `• ${r.vencidas.length} tareas vencidas`,
-        `• ${r.proximas.length} tareas vencen en los próximos ${r.diasProximos} días`,
-        `• ${r.compromisos.length} compromisos de reunión diaria pendientes`,
-        ''
-    ];
-    const bloques = [
-        ['TAREAS VENCIDAS', r.vencidas.map(v => `- [${v.linea}] ${v.tarea} | ${v.responsable || 'Sin responsable'} | ${v.fecha}`)],
-        ['PRÓXIMAS A VENCER', r.proximas.map(v => `- [${v.linea}] ${v.tarea} | ${v.responsable || 'Sin responsable'} | ${v.fecha}`)],
-        ['COMPROMISOS DIARIOS PENDIENTES', r.compromisos.map(d => `- [${d.linea}] ${d.compromiso} | ${d.responsable || 'Sin responsable'} | ${d.prioridad || ''}`)]
-    ];
-    const cierre = ['', `Ver y actualizar: ${enlace}`];
-    let cuerpo = lineas.join('\n');
-    let recortado = false;
-    for (const [titulo, filas] of bloques) {
-        if (!filas.length) continue;
-        const bloque = `\n${titulo}\n` + filas.join('\n') + '\n';
-        if (maxCaracteres && cuerpo.length + bloque.length > maxCaracteres) {
-            const disponibles = filas.filter((_, i) => (cuerpo.length + (`\n${titulo}\n` + filas.slice(0, i + 1).join('\n')).length) < maxCaracteres);
-            if (disponibles.length) cuerpo += `\n${titulo}\n` + disponibles.join('\n') + `\n(... y ${filas.length - disponibles.length} más)\n`;
-            recortado = true;
-            break;
-        }
-        cuerpo += bloque;
-    }
-    if (recortado) cuerpo += '\nEl listado completo está en la aplicación.';
-    cuerpo += cierre.join('\n');
-    return { asunto, cuerpo };
-}
-
-function abrirCorreoEnMiOutlook() {
-    const cc = (document.getElementById('o365-lider-email').value || '').trim();
-    const para = (document.getElementById('alerta-para')?.value || '').trim();
-    // Los enlaces de correo muy largos se cortan en algunos equipos: se limita el texto
-    const { asunto, cuerpo } = textoResumenAlertas(1500);
-    const url = `mailto:${encodeURIComponent(para).replace(/%2C/g, ',').replace(/%40/g, '@')}?${cc ? 'cc=' + encodeURIComponent(cc) + '&' : ''}subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
-    document.getElementById('ps-console-output').textContent = `✉️ Se abrió tu aplicación de correo con el resumen.\nRevisa los destinatarios y dale Enviar.\n\nAsunto: ${asunto}`;
-    window.location.href = url;
-}
-
-async function copiarResumenAlertas() {
-    const { asunto, cuerpo } = textoResumenAlertas(0);
-    const texto = `${asunto}\n\n${cuerpo}`;
-    try {
-        await navigator.clipboard.writeText(texto);
-        document.getElementById('ps-console-output').textContent = '📋 Resumen completo copiado. Pégalo en un correo nuevo de Outlook.\n\n' + texto;
-    } catch (e) {
-        document.getElementById('ps-console-output').textContent = texto;
-        alert('No se pudo copiar automáticamente. El resumen quedó en la consola para que lo copies a mano.');
-    }
-}
-
 // AVISO SI LOS DATOS NO ESTÁN PROTEGIDOS (sin base de datos en la nube)
 document.addEventListener('DOMContentLoaded', () => {
     fetch('/api/status').then(r => r.json()).then(st => {
@@ -988,7 +1054,7 @@ function abrirModalAnalisis(id) {
             <span class="badge badge-purple">👤 ${escaparHTML(acr.responsableAcr || 'Sin responsable')}</span>
             <span class="badge badge-realizado">${(acr.tareas || []).filter(t => t.estado === 'Realizado').length}/${(acr.tareas || []).length} tareas cerradas</span>
         </div>
-        ${vacio ? '<p style="color: var(--text-muted);">Este ACR se cargó con una versión anterior del lector. Vuelve a subir su Excel con el botón "Subir Excel ACR" para ver el análisis completo; se conservan los estados de sus tareas.</p>' : ''}
+        ${vacio ? '<p style="color: var(--text-muted);">Este ACR se cargó con una versión anterior del lector. Vuelve a guardar su Excel en SharePoint para que se lea el análisis completo; se conservan los estados de sus tareas.</p>' : ''}
         ${bloque('1. Descripción del problema', acr.problema ? escaparHTML(acr.problema) + (detalle ? '<div style="margin-top: 8px; font-size: 13px; color: var(--text-muted); display: grid; gap: 4px;">' + detalle + '</div>' : '') : '')}
         ${bloque('2. Síntomas', lista(acr.sintomas))}
         ${bloque('3. Causas potenciales', lista(acr.causasPotenciales))}
@@ -1028,8 +1094,8 @@ document.addEventListener('DOMContentLoaded', () => {
             salir.innerHTML = `🔒 Salir <span class="usuario-sesion">${escaparHTML(me.nombre)}</span>`;
         }
         prellenarUsuario();
-        const para = document.getElementById('alerta-para');
-        if (para && !para.value) para.value = me.correo;
+        const miCorreo = document.getElementById('notif-mi-correo');
+        if (miCorreo) miCorreo.textContent = me.correo;
         ['abrirModalTarea', 'abrirModalDailyStatus', 'abrirModalNuevoCompromiso'].forEach(nombre => {
             const original = window[nombre];
             if (typeof original !== 'function') return;

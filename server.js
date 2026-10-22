@@ -3,6 +3,9 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const storage = require('./storage');
+const docs = require('./lib/docs');
+const rutasExtra = require('./lib/rutas');
+const { crearNotificador } = require('./lib/notificaciones');
 
 const PORT = process.env.PORT || 3000;
 const IS_CLOUD = !!process.env.RENDER;              // Render define esta variable automáticamente
@@ -24,6 +27,7 @@ const DATA_FILE = path.join(DATA_DIR, 'acrs.json');
 const DAILY_DATA_FILE = path.join(DATA_DIR, 'daily_tasks.json');
 const PUBLIC_DIR = path.join(ROOT_DIR, 'public');
 const ALERT_SCRIPT = path.join(ROOT_DIR, 'scripts', 'Send-ACRAlerts.ps1');
+docs.configurar(DATA_DIR);
 
 // ---------------------------------------------------------------
 // Preparar carpeta data/
@@ -629,6 +633,7 @@ const receptorCorreo = crearReceptorCorreo({
 // Si el servidor estaba dormido a esa hora, el correo sale apenas despierte ese mismo día.
 // ---------------------------------------------------------------
 const { generarResumen } = require('./alertas');
+const { hoyISO, esISO, textoFecha } = require('./lib/fechas');
 function listaCorreos(v) {
     return String(v || '').split(/[;,\s]+/).map(x => x.trim().toLowerCase()).filter(Boolean);
 }
@@ -695,7 +700,7 @@ async function cargarColaEnvios() {
 async function encolarEnvio({ para, cc, asunto, html, solicitadoPor }) {
     const envio = { id: 'envio-' + Date.now().toString(36) + '-' + crypto.randomBytes(3).toString('hex'), para, cc: cc || [], asunto, html, fecha: new Date().toISOString(), solicitadoPor: solicitadoPor || '' };
     colaEnvios.unshift(envio);
-    colaEnvios = colaEnvios.slice(0, 20);
+    colaEnvios = colaEnvios.slice(0, 80);
     await storage.save('envios_feed', colaEnvios);
     return envio;
 }
@@ -725,6 +730,34 @@ function rss(titulo, items, req) {
   </channel>
 </rss>`;
 }
+
+function estadoPowerAutomate() {
+    return {
+        ultimaLecturaEnvios: feedLecturas.envios ? new Date(feedLecturas.envios).toISOString() : null,
+        ultimaLecturaReporte: feedLecturas.alertas ? new Date(feedLecturas.alertas).toISOString() : null,
+        ultimosEnvios: colaEnvios.slice(0, 8).map(e => ({ fecha: e.fecha, para: e.para, asunto: e.asunto }))
+    };
+}
+// Un correo automático (recordatorio, aviso de no realizado o prueba)
+async function enviarNotificacion({ para, cc, asunto, html, motivo }) {
+    if (ALERTAS_VIA === 'powerautomate') {
+        await encolarEnvio({ para, cc, asunto, html, solicitadoPor: motivo || 'automático' });
+        console.log(`📨 Notificación (${motivo}) en cola para Power Automate → ${para.join(', ')}`);
+        return;
+    }
+    if (!puedeEnviarCorreo()) throw new Error('La app no tiene cómo enviar correos (configura Power Automate o BREVO_API_KEY).');
+    await enviarCorreo({ to: para, cc, subject: asunto, html, text: asunto });
+}
+const notificador = crearNotificador({
+    obtenerACRs: () => readJson(DATA_FILE),
+    obtenerDaily: () => readJson(DAILY_DATA_FILE),
+    guardarDaily: tasks => {
+        writeJson(DAILY_DATA_FILE, tasks);
+        broadcastEvent({ type: 'daily_updated', dailyTasks: tasks, user: 'Sistema', message: 'Se registraron pendientes no realizados.' });
+    },
+    enviar: enviarNotificacion,
+    urlApp: () => urlPublica()
+});
 
 // ---------------------------------------------------------------
 // Cola de correos de alerta (se ejecutan en el PC corporativo)
@@ -813,8 +846,8 @@ function isAgent(req) {
 }
 
 // Archivos que nunca se deben servir como estáticos
-const BLOCKED_FILES = new Set(['server.js', 'excelScanner.js', 'sync-agent.js', 'storage.js', 'package.json', 'package-lock.json', '.env', '.gitignore']);
-const BLOCKED_DIRS = ['scripts', 'node_modules', '.git'];
+const BLOCKED_FILES = new Set(['server.js', 'excelScanner.js', 'sync-agent.js', 'storage.js', 'alertas.js', 'mail-ingest.js', 'package.json', 'package-lock.json', '.env', '.gitignore']);
+const BLOCKED_DIRS = ['scripts', 'node_modules', '.git', 'lib', 'data'];
 
 const server = http.createServer((req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -978,6 +1011,15 @@ const server = http.createServer((req, res) => {
         });
     }
 
+    if (sesion && sesion.correo && !sesion.nombre) sesion.nombre = nombreDesdeCorreo(sesion.correo);
+    if (pathname.startsWith('/api/') && rutasExtra.manejar(req, res, pathname, parsedUrl, sesion, {
+        sendJson, readBody, broadcastEvent, ahoraTexto, notificador, enviarNotificacion, correoCorporativo, estadoPowerAutomate,
+        via: ALERTAS_VIA,
+        leerACRs: () => readJson(DATA_FILE),
+        leerDaily: () => readJson(DAILY_DATA_FILE),
+        escribirDaily: tasks => writeJson(DAILY_DATA_FILE, tasks)
+    })) return;
+
     // ---------- SSE ----------
     if (pathname === '/api/events' && req.method === 'GET') {
         res.writeHead(200, {
@@ -1129,6 +1171,9 @@ const server = http.createServer((req, res) => {
                 const newTask = {
                     id: `DAILY-${ahora.getFullYear()}-${String(tasks.length + 1).padStart(3, '0')}-${ahora.getTime().toString(36).slice(-5)}`,
                     fecha: ahora.toLocaleDateString('es-ES', { timeZone: 'America/Bogota' }),
+                    fechaISO: hoyISO(),
+                    fechaCompromiso: esISO(payload.fechaCompromiso) ? payload.fechaCompromiso : hoyISO(),
+                    tecnicos: Array.isArray(payload.tecnicos) ? payload.tecnicos.slice(0, 10).map(String) : [],
                     linea: payload.linea,
                     equipo: payload.equipo,
                     compromiso: payload.compromiso,
@@ -1141,7 +1186,7 @@ const server = http.createServer((req, res) => {
                         ts: ahora.getTime(),
                         usuario: payload.usuario || 'Técnico/Ingeniero',
                         correo: sesion ? sesion.correo || undefined : undefined,
-                        accion: 'Compromiso registrado en reunión diaria'
+                        accion: `Pendiente registrado en reunión diaria (para el ${textoFecha(esISO(payload.fechaCompromiso) ? payload.fechaCompromiso : hoyISO())})`
                     }]
                 };
                 tasks.unshift(newTask);
@@ -1165,6 +1210,12 @@ const server = http.createServer((req, res) => {
                 const antiguoEstado = task.estado;
                 task.estado = payload.nuevoEstado;
                 if (payload.observaciones) task.observaciones = payload.observaciones;
+                task.fechaCierre = payload.nuevoEstado === 'Realizado' ? hoyISO() : null;
+                if (payload.nuevoEstado === 'Realizado') task.cerradoPor = payload.usuario || (sesion && sesion.nombre) || '';
+                if (esISO(payload.fechaCompromiso) && payload.fechaCompromiso !== task.fechaCompromiso) {
+                    payload.observaciones = `${payload.observaciones || ''} (reprogramado del ${textoFecha(task.fechaCompromiso)} al ${textoFecha(payload.fechaCompromiso)})`.trim();
+                    task.fechaCompromiso = payload.fechaCompromiso;
+                }
                 if (!task.historial) task.historial = [];
                 task.historial.unshift({
                     fecha: ahoraTexto(),
@@ -1227,11 +1278,7 @@ const server = http.createServer((req, res) => {
         return sendJson(res, 200, {
             ...configAlertasAuto(),
             via: ALERTAS_VIA,
-            powerAutomate: {
-                ultimaLecturaEnvios: feedLecturas.envios ? new Date(feedLecturas.envios).toISOString() : null,
-                ultimaLecturaReporte: feedLecturas.alertas ? new Date(feedLecturas.alertas).toISOString() : null,
-                ultimosEnvios: colaEnvios.slice(0, 5).map(e => ({ fecha: e.fecha, para: e.para, asunto: e.asunto }))
-            }
+            powerAutomate: estadoPowerAutomate()
         });
     }
 
@@ -1397,6 +1444,17 @@ async function arrancar() {
         }
         console.log('🗄️  Base de datos conectada: los datos son permanentes.');
     }
+    await docs.cargar('tecnicos', () => ({ tecnicos: [], habilidades: require('./lib/tecnicos').habilidadesPorDefecto() }));
+    await docs.cargar('turnos', () => ({ tipos: require('./lib/tecnicos').tiposTurnoPorDefecto(), asignaciones: {} }));
+    await docs.cargar('notificaciones', () => require('./lib/notificaciones').configPorDefecto());
+    await docs.cargar('daily_archivo_indice', []);
+    const pendientes = readJson(DAILY_DATA_FILE);
+    if (rutasExtra.migrarPendientes(pendientes)) writeJson(DAILY_DATA_FILE, pendientes);
+    const archivar = () => rutasExtra.archivarPendientes({ leerDaily: () => readJson(DAILY_DATA_FILE), escribirDaily: t => writeJson(DAILY_DATA_FILE, t) })
+        .then(n => { if (n) console.log(`🗃️  ${n} pendientes antiguos pasaron al archivo histórico.`); })
+        .catch(e => console.error('No se pudo archivar pendientes:', e.message));
+    await archivar();
+    setInterval(archivar, 24 * 3600 * 1000);
     // Limpieza: quita la tarea falsa que el lector anterior tomaba del pie del formato
     const acrsActuales = readJson(DATA_FILE);
     let quitadas = 0;
@@ -1419,10 +1477,9 @@ function alEscuchar() {
     receptorCorreo.iniciar();
     cargarColaEnvios();
     if (ALERTAS_VIA === 'powerautomate') console.log('📨 Correos de alerta: salen desde Outlook corporativo con Power Automate (conector RSS).');
-    storage.load('alertas_auto').then(d => { if (d && d.ultimoEnvio) ultimoEnvioAuto = d.ultimoEnvio; })
-        .catch(() => {}).finally(() => { revisarEnvioAutomatico(); setInterval(revisarEnvioAutomatico, 60 * 1000); });
-    const auto = configAlertasAuto();
-    if (auto.activo) console.log(`⏰ Alertas automáticas: ${auto.hora} (días ${auto.dias}) para ${auto.para.join(', ')}`);
+    notificador.iniciar();
+    const cfgN = notificador.config();
+    console.log(`🔔 Notificaciones automáticas: recordatorio ${cfgN.recordatorio.activo ? cfgN.recordatorio.hora : 'apagado'}, cierre del día ${cfgN.cierre.activo ? cfgN.cierre.hora : 'apagado'}, ${cfgN.ingenieros.length} ingenieros configurados.`);
     console.log('=======================================================');
     console.log(`🚀 SERVIDOR ACR DISPONIBLE EN PUERTO: ${PORT} (${IS_CLOUD ? 'nube' : 'local'})`);
     if (!IS_CLOUD) console.log(`👉 En este equipo: http://localhost:${PORT}`);

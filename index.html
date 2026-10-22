@@ -31,9 +31,6 @@
                 🟢 Conectando Real-Time...
             </span>
  
-            <button class="btn btn-primary" onclick="switchTab('powershell')">
-                <span>📧</span> Alertas por correo
-            </button>
             <a href="/logout" class="btn btn-secondary" title="Cerrar sesión" style="text-decoration: none;">🔒 Salir</a>
         </div>
     </header>
@@ -41,13 +38,16 @@
     <!-- Navigation Tabs -->
     <nav class="tabs-header">
         <button class="tab-btn active" onclick="switchTab('dashboard')">
-            <span>📊</span> Dashboard Ejecutivo Global
+            <span>🏠</span> Inicio
         </button>
         <button class="tab-btn" onclick="switchTab('matriz')">
             <span>📋</span> Matriz de Pendientes (Gestión)
         </button>
         <button class="tab-btn" onclick="switchTab('daily')">
-            <span>📝</span> Reunión Diaria (Pendientes del Día)
+            <span>📝</span> Reunión Diaria
+        </button>
+        <button class="tab-btn" onclick="switchTab('tecnicos')">
+            <span>👷</span> Técnicos y Turnos
         </button>
         <button class="tab-btn" onclick="switchTab('catalogo')">
             <span>📚</span> Catálogo de Fallas
@@ -59,7 +59,7 @@
             <span>📜</span> Trazabilidad e Historial
         </button>
         <button class="tab-btn" onclick="switchTab('powershell')">
-            <span>📧</span> Correo de alertas
+            <span>🔔</span> Notificaciones
         </button>
     </nav>
  
@@ -100,6 +100,24 @@
                 </div>
             </div>
  
+            <!-- Personal en turno hoy -->
+            <div class="section-card" id="card-turno-hoy">
+                <div class="section-title">
+                    <span>👷 Personal en turno · <span id="turno-hoy-fecha">hoy</span></span>
+                    <div class="grupo-botones">
+                        <button class="btn btn-secondary btn-sm" onclick="moverDiaInicio(-1)" title="Día anterior">◀</button>
+                        <button class="btn btn-secondary btn-sm" onclick="moverDiaInicio(0)">Hoy</button>
+                        <button class="btn btn-secondary btn-sm" onclick="moverDiaInicio(1)" title="Día siguiente">▶</button>
+                        <button class="btn btn-secondary btn-sm" onclick="irAProgramacion()">🗓️ Programación</button>
+                    </div>
+                </div>
+                <div class="buscador-rapido">
+                    <input type="text" id="inicio-buscar-tecnico" class="search-input" placeholder="🔎 ¿Quién me ayuda con…? (ej. rodillo, eléctrico, rodamientos, PLC)" onkeydown="if (event.key === 'Enter') buscarDesdeInicio()">
+                    <button class="btn btn-primary" onclick="buscarDesdeInicio()">Buscar técnico</button>
+                </div>
+                <div id="turno-hoy-contenido" class="turno-hoy-grid"><div style="color: var(--text-muted); font-size: 13px;">Cargando programación…</div></div>
+            </div>
+
             <!-- Resumen Visual Global de Cumplimiento -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 24px;">
                
@@ -233,63 +251,253 @@
             </div>
         </section>
  
-        <!-- TAB 3: REUNIÓN DIARIA (DDS / TECNICOS E INGENIEROS) -->
+        <!-- TAB 3: REUNIÓN DIARIA (pendientes del día, historial por máquina) -->
         <section id="tab-daily" class="tab-content">
-            <div class="filter-bar">
-                <div class="filter-group">
-                    <input type="text" id="daily-search" class="search-input" placeholder="🔍 Buscar compromiso, equipo, responsable o técnico..." oninput="filtrarReunionDiaria()">
-                   
-                    <select id="daily-filter-linea" class="select-input" onchange="filtrarReunionDiaria()">
-                        <option value="TODAS">Línea: Todas</option>
-                        <option value="Forte">Forte</option>
-                        <option value="Futura">Futura</option>
-                        <option value="Hinnli">Hinnli</option>
-                        <option value="Pocket">Pocket</option>
-                        <option value="Sincro 1">Sincro 1</option>
-                        <option value="Sincro 2">Sincro 2</option>
-                    </select>
- 
-                    <select id="daily-filter-estado" class="select-input" onchange="filtrarReunionDiaria()">
-                        <option value="TODOS">Estado: Todos</option>
-                        <option value="Pendiente">Pendiente</option>
-                        <option value="En Proceso">En Proceso</option>
-                        <option value="Realizado">Realizado / Cumplido</option>
-                    </select>
+            <div class="subtabs">
+                <button class="subtab activo" data-vista="hoy" onclick="vistaDaily('hoy')">📋 Pendientes del día</button>
+                <button class="subtab" data-vista="historial" onclick="vistaDaily('historial')">🗓️ Historial por máquina y fecha</button>
+            </div>
+
+            <div id="daily-vista-hoy">
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <input type="date" id="daily-fecha" class="select-input" onchange="filtrarReunionDiaria()" title="Día de la reunión">
+                        <input type="text" id="daily-search" class="search-input" placeholder="🔍 Buscar pendiente, máquina o responsable..." oninput="filtrarReunionDiaria()">
+                        <select id="daily-filter-linea" class="select-input" onchange="filtrarReunionDiaria()">
+                            <option value="TODAS">Línea: Todas</option>
+                            <option value="Forte">Forte</option>
+                            <option value="Futura">Futura</option>
+                            <option value="Hinnli">Hinnli</option>
+                            <option value="Pocket">Pocket</option>
+                            <option value="Sincro 1">Sincro 1</option>
+                            <option value="Sincro 2">Sincro 2</option>
+                        </select>
+                        <select id="daily-filter-estado" class="select-input" onchange="filtrarReunionDiaria()">
+                            <option value="TODOS">Estado: Todos</option>
+                            <option value="ABIERTOS">Sin cerrar</option>
+                            <option value="NOREALIZADO">⚠️ No realizados a tiempo</option>
+                            <option value="Pendiente">Pendiente</option>
+                            <option value="En Proceso">En Proceso</option>
+                            <option value="Realizado">Realizado</option>
+                        </select>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary" onclick="abrirModalNuevoCompromiso()">
+                            <span>➕</span> Nuevo pendiente
+                        </button>
+                    </div>
                 </div>
-                <div>
-                    <button class="btn btn-primary" onclick="abrirModalNuevoCompromiso()">
-                        <span>➕</span> Registrar Compromiso de la Reunión
-                    </button>
+
+                <div class="kpi-mini-grid" id="daily-resumen"></div>
+
+                <div class="section-card">
+                    <div class="section-title">
+                        <span>📝 Pendientes de la reunión diaria</span>
+                        <span id="daily-counter" style="font-size: 13px; color: var(--text-muted); font-weight: 500;">0 pendientes</span>
+                    </div>
+                    <p style="font-size: 12px; color: var(--text-muted); margin: -8px 0 12px;">Se muestran los pendientes con fecha del día elegido y los de días anteriores que siguen sin cerrarse. Si al cierre del día un pendiente no se realizó, se avisa automáticamente al ingeniero de la línea.</p>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Línea</th>
+                                    <th>Máquina</th>
+                                    <th>Compromiso / Pendiente</th>
+                                    <th>Responsable</th>
+                                    <th>Prioridad</th>
+                                    <th>Estado</th>
+                                    <th>Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="daily-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="section-card">
+                    <div class="section-title">
+                        <span>⚡ Acciones inmediatas de ACR abiertas</span>
+                        <span id="inmediatas-counter" style="font-size: 13px; color: var(--text-muted); font-weight: 500;"></span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Línea</th>
+                                    <th>ACR</th>
+                                    <th>Equipo</th>
+                                    <th>Tarea</th>
+                                    <th>Responsable</th>
+                                    <th>Fecha límite</th>
+                                    <th>Estado</th>
+                                    <th>Gestión</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inmediatas-tbody"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
- 
-            <div class="section-card">
-                <div class="section-title">
-                    <span>📝 Compromisos de la Reunión Diaria (Alineación Técnicos & Ingenieros)</span>
-                    <span id="daily-counter" style="font-size: 13px; color: var(--text-muted); font-weight: 500;">0 compromisos registrados</span>
+
+            <div id="daily-vista-historial" style="display: none;">
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <label class="etiqueta-campo">Desde <input type="date" id="hist-desde" class="select-input"></label>
+                        <label class="etiqueta-campo">Hasta <input type="date" id="hist-hasta" class="select-input"></label>
+                        <input type="text" id="hist-maquina" class="search-input" list="lista-maquinas" placeholder="🔍 Máquina, pendiente o responsable..." oninput="renderHistorialPendientes()">
+                        <select id="hist-linea" class="select-input" onchange="renderHistorialPendientes()">
+                            <option value="TODAS">Línea: Todas</option>
+                            <option value="Forte">Forte</option>
+                            <option value="Futura">Futura</option>
+                            <option value="Hinnli">Hinnli</option>
+                            <option value="Pocket">Pocket</option>
+                            <option value="Sincro 1">Sincro 1</option>
+                            <option value="Sincro 2">Sincro 2</option>
+                        </select>
+                        <select id="hist-estado" class="select-input" onchange="renderHistorialPendientes()">
+                            <option value="TODOS">Estado: Todos</option>
+                            <option value="Realizado">Realizados</option>
+                            <option value="NOREALIZADO">No realizados a tiempo</option>
+                            <option value="ABIERTOS">Sin cerrar</option>
+                            <option value="ELIMINADO">Eliminados</option>
+                        </select>
+                    </div>
+                    <div class="grupo-botones">
+                        <button class="btn btn-primary" onclick="cargarHistorialPendientes()">Buscar</button>
+                        <button class="btn btn-secondary" onclick="exportarHistorialPendientes()">⬇️ Excel (CSV)</button>
+                    </div>
                 </div>
-                <div class="table-responsive">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Fecha</th>
-                                <th>Línea</th>
-                                <th>Equipo / Sistema</th>
-                                <th>Compromiso / Pendiente del Día</th>
-                                <th>Responsable (Técnico / Ingeniero)</th>
-                                <th>Prioridad</th>
-                                <th>Estado</th>
-                                <th>Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody id="daily-tbody">
-                            <!-- Rendered dynamically -->
-                        </tbody>
-                    </table>
+                <div id="hist-por-maquina" class="chips-maquinas"></div>
+                <div class="section-card">
+                    <div class="section-title">
+                        <span>🗓️ Actividades registradas</span>
+                        <span id="hist-counter" style="font-size: 13px; color: var(--text-muted); font-weight: 500;"></span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Máquina</th>
+                                    <th>Línea</th>
+                                    <th>Compromiso / Pendiente</th>
+                                    <th>Responsable</th>
+                                    <th>Estado</th>
+                                    <th>Cierre / Detalle</th>
+                                    <th>Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="hist-tbody"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </section>
- 
+
+        <!-- TAB: TÉCNICOS Y TURNOS -->
+        <section id="tab-tecnicos" class="tab-content">
+            <div class="subtabs">
+                <button class="subtab activo" data-vista="buscar" onclick="vistaTecnicos('buscar')">🔎 Buscar técnico</button>
+                <button class="subtab" data-vista="perfiles" onclick="vistaTecnicos('perfiles')">🪪 Perfiles</button>
+                <button class="subtab" data-vista="matriz" onclick="vistaTecnicos('matriz')">🧩 Matriz de polivalencia</button>
+                <button class="subtab" data-vista="turnos" onclick="vistaTecnicos('turnos')">🗓️ Programación de turnos</button>
+            </div>
+
+            <!-- Buscar -->
+            <div id="tec-vista-buscar">
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <input type="text" id="buscar-tec-texto" class="search-input" placeholder="🔎 ¿Qué necesitas? Ej: cambiar un rodillo, eléctrico, rodamientos, planos, PLC…" oninput="renderBuscador()">
+                        <select id="buscar-tec-rol" class="select-input" onchange="renderBuscador()">
+                            <option value="TODOS">Rol: Todos</option>
+                            <option value="Mecánico">🔧 Mecánicos</option>
+                            <option value="Electricista">⚡ Electricistas</option>
+                        </select>
+                        <select id="buscar-tec-turno" class="select-input" onchange="renderBuscador()">
+                            <option value="TODOS">Disponibilidad: Todos</option>
+                            <option value="HOY">Laboran hoy</option>
+                            <option value="AHORA">En turno ahora</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="buscar-chips" class="chips-rapidos"></div>
+                <div id="buscar-resultados" class="tarjetas-tecnicos"></div>
+            </div>
+
+            <!-- Perfiles -->
+            <div id="tec-vista-perfiles" style="display: none;">
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <input type="text" id="perfiles-buscar" class="search-input" placeholder="🔍 Buscar por nombre, línea o especialidad..." oninput="renderPerfiles()">
+                        <select id="perfiles-rol" class="select-input" onchange="renderPerfiles()">
+                            <option value="TODOS">Rol: Todos</option>
+                            <option value="Mecánico">🔧 Mecánicos</option>
+                            <option value="Electricista">⚡ Electricistas</option>
+                        </select>
+                    </div>
+                    <div class="grupo-botones">
+                        <button class="btn btn-primary" onclick="abrirPerfil()">➕ Nuevo técnico</button>
+                        <button class="btn btn-secondary" onclick="document.getElementById('archivo-matriz').click()">📥 Importar matriz (Excel)</button>
+                        <input type="file" id="archivo-matriz" accept=".xlsx,.xls,.xlsm" style="display: none;" onchange="importarMatrizExcel(this)">
+                    </div>
+                </div>
+                <div id="perfiles-lista" class="tarjetas-tecnicos"></div>
+            </div>
+
+            <!-- Matriz de polivalencia -->
+            <div id="tec-vista-matriz" style="display: none;">
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <select id="matriz-rol" class="select-input" onchange="renderMatrizPolivalencia()">
+                            <option value="Mecánico">🔧 Mecánicos</option>
+                            <option value="Electricista">⚡ Electricistas</option>
+                        </select>
+                        <select id="matriz-orden" class="select-input" onchange="renderMatrizPolivalencia()">
+                            <option value="puntaje">Ordenar: mayor puntaje</option>
+                            <option value="nombre">Ordenar: nombre</option>
+                        </select>
+                        <label class="interruptor"><input type="checkbox" id="matriz-editar" onchange="renderMatrizPolivalencia()"> ✏️ Modo edición</label>
+                    </div>
+                    <div class="leyenda-niveles">
+                        <span class="nivel n1">1 No sabe</span><span class="nivel n2">2 Básico</span><span class="nivel n3">3 Autónomo</span><span class="nivel n4">4 Experto</span>
+                    </div>
+                </div>
+                <div class="section-card" style="padding: 0;">
+                    <div class="tabla-desplazable"><table class="grid-tabla" id="matriz-polivalencia"></table></div>
+                </div>
+                <p style="font-size: 12px; color: var(--text-muted);">Puntaje ponderado = suma de (nivel ÷ 4) × peso de cada habilidad. Las evaluaciones quedan guardadas por semestre (<span id="matriz-periodo"></span>) para ver si cada técnico mejora.</p>
+            </div>
+
+            <!-- Programación de turnos -->
+            <div id="tec-vista-turnos" style="display: none;">
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <button class="btn btn-secondary" onclick="moverSemana(-7)">◀</button>
+                        <input type="date" id="turnos-semana" class="select-input" onchange="cargarTurnos()">
+                        <button class="btn btn-secondary" onclick="moverSemana(7)">▶</button>
+                        <select id="turnos-rol" class="select-input" onchange="renderTurnos()">
+                            <option value="TODOS">Rol: Todos</option>
+                            <option value="Mecánico">🔧 Mecánicos</option>
+                            <option value="Electricista">⚡ Electricistas</option>
+                        </select>
+                    </div>
+                    <div class="grupo-botones">
+                        <button class="btn btn-secondary" onclick="copiarSemanaAnterior()">📋 Copiar semana anterior</button>
+                        <button class="btn btn-secondary" onclick="descargarPlantillaTurnos()">⬇️ Plantilla Excel</button>
+                        <button class="btn btn-secondary" onclick="document.getElementById('archivo-turnos').click()">📥 Cargar Excel</button>
+                        <input type="file" id="archivo-turnos" accept=".xlsx,.xls,.xlsm" style="display: none;" onchange="importarTurnosExcel(this)">
+                        <button class="btn btn-secondary" onclick="abrirTiposTurno()">⚙️ Tipos de turno</button>
+                    </div>
+                </div>
+                <div class="leyenda-turnos" id="leyenda-turnos"></div>
+                <div class="section-card" style="padding: 0;">
+                    <div class="tabla-desplazable"><table class="grid-tabla" id="tabla-turnos"></table></div>
+                </div>
+                <p style="font-size: 12px; color: var(--text-muted);">Cada cambio se guarda al instante. También puedes descargar la plantilla de la semana, llenarla en Excel y cargarla.</p>
+            </div>
+        </section>
+
         <!-- TAB 4: CATÁLOGO DE FALLAS -->
         <section id="tab-catalogo" class="tab-content">
             <div class="filter-bar">
@@ -371,55 +579,69 @@
             </div>
         </section>
  
-        <!-- TAB: CORREO DE ALERTAS -->
+        <!-- TAB: NOTIFICACIONES AUTOMÁTICAS -->
         <section id="tab-powershell" class="tab-content">
-            <div style="max-width: 760px; margin: 0 auto;">
+            <div style="max-width: 900px; margin: 0 auto;">
                 <div class="section-card">
-                    <div class="section-title">
-                        <span>📧 Enviar reporte de alertas</span>
+                    <div class="section-title"><span>🔔 Avisos automáticos por correo</span></div>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">Los correos salen solos, desde Outlook corporativo (flujo de Power Automate). A cada ingeniero le llega solo lo de sus líneas.</p>
+                    <div class="config-avisos">
+                        <div class="config-aviso">
+                            <label class="interruptor"><input type="checkbox" id="notif-rec-activo"> <strong>Recordatorio diario</strong></label>
+                            <p>Pendientes no realizados, pendientes del día, acciones de ACR vencidas y las que están próximas a vencer.</p>
+                            <div class="fila-campos">
+                                <label>Hora <input type="time" id="notif-rec-hora" class="form-control"></label>
+                                <label>Avisar con <input type="number" id="notif-rec-anticipacion" class="form-control" min="1" max="30" style="width: 80px;"> días de anticipación</label>
+                            </div>
+                            <div class="dias-semana" id="notif-rec-dias"></div>
+                        </div>
+                        <div class="config-aviso">
+                            <label class="interruptor"><input type="checkbox" id="notif-cie-activo"> <strong>Aviso de pendiente no realizado</strong></label>
+                            <p>A esta hora, si un pendiente del día sigue sin cerrar, se avisa una vez al ingeniero de la línea.</p>
+                            <div class="fila-campos">
+                                <label>Hora de cierre <input type="time" id="notif-cie-hora" class="form-control"></label>
+                            </div>
+                            <div class="dias-semana" id="notif-cie-dias"></div>
+                        </div>
                     </div>
-                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
-                        Un solo correo con las <strong>tareas vencidas</strong>, las que <strong>vencen en los próximos 7 días</strong> y los <strong>compromisos diarios pendientes</strong>. Sale desde <strong>Outlook corporativo</strong> mediante un flujo de Power Automate, así llega como correo interno (1 a 5 minutos).
-                    </p>
-                    <div class="form-group" style="margin-bottom: 10px;">
-                        <label>Para (separa varios correos con coma)</label>
-                        <input type="text" id="alerta-para" class="form-control" placeholder="nombre@kcc.com, otro@arbex.com" autocomplete="off">
-                    </div>
-                    <div class="form-group" style="margin-bottom: 14px;">
-                        <label>Con copia (CC) · opcional</label>
-                        <input type="text" id="o365-lider-email" class="form-control" placeholder="jefe@kcc.com" autocomplete="off">
-                    </div>
-                    <div class="grupo-botones">
-                        <button class="btn btn-secondary" onclick="enviarAlertas(false)">👁️ Vista previa</button>
-                        <button class="btn btn-success" onclick="enviarAlertas(true)">📧 Enviar correo ahora</button>
-                    </div>
-                    <p style="font-size: 12px; color: var(--text-muted); margin-top: 10px;">Solo se permiten correos corporativos. Los que pongas en CC también reciben el correo.</p>
                 </div>
 
                 <div class="section-card">
                     <div class="section-title">
-                        <span>🔗 Conexión con Power Automate</span>
+                        <span>👨‍🔧 Ingenieros que reciben los avisos</span>
+                        <button class="btn btn-secondary btn-sm" onclick="agregarIngeniero()">➕ Agregar ingeniero</button>
                     </div>
+                    <div id="notif-ingenieros"></div>
+                    <div class="form-group" style="margin-top: 14px;">
+                        <label>Copia de todos los avisos (opcional, separa con coma)</label>
+                        <input type="text" id="notif-copia" class="form-control" placeholder="jefe@kcc.com">
+                    </div>
+                    <div class="grupo-botones">
+                        <button class="btn btn-success" onclick="guardarNotificaciones()">💾 Guardar configuración</button>
+                    </div>
+                </div>
+
+                <div class="section-card">
+                    <div class="section-title"><span>🧪 Probar</span></div>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">La prueba solo se envía a tu correo (<span id="notif-mi-correo"></span>).</p>
+                    <div class="grupo-botones">
+                        <button class="btn btn-secondary" onclick="vistaPreviaNotificacion('recordatorio')">👁️ Ver recordatorio</button>
+                        <button class="btn btn-secondary" onclick="vistaPreviaNotificacion('cierre')">👁️ Ver aviso de no realizados</button>
+                        <button class="btn btn-primary" onclick="probarNotificacion('recordatorio')">📧 Enviarme el recordatorio</button>
+                    </div>
+                    <div class="console-box" id="ps-console-output" style="margin-top: 12px;">Elige una opción.</div>
+                    <div id="alerta-preview" style="display: none; margin-top: 14px; background: #fff; border-radius: 10px; padding: 14px; max-height: 520px; overflow: auto;"></div>
+                </div>
+
+                <div class="section-card">
+                    <div class="section-title"><span>🔗 Conexión con Power Automate</span></div>
                     <div id="alertas-auto-estado" style="font-size: 13px; color: var(--text-muted);">Cargando…</div>
                 </div>
 
                 <div class="section-card">
-                    <div class="section-title">
-                        <span>✉️ Enviar desde mi propio Outlook</span>
-                    </div>
-                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Si prefieres que salga desde tu cuenta, abre el resumen en tu programa de correo o cópialo.</p>
-                    <div class="grupo-botones">
-                        <button class="btn btn-secondary" onclick="abrirCorreoEnMiOutlook()">✉️ Abrir correo en mi Outlook</button>
-                        <button class="btn btn-secondary" onclick="copiarResumenAlertas()">📋 Copiar resumen completo</button>
-                    </div>
-                </div>
-
-                <div class="section-card">
-                    <div class="section-title">
-                        <span>📄 Resultado</span>
-                    </div>
-                    <div class="console-box" id="ps-console-output">Elige "Vista previa" o "Enviar correo ahora".</div>
-                    <div id="alerta-preview" style="display: none; margin-top: 14px; background: #fff; border-radius: 10px; padding: 14px; max-height: 520px; overflow: auto;"></div>
+                    <div class="section-title"><span>🗄️ Base de datos</span></div>
+                    <div id="estado-base-datos" style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Cargando…</div>
+                    <a class="btn btn-secondary" href="/api/respaldo" style="text-decoration: none;">⬇️ Descargar respaldo completo</a>
                 </div>
             </div>
         </section>
@@ -487,106 +709,225 @@
         </div>
     </div>
  
-    <!-- Modal Nuevo Compromiso de Reunión Diaria -->
+    <datalist id="lista-maquinas"></datalist>
+    <datalist id="lista-tecnicos"></datalist>
+
+    <!-- Modal Nuevo pendiente de Reunión Diaria -->
     <div id="modal-daily-create" class="modal-backdrop">
-        <div class="modal-box" style="max-width: 580px;">
+        <div class="modal-box" style="max-width: 620px;">
             <div class="modal-header">
-                <h2>📝 Nuevo Compromiso - Reunión Diaria (DDS)</h2>
+                <h2>📝 Nuevo pendiente · Reunión diaria</h2>
                 <button class="close-modal" onclick="cerrarModalNuevoCompromiso()">&times;</button>
             </div>
             <form id="form-daily-create" onsubmit="guardarNuevoCompromiso(event)">
-                <div class="form-group">
-                    <label>Línea de Producción</label>
-                    <select id="daily-create-linea" class="form-control" required>
-                        <option value="Forte">Forte</option>
-                        <option value="Futura">Futura</option>
-                        <option value="Hinnli">Hinnli</option>
-                        <option value="Pocket">Pocket</option>
-                        <option value="Sincro 1">Sincro 1</option>
-                        <option value="Sincro 2">Sincro 2</option>
-                    </select>
-                </div>
- 
-                <div class="form-group">
-                    <label>Equipo / Sistema / Subsistema</label>
-                    <input type="text" id="daily-create-equipo" class="form-control" placeholder="Ej. Cortadora Interna PROLOG / Empacadora" required>
-                </div>
- 
-                <div class="form-group">
-                    <label>Compromiso / Pendiente del Día</label>
-                    <textarea id="daily-create-compromiso" class="form-control" placeholder="Describa la acción acordada entre técnicos e ingenieros para ejecutarse hoy..." required></textarea>
-                </div>
- 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                     <div class="form-group">
-                        <label>Responsables (Slash / Nombres)</label>
-                        <input type="text" id="daily-create-responsable" class="form-control" placeholder="Ej. Faber / Luis Felipe" required>
+                        <label>Línea de producción</label>
+                        <select id="daily-create-linea" class="form-control" required>
+                            <option value="Forte">Forte</option>
+                            <option value="Futura">Futura</option>
+                            <option value="Hinnli">Hinnli</option>
+                            <option value="Pocket">Pocket</option>
+                            <option value="Sincro 1">Sincro 1</option>
+                            <option value="Sincro 2">Sincro 2</option>
+                        </select>
                     </div>
+                    <div class="form-group">
+                        <label>Fecha de compromiso</label>
+                        <input type="date" id="daily-create-fecha" class="form-control" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Máquina / Equipo / Sistema</label>
+                    <input type="text" id="daily-create-equipo" class="form-control" list="lista-maquinas" placeholder="Ej. Cortadora interna / Empacadora" required autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label>Pendiente acordado</label>
+                    <textarea id="daily-create-compromiso" class="form-control" placeholder="Describa la acción acordada entre técnicos e ingenieros..." required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Responsables (separa con " / ")</label>
+                    <input type="text" id="daily-create-responsable" class="form-control" list="lista-tecnicos" placeholder="Ej. Faber / Luis Felipe" required autocomplete="off">
+                    <div id="daily-create-sugeridos" class="chips-sugeridos"></div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                     <div class="form-group">
                         <label>Prioridad</label>
                         <select id="daily-create-prioridad" class="form-control">
-                            <option value="Alta">🔴 Alta (Urgente hoy)</option>
-                            <option value="Media">🟡 Media (En turno)</option>
-                            <option value="Baja">🟢 Baja (Monitoreo)</option>
+                            <option value="Alta">🔴 Alta (urgente hoy)</option>
+                            <option value="Media">🟡 Media (en turno)</option>
+                            <option value="Baja">🟢 Baja (monitoreo)</option>
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label>Usuario que registra</label>
+                        <input type="text" id="daily-create-usuario" class="form-control" placeholder="Ing. Planta / Técnico" required>
+                    </div>
                 </div>
- 
-                <div class="form-group">
-                    <label>Usuario que Registra (Ingeniero / Técnico)</label>
-                    <input type="text" id="daily-create-usuario" class="form-control" placeholder="Ej. Ing. Planta / Técnico Mantenimiento" required>
-                </div>
- 
-                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+
+                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 18px;">
                     <button type="button" class="btn btn-secondary" onclick="cerrarModalNuevoCompromiso()">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Registrar Compromiso</button>
+                    <button type="submit" class="btn btn-primary">Registrar pendiente</button>
                 </div>
             </form>
         </div>
     </div>
- 
-    <!-- Modal Editar Estado Compromiso Diario -->
+
+    <!-- Modal actualizar pendiente -->
     <div id="modal-daily-status" class="modal-backdrop">
-        <div class="modal-box" style="max-width: 540px;">
+        <div class="modal-box" style="max-width: 560px;">
             <div class="modal-header">
-                <h2>Actualizar Compromiso Diario</h2>
+                <h2>Actualizar pendiente</h2>
                 <button class="close-modal" onclick="cerrarModalDailyStatus()">&times;</button>
             </div>
             <form id="form-daily-status" onsubmit="guardarEstadoDailyTask(event)">
                 <input type="hidden" id="modal-daily-id">
- 
                 <div class="form-group">
-                    <label>Compromiso</label>
+                    <label>Pendiente</label>
                     <input type="text" id="modal-daily-desc" class="form-control" readonly style="opacity: 0.7;">
                 </div>
- 
-                <div class="form-group">
-                    <label>Estado de Avance</label>
-                    <select id="modal-daily-status-val" class="form-control">
-                        <option value="Pendiente">Pendiente</option>
-                        <option value="En Proceso">En Proceso</option>
-                        <option value="Realizado">Realizado (Cumplido)</option>
-                    </select>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label>Estado</label>
+                        <select id="modal-daily-status-val" class="form-control">
+                            <option value="Pendiente">Pendiente</option>
+                            <option value="En Proceso">En Proceso</option>
+                            <option value="Realizado">Realizado (cumplido)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Fecha de compromiso</label>
+                        <input type="date" id="modal-daily-fecha" class="form-control">
+                    </div>
                 </div>
- 
                 <div class="form-group">
-                    <label>Usuario que Actualiza</label>
+                    <label>Usuario que actualiza</label>
                     <input type="text" id="modal-daily-user" class="form-control" placeholder="Ej. Faber / Luis Felipe" required>
                 </div>
- 
                 <div class="form-group">
-                    <label>Observaciones / Evidencia</label>
-                    <textarea id="modal-daily-obs" class="form-control" placeholder="Detalle qué se realizó durante el día..." required></textarea>
+                    <label>Observaciones / evidencia</label>
+                    <textarea id="modal-daily-obs" class="form-control" placeholder="Qué se realizó, motivo del retraso o por qué se reprograma..." required></textarea>
                 </div>
- 
-                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+                <div id="modal-daily-historial" class="mini-historial"></div>
+                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 18px;">
                     <button type="button" class="btn btn-secondary" onclick="cerrarModalDailyStatus()">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                    <button type="submit" class="btn btn-primary">Guardar cambios</button>
                 </div>
             </form>
         </div>
     </div>
- 
+
+    <!-- Modal eliminar pendiente -->
+    <div id="modal-daily-eliminar" class="modal-backdrop">
+        <div class="modal-box" style="max-width: 480px;">
+            <div class="modal-header">
+                <h2>🗑️ Eliminar pendiente</h2>
+                <button class="close-modal" onclick="cerrarModal('modal-daily-eliminar')">&times;</button>
+            </div>
+            <form onsubmit="confirmarEliminarPendiente(event)">
+                <input type="hidden" id="eliminar-daily-id">
+                <p id="eliminar-daily-texto" style="font-size: 14px; margin-bottom: 14px;"></p>
+                <div class="form-group">
+                    <label>Motivo (queda en el historial)</label>
+                    <input type="text" id="eliminar-daily-motivo" class="form-control" placeholder="Ej. Registrado por error / duplicado / ya no aplica" required>
+                </div>
+                <p style="font-size: 12px; color: var(--text-muted);">Deja de verse en el día, pero queda en el historial y se puede restaurar.</p>
+                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 18px;">
+                    <button type="button" class="btn btn-secondary" onclick="cerrarModal('modal-daily-eliminar')">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal perfil del técnico -->
+    <div id="modal-perfil" class="modal-backdrop">
+        <div class="modal-box" style="max-width: 860px;">
+            <div class="modal-header">
+                <h2 id="perfil-titulo">Perfil del técnico</h2>
+                <button class="close-modal" onclick="cerrarModal('modal-perfil')">&times;</button>
+            </div>
+            <form id="form-perfil" onsubmit="guardarPerfil(event)">
+                <input type="hidden" id="perfil-id">
+                <div id="perfil-resumen"></div>
+                <div class="perfil-grid">
+                    <div class="form-group"><label>Nombre completo</label><input type="text" id="perfil-nombre" class="form-control" required></div>
+                    <div class="form-group"><label>Rol</label>
+                        <select id="perfil-rol" class="form-control" onchange="renderNivelesPerfil()">
+                            <option value="Mecánico">🔧 Mecánico</option>
+                            <option value="Electricista">⚡ Electricista</option>
+                            <option value="Instrumentista">Instrumentista</option>
+                            <option value="Lubricador">Lubricador</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Cargo</label><input type="text" id="perfil-cargo" class="form-control" placeholder="Técnico A / Líder de turno"></div>
+                    <div class="form-group"><label>Línea o área base</label>
+                        <select id="perfil-linea" class="form-control">
+                            <option value="">Todas / rotativo</option>
+                            <option value="Forte">Forte</option>
+                            <option value="Futura">Futura</option>
+                            <option value="Hinnli">Hinnli</option>
+                            <option value="Pocket">Pocket</option>
+                            <option value="Sincro 1">Sincro 1</option>
+                            <option value="Sincro 2">Sincro 2</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Celular</label><input type="tel" id="perfil-telefono" class="form-control"></div>
+                    <div class="form-group"><label>Correo (opcional)</label><input type="email" id="perfil-correo" class="form-control"></div>
+                    <div class="form-group"><label>Estado</label>
+                        <select id="perfil-activo" class="form-control">
+                            <option value="true">Activo</option>
+                            <option value="false">Inactivo (no aparece en turnos ni búsquedas)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Especialidades (separa con coma) — es lo que encuentra el buscador</label>
+                    <input type="text" id="perfil-especialidades" class="form-control" placeholder="Ej. Cambio de rodillos, Neumática, Soldadura, Variadores, PLC">
+                </div>
+                <div class="form-group">
+                    <label>Notas</label>
+                    <textarea id="perfil-notas" class="form-control" style="min-height: 60px;" placeholder="Certificaciones, cursos, restricciones..."></textarea>
+                </div>
+                <div class="form-group" style="margin-bottom: 6px;">
+                    <label>Matriz de polivalencia · semestre <span id="perfil-periodo"></span></label>
+                </div>
+                <div id="perfil-niveles" class="perfil-niveles"></div>
+                <div id="perfil-extra"></div>
+                <div style="display: flex; justify-content: space-between; gap: 12px; margin-top: 18px; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-danger" id="perfil-eliminar" onclick="eliminarPerfil()">🗑️ Eliminar técnico</button>
+                    <div style="display: flex; gap: 12px;">
+                        <button type="button" class="btn btn-secondary" onclick="cerrarModal('modal-perfil')">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar perfil</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal tipos de turno -->
+    <div id="modal-tipos-turno" class="modal-backdrop">
+        <div class="modal-box" style="max-width: 720px;">
+            <div class="modal-header">
+                <h2>⚙️ Tipos de turno</h2>
+                <button class="close-modal" onclick="cerrarModal('modal-tipos-turno')">&times;</button>
+            </div>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">El código es lo que se escribe en la programación (y en el Excel). "Labora" indica si cuenta como personal disponible en planta.</p>
+            <div id="tipos-turno-lista"></div>
+            <div style="display: flex; justify-content: space-between; gap: 12px; margin-top: 18px; flex-wrap: wrap;">
+                <button type="button" class="btn btn-secondary" onclick="agregarTipoTurno()">➕ Agregar tipo</button>
+                <div style="display: flex; gap: 12px;">
+                    <button type="button" class="btn btn-secondary" onclick="cerrarModal('modal-tipos-turno')">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="guardarTiposTurno()">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Análisis del ACR -->
     <div id="modal-analisis" class="modal-backdrop" onclick="if (event.target === this) cerrarModalAnalisis()">
         <div class="modal-box" style="max-width: 760px;">
@@ -599,6 +940,7 @@
     </div>
 
     <script src="app.js"></script>
+    <script src="tecnicos-ui.js"></script>
 </body>
 </html>
  

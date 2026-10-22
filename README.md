@@ -80,3 +80,24 @@ Los filtros de la empresa retienen los correos externos, así que las alertas sa
 - `/feeds/envios.xml?token=<SYNC_TOKEN>`: un ítem por cada "Enviar correo ahora" (título = asunto, resumen = HTML, categorías = destinatarios). Flujo: desencadenador RSS "Cuando se publica un elemento de fuente" → Outlook "Enviar un correo electrónico (V2)".
 - `/feeds/alertas.xml?token=<SYNC_TOKEN>&para=correo1,correo2`: reporte del día para un flujo programado (Periodicidad → RSS "Enumerar todos los elementos de fuente RSS" → Outlook).
 - `FEED_TOKEN` opcional (por defecto `SYNC_TOKEN`); `ALERTAS_VIA=brevo` vuelve al envío directo.
+
+## Técnicos, matriz de polivalencia y turnos
+- **Inicio**: además del panel de ACR, muestra quién está en turno el día elegido (y quién está trabajando en este momento) y un buscador rápido de técnicos.
+- **Técnicos y Turnos**:
+  - *Buscar técnico*: escribe lo que necesitas ("cambiar un rodillo", "eléctrico", "rodamientos") y ordena a los técnicos por especialidades y nivel en la matriz; se puede filtrar por quienes laboran hoy o están en turno ahora.
+  - *Perfiles*: datos, especialidades (lo que encuentra el buscador), notas, matriz del semestre y turnos de la semana. Se pueden importar desde el Excel de la matriz de competencias (hojas `DimTecnico`, `DimHabilidad`, `DimPeriodo`, `FactEvaluacion`).
+  - *Matriz de polivalencia*: escala 1–4, puntaje ponderado = Σ (nivel ÷ 4) × peso; las evaluaciones se guardan por semestre para ver la variación.
+  - *Programación de turnos*: cuadrícula semanal (se guarda al instante), copiar la semana anterior, plantilla Excel para cargar la semana y tipos de turno editables.
+
+## Reunión diaria
+- Cada pendiente tiene **fecha de compromiso** y **máquina**. La vista del día muestra los del día y los atrasados que siguen abiertos (marcados "No realizado").
+- **Eliminar** pide un motivo y deja el pendiente en el historial (se puede restaurar).
+- **Historial por máquina y fecha**: rango de fechas, filtros por máquina, línea y estado, resumen por máquina y exportación a CSV.
+- Abajo se listan las **acciones inmediatas de ACR** abiertas.
+- Los pendientes cerrados hace más de 60 días pasan a un archivo mensual en la base de datos (`daily_archivo_AAAA-MM`) y siguen apareciendo en el historial.
+
+## Notificaciones automáticas (pestaña Notificaciones)
+- **Recordatorio diario** (6:30 a. m., lunes a sábado por defecto) a cada ingeniero con lo de sus líneas: pendientes no realizados, pendientes del día, acciones de ACR vencidas y las que vencen en N días.
+- **Aviso de pendiente no realizado** (6:00 p. m. por defecto): una sola vez por pendiente.
+- Los correos salen por el mismo flujo de Power Automate de `/feeds/envios.xml` (no hace falta otro flujo). El flujo, al revisar la app cada pocos minutos, también la mantiene despierta en Render.
+- Respaldo completo de todos los datos en JSON: botón en Notificaciones (`/api/respaldo`).

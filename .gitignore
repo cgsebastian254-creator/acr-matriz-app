@@ -4,3 +4,8 @@ iniciar-sincronizacion.bat
 data/excels/
 ~$*
 data/vista_previa_alerta.html
+# Copias locales de los datos que viven en MongoDB Atlas
+data/tecnicos.json
+data/turnos.json
+data/notificaciones.json
+data/daily_archivo_*.json
