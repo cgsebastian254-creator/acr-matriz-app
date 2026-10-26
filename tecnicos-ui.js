@@ -699,7 +699,6 @@ async function cargarNotificaciones() {
     document.getElementById('notif-rec-activo').checked = notif.recordatorio.activo;
     document.getElementById('notif-rec-hora').value = notif.recordatorio.hora;
     document.getElementById('notif-rec-anticipacion').value = notif.recordatorio.anticipacion;
-    document.getElementById('notif-copia').value = (notif.copia || []).join(', ');
     renderDias('notif-rec-dias', notif.recordatorio.dias);
     renderIngenieros();
     renderEstadoPowerAutomate();
@@ -746,7 +745,7 @@ function agregarIngeniero() {
 async function guardarNotificaciones() {
     const datos = {
         ingenieros: notif.ingenieros,
-        copia: document.getElementById('notif-copia').value,
+        copia: [],
         recordatorio: {
             activo: document.getElementById('notif-rec-activo').checked,
             hora: document.getElementById('notif-rec-hora').value,
