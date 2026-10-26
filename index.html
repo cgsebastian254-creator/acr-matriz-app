@@ -41,13 +41,7 @@
             <span>🏠</span> Inicio
         </button>
         <button class="tab-btn" onclick="switchTab('matriz')">
-            <span>📋</span> Matriz de Pendientes (Gestión)
-        </button>
-        <button class="tab-btn" onclick="switchTab('daily')">
-            <span>📝</span> Reunión Diaria
-        </button>
-        <button class="tab-btn" onclick="switchTab('tecnicos')">
-            <span>👷</span> Técnicos y Turnos
+            <span>📋</span> Acciones ACR (Gestión)
         </button>
         <button class="tab-btn" onclick="switchTab('catalogo')">
             <span>📚</span> Catálogo de Fallas
@@ -100,24 +94,6 @@
                 </div>
             </div>
  
-            <!-- Personal en turno hoy -->
-            <div class="section-card" id="card-turno-hoy">
-                <div class="section-title">
-                    <span>👷 Personal en turno · <span id="turno-hoy-fecha">hoy</span></span>
-                    <div class="grupo-botones">
-                        <button class="btn btn-secondary btn-sm" onclick="moverDiaInicio(-1)" title="Día anterior">◀</button>
-                        <button class="btn btn-secondary btn-sm" onclick="moverDiaInicio(0)">Hoy</button>
-                        <button class="btn btn-secondary btn-sm" onclick="moverDiaInicio(1)" title="Día siguiente">▶</button>
-                        <button class="btn btn-secondary btn-sm" onclick="irAProgramacion()">🗓️ Programación</button>
-                    </div>
-                </div>
-                <div class="buscador-rapido">
-                    <input type="text" id="inicio-buscar-tecnico" class="search-input" placeholder="🔎 ¿Quién me ayuda con…? (ej. rodillo, eléctrico, rodamientos, PLC)" onkeydown="if (event.key === 'Enter') buscarDesdeInicio()">
-                    <button class="btn btn-primary" onclick="buscarDesdeInicio()">Buscar técnico</button>
-                </div>
-                <div id="turno-hoy-contenido" class="turno-hoy-grid"><div style="color: var(--text-muted); font-size: 13px;">Cargando programación…</div></div>
-            </div>
-
             <!-- Resumen Visual Global de Cumplimiento -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 24px;">
                
@@ -251,253 +227,6 @@
             </div>
         </section>
  
-        <!-- TAB 3: REUNIÓN DIARIA (pendientes del día, historial por máquina) -->
-        <section id="tab-daily" class="tab-content">
-            <div class="subtabs">
-                <button class="subtab activo" data-vista="hoy" onclick="vistaDaily('hoy')">📋 Pendientes del día</button>
-                <button class="subtab" data-vista="historial" onclick="vistaDaily('historial')">🗓️ Historial por máquina y fecha</button>
-            </div>
-
-            <div id="daily-vista-hoy">
-                <div class="filter-bar">
-                    <div class="filter-group">
-                        <input type="date" id="daily-fecha" class="select-input" onchange="filtrarReunionDiaria()" title="Día de la reunión">
-                        <input type="text" id="daily-search" class="search-input" placeholder="🔍 Buscar pendiente, máquina o responsable..." oninput="filtrarReunionDiaria()">
-                        <select id="daily-filter-linea" class="select-input" onchange="filtrarReunionDiaria()">
-                            <option value="TODAS">Línea: Todas</option>
-                            <option value="Forte">Forte</option>
-                            <option value="Futura">Futura</option>
-                            <option value="Hinnli">Hinnli</option>
-                            <option value="Pocket">Pocket</option>
-                            <option value="Sincro 1">Sincro 1</option>
-                            <option value="Sincro 2">Sincro 2</option>
-                        </select>
-                        <select id="daily-filter-estado" class="select-input" onchange="filtrarReunionDiaria()">
-                            <option value="TODOS">Estado: Todos</option>
-                            <option value="ABIERTOS">Sin cerrar</option>
-                            <option value="NOREALIZADO">⚠️ No realizados a tiempo</option>
-                            <option value="Pendiente">Pendiente</option>
-                            <option value="En Proceso">En Proceso</option>
-                            <option value="Realizado">Realizado</option>
-                        </select>
-                    </div>
-                    <div>
-                        <button class="btn btn-primary" onclick="abrirModalNuevoCompromiso()">
-                            <span>➕</span> Nuevo pendiente
-                        </button>
-                    </div>
-                </div>
-
-                <div class="kpi-mini-grid" id="daily-resumen"></div>
-
-                <div class="section-card">
-                    <div class="section-title">
-                        <span>📝 Pendientes de la reunión diaria</span>
-                        <span id="daily-counter" style="font-size: 13px; color: var(--text-muted); font-weight: 500;">0 pendientes</span>
-                    </div>
-                    <p style="font-size: 12px; color: var(--text-muted); margin: -8px 0 12px;">Se muestran los pendientes con fecha del día elegido y los de días anteriores que siguen sin cerrarse. Si al cierre del día un pendiente no se realizó, se avisa automáticamente al ingeniero de la línea.</p>
-                    <div class="table-responsive">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Fecha</th>
-                                    <th>Línea</th>
-                                    <th>Máquina</th>
-                                    <th>Compromiso / Pendiente</th>
-                                    <th>Responsable</th>
-                                    <th>Prioridad</th>
-                                    <th>Estado</th>
-                                    <th>Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody id="daily-tbody"></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="section-card">
-                    <div class="section-title">
-                        <span>⚡ Acciones inmediatas de ACR abiertas</span>
-                        <span id="inmediatas-counter" style="font-size: 13px; color: var(--text-muted); font-weight: 500;"></span>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Línea</th>
-                                    <th>ACR</th>
-                                    <th>Equipo</th>
-                                    <th>Tarea</th>
-                                    <th>Responsable</th>
-                                    <th>Fecha límite</th>
-                                    <th>Estado</th>
-                                    <th>Gestión</th>
-                                </tr>
-                            </thead>
-                            <tbody id="inmediatas-tbody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <div id="daily-vista-historial" style="display: none;">
-                <div class="filter-bar">
-                    <div class="filter-group">
-                        <label class="etiqueta-campo">Desde <input type="date" id="hist-desde" class="select-input"></label>
-                        <label class="etiqueta-campo">Hasta <input type="date" id="hist-hasta" class="select-input"></label>
-                        <input type="text" id="hist-maquina" class="search-input" list="lista-maquinas" placeholder="🔍 Máquina, pendiente o responsable..." oninput="renderHistorialPendientes()">
-                        <select id="hist-linea" class="select-input" onchange="renderHistorialPendientes()">
-                            <option value="TODAS">Línea: Todas</option>
-                            <option value="Forte">Forte</option>
-                            <option value="Futura">Futura</option>
-                            <option value="Hinnli">Hinnli</option>
-                            <option value="Pocket">Pocket</option>
-                            <option value="Sincro 1">Sincro 1</option>
-                            <option value="Sincro 2">Sincro 2</option>
-                        </select>
-                        <select id="hist-estado" class="select-input" onchange="renderHistorialPendientes()">
-                            <option value="TODOS">Estado: Todos</option>
-                            <option value="Realizado">Realizados</option>
-                            <option value="NOREALIZADO">No realizados a tiempo</option>
-                            <option value="ABIERTOS">Sin cerrar</option>
-                            <option value="ELIMINADO">Eliminados</option>
-                        </select>
-                    </div>
-                    <div class="grupo-botones">
-                        <button class="btn btn-primary" onclick="cargarHistorialPendientes()">Buscar</button>
-                        <button class="btn btn-secondary" onclick="exportarHistorialPendientes()">⬇️ Excel (CSV)</button>
-                    </div>
-                </div>
-                <div id="hist-por-maquina" class="chips-maquinas"></div>
-                <div class="section-card">
-                    <div class="section-title">
-                        <span>🗓️ Actividades registradas</span>
-                        <span id="hist-counter" style="font-size: 13px; color: var(--text-muted); font-weight: 500;"></span>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Fecha</th>
-                                    <th>Máquina</th>
-                                    <th>Línea</th>
-                                    <th>Compromiso / Pendiente</th>
-                                    <th>Responsable</th>
-                                    <th>Estado</th>
-                                    <th>Cierre / Detalle</th>
-                                    <th>Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody id="hist-tbody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- TAB: TÉCNICOS Y TURNOS -->
-        <section id="tab-tecnicos" class="tab-content">
-            <div class="subtabs">
-                <button class="subtab activo" data-vista="buscar" onclick="vistaTecnicos('buscar')">🔎 Buscar técnico</button>
-                <button class="subtab" data-vista="perfiles" onclick="vistaTecnicos('perfiles')">🪪 Perfiles</button>
-                <button class="subtab" data-vista="matriz" onclick="vistaTecnicos('matriz')">🧩 Matriz de polivalencia</button>
-                <button class="subtab" data-vista="turnos" onclick="vistaTecnicos('turnos')">🗓️ Programación de turnos</button>
-            </div>
-
-            <!-- Buscar -->
-            <div id="tec-vista-buscar">
-                <div class="filter-bar">
-                    <div class="filter-group">
-                        <input type="text" id="buscar-tec-texto" class="search-input" placeholder="🔎 ¿Qué necesitas? Ej: cambiar un rodillo, eléctrico, rodamientos, planos, PLC…" oninput="renderBuscador()">
-                        <select id="buscar-tec-rol" class="select-input" onchange="renderBuscador()">
-                            <option value="TODOS">Rol: Todos</option>
-                            <option value="Mecánico">🔧 Mecánicos</option>
-                            <option value="Electricista">⚡ Electricistas</option>
-                        </select>
-                        <select id="buscar-tec-turno" class="select-input" onchange="renderBuscador()">
-                            <option value="TODOS">Disponibilidad: Todos</option>
-                            <option value="HOY">Laboran hoy</option>
-                            <option value="AHORA">En turno ahora</option>
-                        </select>
-                    </div>
-                </div>
-                <div id="buscar-chips" class="chips-rapidos"></div>
-                <div id="buscar-resultados" class="tarjetas-tecnicos"></div>
-            </div>
-
-            <!-- Perfiles -->
-            <div id="tec-vista-perfiles" style="display: none;">
-                <div class="filter-bar">
-                    <div class="filter-group">
-                        <input type="text" id="perfiles-buscar" class="search-input" placeholder="🔍 Buscar por nombre, línea o especialidad..." oninput="renderPerfiles()">
-                        <select id="perfiles-rol" class="select-input" onchange="renderPerfiles()">
-                            <option value="TODOS">Rol: Todos</option>
-                            <option value="Mecánico">🔧 Mecánicos</option>
-                            <option value="Electricista">⚡ Electricistas</option>
-                        </select>
-                    </div>
-                    <div class="grupo-botones">
-                        <button class="btn btn-primary" onclick="abrirPerfil()">➕ Nuevo técnico</button>
-                        <button class="btn btn-secondary" onclick="document.getElementById('archivo-matriz').click()">📥 Importar matriz (Excel)</button>
-                        <input type="file" id="archivo-matriz" accept=".xlsx,.xls,.xlsm" style="display: none;" onchange="importarMatrizExcel(this)">
-                    </div>
-                </div>
-                <div id="perfiles-lista" class="tarjetas-tecnicos"></div>
-            </div>
-
-            <!-- Matriz de polivalencia -->
-            <div id="tec-vista-matriz" style="display: none;">
-                <div class="filter-bar">
-                    <div class="filter-group">
-                        <select id="matriz-rol" class="select-input" onchange="renderMatrizPolivalencia()">
-                            <option value="Mecánico">🔧 Mecánicos</option>
-                            <option value="Electricista">⚡ Electricistas</option>
-                        </select>
-                        <select id="matriz-orden" class="select-input" onchange="renderMatrizPolivalencia()">
-                            <option value="puntaje">Ordenar: mayor puntaje</option>
-                            <option value="nombre">Ordenar: nombre</option>
-                        </select>
-                        <label class="interruptor"><input type="checkbox" id="matriz-editar" onchange="renderMatrizPolivalencia()"> ✏️ Modo edición</label>
-                    </div>
-                    <div class="leyenda-niveles">
-                        <span class="nivel n1">1 No sabe</span><span class="nivel n2">2 Básico</span><span class="nivel n3">3 Autónomo</span><span class="nivel n4">4 Experto</span>
-                    </div>
-                </div>
-                <div class="section-card" style="padding: 0;">
-                    <div class="tabla-desplazable"><table class="grid-tabla" id="matriz-polivalencia"></table></div>
-                </div>
-                <p style="font-size: 12px; color: var(--text-muted);">Puntaje ponderado = suma de (nivel ÷ 4) × peso de cada habilidad. Las evaluaciones quedan guardadas por semestre (<span id="matriz-periodo"></span>) para ver si cada técnico mejora.</p>
-            </div>
-
-            <!-- Programación de turnos -->
-            <div id="tec-vista-turnos" style="display: none;">
-                <div class="filter-bar">
-                    <div class="filter-group">
-                        <button class="btn btn-secondary" onclick="moverSemana(-7)">◀</button>
-                        <input type="date" id="turnos-semana" class="select-input" onchange="cargarTurnos()">
-                        <button class="btn btn-secondary" onclick="moverSemana(7)">▶</button>
-                        <select id="turnos-rol" class="select-input" onchange="renderTurnos()">
-                            <option value="TODOS">Rol: Todos</option>
-                            <option value="Mecánico">🔧 Mecánicos</option>
-                            <option value="Electricista">⚡ Electricistas</option>
-                        </select>
-                    </div>
-                    <div class="grupo-botones">
-                        <button class="btn btn-secondary" onclick="copiarSemanaAnterior()">📋 Copiar semana anterior</button>
-                        <button class="btn btn-secondary" onclick="descargarPlantillaTurnos()">⬇️ Plantilla Excel</button>
-                        <button class="btn btn-secondary" onclick="document.getElementById('archivo-turnos').click()">📥 Cargar Excel</button>
-                        <input type="file" id="archivo-turnos" accept=".xlsx,.xls,.xlsm" style="display: none;" onchange="importarTurnosExcel(this)">
-                        <button class="btn btn-secondary" onclick="abrirTiposTurno()">⚙️ Tipos de turno</button>
-                    </div>
-                </div>
-                <div class="leyenda-turnos" id="leyenda-turnos"></div>
-                <div class="section-card" style="padding: 0;">
-                    <div class="tabla-desplazable"><table class="grid-tabla" id="tabla-turnos"></table></div>
-                </div>
-                <p style="font-size: 12px; color: var(--text-muted);">Cada cambio se guarda al instante. También puedes descargar la plantilla de la semana, llenarla en Excel y cargarla.</p>
-            </div>
-        </section>
-
         <!-- TAB 4: CATÁLOGO DE FALLAS -->
         <section id="tab-catalogo" class="tab-content">
             <div class="filter-bar">
@@ -584,32 +313,24 @@
             <div style="max-width: 900px; margin: 0 auto;">
                 <div class="section-card">
                     <div class="section-title"><span>🔔 Avisos automáticos por correo</span></div>
-                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">Los correos salen solos, desde Outlook corporativo (flujo de Power Automate). A cada ingeniero le llega solo lo de sus líneas.</p>
-                    <div class="config-avisos">
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">Los correos salen solos, desde Outlook corporativo (flujo de Power Automate). A cada persona le llega solo lo de las líneas que marques.</p>
+                    <div class="config-avisos" style="grid-template-columns: 1fr;">
                         <div class="config-aviso">
-                            <label class="interruptor"><input type="checkbox" id="notif-rec-activo"> <strong>Recordatorio diario</strong></label>
-                            <p>Pendientes no realizados, pendientes del día, acciones de ACR vencidas y las que están próximas a vencer.</p>
+                            <label class="interruptor"><input type="checkbox" id="notif-rec-activo"> <strong>Correo automático de pendientes de ACR</strong></label>
+                            <p>Acciones de ACR vencidas, las que vencen en los próximos días y las acciones inmediatas abiertas.</p>
                             <div class="fila-campos">
                                 <label>Hora <input type="time" id="notif-rec-hora" class="form-control"></label>
                                 <label>Avisar con <input type="number" id="notif-rec-anticipacion" class="form-control" min="1" max="30" style="width: 80px;"> días de anticipación</label>
                             </div>
                             <div class="dias-semana" id="notif-rec-dias"></div>
                         </div>
-                        <div class="config-aviso">
-                            <label class="interruptor"><input type="checkbox" id="notif-cie-activo"> <strong>Aviso de pendiente no realizado</strong></label>
-                            <p>A esta hora, si un pendiente del día sigue sin cerrar, se avisa una vez al ingeniero de la línea.</p>
-                            <div class="fila-campos">
-                                <label>Hora de cierre <input type="time" id="notif-cie-hora" class="form-control"></label>
-                            </div>
-                            <div class="dias-semana" id="notif-cie-dias"></div>
-                        </div>
                     </div>
                 </div>
 
                 <div class="section-card">
                     <div class="section-title">
-                        <span>👨‍🔧 Ingenieros que reciben los avisos</span>
-                        <button class="btn btn-secondary btn-sm" onclick="agregarIngeniero()">➕ Agregar ingeniero</button>
+                        <span>👨‍🔧 Personas que reciben el correo</span>
+                        <button class="btn btn-secondary btn-sm" onclick="agregarIngeniero()">➕ Agregar correo</button>
                     </div>
                     <div id="notif-ingenieros"></div>
                     <div class="form-group" style="margin-top: 14px;">
@@ -625,9 +346,8 @@
                     <div class="section-title"><span>🧪 Probar</span></div>
                     <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">La prueba solo se envía a tu correo (<span id="notif-mi-correo"></span>).</p>
                     <div class="grupo-botones">
-                        <button class="btn btn-secondary" onclick="vistaPreviaNotificacion('recordatorio')">👁️ Ver recordatorio</button>
-                        <button class="btn btn-secondary" onclick="vistaPreviaNotificacion('cierre')">👁️ Ver aviso de no realizados</button>
-                        <button class="btn btn-primary" onclick="probarNotificacion('recordatorio')">📧 Enviarme el recordatorio</button>
+                        <button class="btn btn-secondary" onclick="vistaPreviaNotificacion('recordatorio')">👁️ Ver cómo queda el correo</button>
+                        <button class="btn btn-primary" onclick="probarNotificacion('recordatorio')">📧 Enviarme una prueba</button>
                     </div>
                     <div class="console-box" id="ps-console-output" style="margin-top: 12px;">Elige una opción.</div>
                     <div id="alerta-preview" style="display: none; margin-top: 14px; background: #fff; border-radius: 10px; padding: 14px; max-height: 520px; overflow: auto;"></div>

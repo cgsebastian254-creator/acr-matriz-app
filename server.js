@@ -683,7 +683,7 @@ async function revisarEnvioAutomatico() {
     if (ultimoEnvioAuto === hoy || !dias.includes(diaSemana) || ahoraMin < hh * 60 + mm) return;
     ultimoEnvioAuto = hoy;              // se marca antes de enviar para no duplicar
     try {
-        const resumen = generarResumen(readJson(DATA_FILE), readJson(DAILY_DATA_FILE), { urlApp: urlPublica() });
+        const resumen = generarResumen(readJson(DATA_FILE), [], { urlApp: urlPublica() });
         await enviarCorreo({ to: cfg.para, cc: cfg.cc, subject: resumen.asunto, html: resumen.html, text: resumen.texto });
         await storage.save('alertas_auto', { ultimoEnvio: hoy });
         console.log(`📧 Alertas automáticas del ${hoy} enviadas a ${cfg.para.join(', ')}`);
@@ -885,7 +885,7 @@ const server = http.createServer((req, res) => {
             xml = rss('Envíos de alertas ACR', recientes.map(e => ({ id: e.id, titulo: e.asunto, html: e.html, fecha: e.fecha, para: [...e.para, ...(e.cc || [])] })), req);
         } else {
             feedLecturas.alertas = Date.now();
-            const resumen = generarResumen(readJson(DATA_FILE), readJson(DAILY_DATA_FILE), { urlApp: urlPublica(req) });
+            const resumen = generarResumen(readJson(DATA_FILE), [], { urlApp: urlPublica(req) });
             const hoy = new Date().toISOString().slice(0, 10);
             const para = listaCorreos(parsedUrl.searchParams.get('para') || process.env.ALERTAS_DESTINATARIOS || '');
             xml = rss('Reporte diario de alertas ACR', [{ id: 'alertas-' + hoy + '-' + Date.now(), titulo: resumen.asunto, html: resumen.html, fecha: new Date().toISOString(), para }], req);
@@ -1269,7 +1269,7 @@ const server = http.createServer((req, res) => {
             }
             if (!para.length) return sendJson(res, 400, { success: false, error: 'Escribe al menos un destinatario.' });
 
-            const resumen = generarResumen(readJson(DATA_FILE), readJson(DAILY_DATA_FILE), { urlApp: urlPublica(req) });
+            const resumen = generarResumen(readJson(DATA_FILE), [], { urlApp: urlPublica(req) });
             if (!modoReal) {
                 return sendJson(res, 200, { success: true, output: `🧪 VISTA PREVIA (no se envió nada)\nAsunto: ${resumen.asunto}\nPara: ${para.join(', ')}${cc.length ? '\nCC: ' + cc.join(', ') : ''}\n\n${resumen.texto}`, html: resumen.html });
             }

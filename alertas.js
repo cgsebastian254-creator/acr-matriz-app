@@ -71,12 +71,12 @@ function generarResumen(acrs, compromisosDiarios, { diasProximos = 7, urlApp = '
 <p style="font-size:13px;margin-top:0;">Reporte consolidado del ${fecha}.</p>
 <table style="border-collapse:collapse;margin:12px 0;"><tr>
 <td style="padding:10px 18px;background:#fee2e2;border-radius:6px;font-size:14px;"><b>${vencidas.length}</b> tareas vencidas</td><td style="width:10px;"></td>
-<td style="padding:10px 18px;background:#fef3c7;border-radius:6px;font-size:14px;"><b>${proximas.length}</b> vencen en los próximos ${diasProximos} días</td><td style="width:10px;"></td>
-<td style="padding:10px 18px;background:#dbeafe;border-radius:6px;font-size:14px;"><b>${compromisos.length}</b> compromisos diarios pendientes</td>
+<td style="padding:10px 18px;background:#fef3c7;border-radius:6px;font-size:14px;"><b>${proximas.length}</b> vencen en los próximos ${diasProximos} días</td>${compromisos.length ? `<td style="width:10px;"></td>
+<td style="padding:10px 18px;background:#dbeafe;border-radius:6px;font-size:14px;"><b>${compromisos.length}</b> compromisos diarios pendientes</td>` : ''}
 </tr></table>
 <h3 style="color:#b91c1c;">Tareas vencidas</h3>${tabla(vencidas, '#b91c1c', 'Días de atraso')}
 <h3 style="color:#b45309;">Próximas a vencer</h3>${tabla(proximas, '#b45309', 'Días restantes')}
-<h3 style="color:#1e3a8a;">Compromisos de reunión diaria pendientes</h3>${tablaCompromisos}
+${compromisos.length ? `<h3 style="color:#1e3a8a;">Compromisos de reunión diaria pendientes</h3>${tablaCompromisos}` : ''}
 ${urlApp ? `<p style="font-size:12px;color:#64748b;margin-top:18px;">Consulta y actualiza el estado en <a href="${esc(urlApp)}">${esc(urlApp)}</a></p>` : ''}
 </div>`;
 
@@ -84,7 +84,7 @@ ${urlApp ? `<p style="font-size:12px;color:#64748b;margin-top:18px;">Consulta y 
         `Resumen al ${fecha}`,
         `  Vencidas: ${vencidas.length}`,
         `  Próximas a vencer (${diasProximos} días): ${proximas.length}`,
-        `  Compromisos diarios pendientes: ${compromisos.length}`,
+        ...(compromisos.length ? [`  Compromisos diarios pendientes: ${compromisos.length}`] : []),
         ...vencidas.slice(0, 15).map(v => `  [VENCIDA] ${v.linea} | ${v.tarea} | ${v.responsable || 'Sin responsable'} | ${v.fecha}`)
     ];
     if (vencidas.length > 15) lineas.push(`  ... y ${vencidas.length - 15} más`);

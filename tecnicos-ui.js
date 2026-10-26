@@ -699,18 +699,15 @@ async function cargarNotificaciones() {
     document.getElementById('notif-rec-activo').checked = notif.recordatorio.activo;
     document.getElementById('notif-rec-hora').value = notif.recordatorio.hora;
     document.getElementById('notif-rec-anticipacion').value = notif.recordatorio.anticipacion;
-    document.getElementById('notif-cie-activo').checked = notif.cierre.activo;
-    document.getElementById('notif-cie-hora').value = notif.cierre.hora;
     document.getElementById('notif-copia').value = (notif.copia || []).join(', ');
     renderDias('notif-rec-dias', notif.recordatorio.dias);
-    renderDias('notif-cie-dias', notif.cierre.dias);
     renderIngenieros();
     renderEstadoPowerAutomate();
     fetch('/api/status').then(r => r.json()).then(st => {
         const caja = document.getElementById('estado-base-datos');
         if (!caja) return;
         caja.innerHTML = st.baseDatos === 'conectada'
-            ? '🟢 <strong>MongoDB Atlas conectada.</strong> ACR, pendientes, historial, técnicos, matriz y turnos se guardan en la nube y no se pierden aunque Render se reinicie.'
+            ? '🟢 <strong>MongoDB Atlas conectada.</strong> Los ACR, sus acciones y el historial se guardan en la nube y no se pierden aunque Render se reinicie.'
             : `🔴 <strong>Base de datos ${escaparHTML(st.baseDatos || 'sin configurar')}.</strong> Revisa MONGODB_URI en Render.`;
     }).catch(() => {});
 }
@@ -732,7 +729,7 @@ function renderIngenieros() {
             <input class="form-control" type="email" placeholder="correo@kcc.com" value="${attr(ing.correo)}" oninput="notif.ingenieros[${i}].correo = this.value">
             <div class="lineas-check">${lineas.map(l => `<label class="${(ing.lineas || []).includes(l) ? 'sel' : ''}"><input type="checkbox" ${(ing.lineas || []).includes(l) ? 'checked' : ''} onchange="alternarLineaIng(${i}, '${l}', this.checked)">${l}</label>`).join('')}</div>
             <button class="btn btn-danger btn-sm" onclick="notif.ingenieros.splice(${i}, 1); renderIngenieros();">✕</button>
-        </div>`).join('') : '<div class="vacio">Todavía no hay ingenieros. Agrega al menos uno con sus líneas para que lleguen los avisos.</div>';
+        </div>`).join('') : '<div class="vacio">Todavía no hay destinatarios. Agrega al menos un correo con sus líneas para que salga el correo automático.</div>';
 }
 function alternarLineaIng(i, linea, marcado) {
     const ing = notif.ingenieros[i];
@@ -756,11 +753,7 @@ async function guardarNotificaciones() {
             anticipacion: Number(document.getElementById('notif-rec-anticipacion').value),
             dias: leerDias('notif-rec-dias')
         },
-        cierre: {
-            activo: document.getElementById('notif-cie-activo').checked,
-            hora: document.getElementById('notif-cie-hora').value,
-            dias: leerDias('notif-cie-dias')
-        }
+        cierre: { activo: false, hora: '18:00', dias: [] }
     };
     try {
         await postJSON('/api/notificaciones', datos);
@@ -775,7 +768,7 @@ async function vistaPreviaNotificacion(tipo) {
     box.textContent = '⏳ Generando…';
     try {
         const r = await (await fetch(`/api/notificaciones/vista-previa?tipo=${tipo}`)).json();
-        box.textContent = r.asunto ? `Asunto: ${r.asunto}\n(vista previa con todas las líneas; cada ingeniero recibe solo las suyas)` : 'Nada que enviar ahora mismo.';
+        box.textContent = r.asunto ? `Asunto: ${r.asunto}\n(vista previa con todas las líneas; cada persona recibe solo sus líneas)` : 'Nada que enviar ahora mismo.';
         prev.innerHTML = r.html;
         prev.style.display = 'block';
     } catch (e) { box.textContent = '❌ No se pudo generar.'; }
@@ -804,6 +797,6 @@ function renderEstadoPowerAutomate() {
             ${reciente ? '🟢 Flujo de Power Automate conectado' : '🟡 El flujo de Power Automate no ha revisado la app en los últimos 30 minutos (si no está creado, los correos no salen)'}
         </div>
         <div>Última revisión del flujo: <strong>${escaparHTML(fecha(pa.ultimaLecturaEnvios))}</strong></div>
-        <div>Último recordatorio automático: <strong>${escaparHTML(st.ultimoRecordatorio ? fechaTxt(st.ultimoRecordatorio) : 'aún no')}</strong> · Último cierre del día: <strong>${escaparHTML(st.ultimoCierre ? fechaTxt(st.ultimoCierre) : 'aún no')}</strong></div>
+        <div>Último correo automático: <strong>${escaparHTML(st.ultimoRecordatorio ? fechaTxt(st.ultimoRecordatorio) : 'aún no')}</strong></div>
         ${(pa.ultimosEnvios || []).length ? `<div style="margin-top: 8px;">Últimos correos en cola:</div><ul style="margin: 4px 0 0 18px;">${pa.ultimosEnvios.map(e => `<li>${escaparHTML(fecha(e.fecha))} → ${escaparHTML((e.para || []).join(', '))}: ${escaparHTML(e.asunto)}</li>`).join('')}</ul>` : ''}`;
 }
