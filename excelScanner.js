@@ -92,7 +92,7 @@ function buscarCelda(grid, prueba, desde = 0) {
 // Etiquetas fijas del formato que no son respuestas
 const ETIQUETAS = new Set(['QUE?', 'CUANDO?', 'COMO?', 'DONDE?', 'HACE CUANTO?', 'DESPUES DE?', 'CUANTO ES?',
     'QUE VEO?', 'QUE SIENTO?', 'QUE HUELO?', 'AGUJERO', 'MAL SELLADO', 'ARRUGA', 'MALA FORMACION', 'MAL CORTE',
-    'PAQUETE QUEMADO', 'MAL LAMIMADO', 'MAL LAMINADO', 'MAL ESTIBADO']);
+    'PAQUETE QUEMADO', 'MAL LAMIMADO', 'MAL LAMINADO', 'MAL ESTIBADO', 'PIEZA AVERIADA']);
 function esEtiqueta(v) {
     const n = normalizar(v).replace(/^¿/, '');
     // "2. Síntomas" es etiqueta; "1. Resistencia original con fatiga..." es una respuesta numerada
@@ -104,7 +104,7 @@ function extraerAnalisis(grid) {
 
     const desc = buscarCelda(grid, n => n.includes('DESCRIPCION DEL PROBLEMA'));
     const sint = buscarCelda(grid, n => /^2\.?\s*SINTOMAS/.test(n));
-    const caus = buscarCelda(grid, n => n.includes('CAUSAS POTENCIALES'));
+    const caus = buscarCelda(grid, n => /CAUSAS (BASICAS )?POTENCIALES/.test(n));
     const porq = buscarCelda(grid, n => /^4\.?\s*1\s*¿?POR QUE/.test(n) || /^1\s*¿POR QUE/.test(n));
     const filaFin = porq ? porq.r : Math.min(grid.length, (desc ? desc.r : 0) + 20);
 
@@ -132,8 +132,9 @@ function extraerAnalisis(grid) {
         for (let r = inicio.r + 1; r < filaFin; r++) {
             const row = grid[r] || [];
             for (let c = colIni; c < colFin; c++) {
-                const t = textoCelda(row[c]);
-                if (t && !esEtiqueta(t) && !vals.includes(t)) vals.push(t);
+                // Una celda con varias líneas (un síntoma por línea) da varios elementos
+                const partes = row[c] instanceof Date ? [textoCelda(row[c])] : String(row[c] == null ? '' : row[c]).split(/\r?\n/).map(textoCelda);
+                for (const t of partes) if (t && !esEtiqueta(t) && !vals.includes(t)) vals.push(t);
             }
         }
         return vals;
@@ -217,6 +218,7 @@ function parseSingleACRExcel(filePath, index) {
                 }
 
                 if (val.toUpperCase().includes('FECHA:')) {
+                    fechaEncontrada = true;   // el formato tiene la etiqueta (aunque esté vacía)
                     let parsed = val.replace(/FECHA:/gi, '').trim();
                     if (!parsed && row[c + 1]) parsed = String(row[c + 1]).trim();
                     if (parsed) { fecha = formatDateValue(parsed); fechaEncontrada = true; }
@@ -268,7 +270,7 @@ function parseSingleACRExcel(filePath, index) {
         }
         // Sin etiqueta "FECHA:": primera fecha que aparezca en el encabezado (ej. junto a la línea)
         if (!fechaEncontrada) {
-            const enc = grid.slice(0, 10);
+            const enc = grid.slice(3, 10);   // sin las filas del encabezado del documento (Effective Date)
             buscar: for (const row of enc) {
                 for (const v of row || []) {
                     const t = textoCelda(v);
