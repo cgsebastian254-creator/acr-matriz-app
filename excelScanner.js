@@ -55,6 +55,8 @@ function formatDateValue(val) {
         return `${d}/${m}/${y}`;
     }
     const str = String(val).trim();
+    const iso = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
     if (str.includes('GMT') || str.includes('T')) {
         const dt = new Date(str);
         if (!isNaN(dt.getTime())) {
@@ -93,7 +95,8 @@ const ETIQUETAS = new Set(['QUE?', 'CUANDO?', 'COMO?', 'DONDE?', 'HACE CUANTO?',
     'PAQUETE QUEMADO', 'MAL LAMIMADO', 'MAL LAMINADO', 'MAL ESTIBADO']);
 function esEtiqueta(v) {
     const n = normalizar(v).replace(/^¿/, '');
-    return !n || ETIQUETAS.has(n) || /^\d\.\s/.test(n) || /POR QUE\?$/.test(n);
+    // "2. Síntomas" es etiqueta; "1. Resistencia original con fatiga..." es una respuesta numerada
+    return !n || ETIQUETAS.has(n) || (/^\d\.\s/.test(n) && n.length < 45 && !/\s\S+\s\S+\s\S+\s\S+\s/.test(n)) || /^\d\s*¿?POR QUE\?$/.test(n) || /POR QUE\?$/.test(n) && n.length < 30;
 }
 
 function extraerAnalisis(grid) {
@@ -143,7 +146,8 @@ function extraerAnalisis(grid) {
         const columnas = [];
         cab.forEach((v, c) => { if (/POR QUE/.test(normalizar(v))) columnas.push(c); });
         const finPorques = (() => {
-            const f = buscarCelda(grid, n => n.includes('CAUSA RAIZ') || n.includes('ACCIONES INMEDIATAS'), porq.r + 1);
+            // Fin de los porqués: el siguiente título del formato (no un texto que mencione "causa raíz")
+            const f = buscarCelda(grid, n => n.length < 80 && (/^(\d\.?\s*)?CAUSA RAIZ/.test(n) || /^(\d\.?\s*)?ACCIONES (INMEDIATAS|CORRECTIVAS)/.test(n) || /^\d\.?\s*VERIFICAR/.test(n)), porq.r + 1);
             return f ? f.r : Math.min(grid.length, porq.r + 30);
         })();
         columnas.forEach((c, i) => {
@@ -198,6 +202,7 @@ function parseSingleACRExcel(filePath, index) {
         let fecha = new Date().toISOString().split('T')[0];
         let responsableAcr = 'No Hay Responsable';
         let causaRaiz = 'Sin causa raíz especificada en el formato';
+        let fechaEncontrada = false;
 
         // Header Extraction
         for (let r = 0; r < Math.min(grid.length, 20); r++) {
@@ -214,7 +219,7 @@ function parseSingleACRExcel(filePath, index) {
                 if (val.toUpperCase().includes('FECHA:')) {
                     let parsed = val.replace(/FECHA:/gi, '').trim();
                     if (!parsed && row[c + 1]) parsed = String(row[c + 1]).trim();
-                    if (parsed) fecha = formatDateValue(parsed);
+                    if (parsed) { fecha = formatDateValue(parsed); fechaEncontrada = true; }
                 }
 
                 if (val.toUpperCase().includes('RESPONSABLE:')) {
@@ -239,7 +244,7 @@ function parseSingleACRExcel(filePath, index) {
             const row = grid[filaMaq.r] || [];
             for (let c = filaMaq.c + 1; c < row.length; c++) {
                 const v = row[c];
-                if (v instanceof Date || /^\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}$/.test(textoCelda(v))) { fecha = formatDateValue(v); break; }
+                if (v instanceof Date || /^\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}$/.test(textoCelda(v))) { fecha = formatDateValue(v); fechaEncontrada = true; break; }
             }
         }
         let numeroACR = '';
@@ -251,6 +256,26 @@ function parseSingleACRExcel(filePath, index) {
         }
         const causaEncontrada = extraerCausaRaiz(grid);
         if (causaEncontrada) causaRaiz = causaEncontrada;
+        // Formato "6. Causa Raíz Definida" (el texto va debajo o a la derecha, en cualquier fila)
+        if (/^Sin causa ra/i.test(causaRaiz)) {
+            const c6 = buscarCelda(grid, n => /^6\.?\s*CAUSA RAIZ/.test(n));
+            if (c6) {
+                for (const [r, c] of [[c6.r + 1, c6.c], [c6.r, c6.c + 1], [c6.r + 2, c6.c]]) {
+                    const t = textoCelda((grid[r] || [])[c]);
+                    if (t.length > 10) { causaRaiz = t; break; }
+                }
+            }
+        }
+        // Sin etiqueta "FECHA:": primera fecha que aparezca en el encabezado (ej. junto a la línea)
+        if (!fechaEncontrada) {
+            const enc = grid.slice(0, 10);
+            buscar: for (const row of enc) {
+                for (const v of row || []) {
+                    const t = textoCelda(v);
+                    if (v instanceof Date || /^(\d{4}-\d{2}-\d{2}|\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})$/.test(t)) { fecha = formatDateValue(v); break buscar; }
+                }
+            }
+        }
         const analisis = extraerAnalisis(grid);
 
         // Clean up multi-line Responsable
@@ -269,18 +294,31 @@ function parseSingleACRExcel(filePath, index) {
         let prevHeaderCol = 6;
         let foundActionSection = false;
 
-        for (let r = 35; r < grid.length; r++) {
+        // Encabezado de la tabla: "Acciones Inmediatas" o "Acciones Correctivas (Inmediatas)" y "Acciones Preventivas"
+        const esCabInmed = n => n.length < 70 && /ACCIONES (CORRECTIVAS|INMEDIATAS)/.test(n);
+        const esCabPrev = n => n.length < 70 && /ACCIONES PREVENTIVAS/.test(n);
+        for (let r = 0; r < grid.length; r++) {
             const row = grid[r] || [];
-            const rowStr = row.join(' ');
-            if (rowStr.includes('Acciones Inmediatas') || rowStr.includes('Acciones Preventivas')) {
+            if (row.some(v => { const n = normalizar(v); return esCabInmed(n) || esCabPrev(n); })) {
                 foundActionSection = true;
 
                 // Determine column split between Inmediatas & Preventivas
                 for (let c = 0; c < row.length; c++) {
-                    const cVal = String(row[c] || '');
-                    if (cVal.includes('Acciones Inmediatas')) inmedHeaderCol = c;
-                    if (cVal.includes('Acciones Preventivas')) prevHeaderCol = c;
+                    const n = normalizar(row[c]);
+                    if (esCabInmed(n)) inmedHeaderCol = c;
+                    if (esCabPrev(n)) prevHeaderCol = c;
                 }
+                // Columnas "Fecha" y "Responsable" de cada lado, si el encabezado las trae
+                const colEtiqueta = (patron, desde, hasta) => {
+                    for (let c = desde + 1; c < Math.min(hasta, row.length); c++) if (patron.test(normalizar(row[c]))) return c;
+                    return null;
+                };
+                const finInmed = prevHeaderCol > inmedHeaderCol ? prevHeaderCol : row.length;
+                const finPrev = inmedHeaderCol > prevHeaderCol ? inmedHeaderCol : row.length;
+                const colFechaI = colEtiqueta(/^FECHA/, inmedHeaderCol, finInmed);
+                const colRespI = colEtiqueta(/^RESPONSABLE/, inmedHeaderCol, finInmed);
+                const colFechaP = colEtiqueta(/^FECHA/, prevHeaderCol, finPrev);
+                const colRespP = colEtiqueta(/^RESPONSABLE/, prevHeaderCol, finPrev);
 
                 // Process rows below header
                 for (let ar = r + 1; ar < Math.min(r + 30, grid.length); ar++) {
@@ -291,10 +329,10 @@ function parseSingleACRExcel(filePath, index) {
 
                     // Acciones Inmediatas (left side cols: inmedHeaderCol to prevHeaderCol - 1)
                     const inmedDesc = String(aRow[inmedHeaderCol] || '').trim();
-                    let inmedDate = formatDateValue(aRow[inmedHeaderCol + 1] || aRow[inmedHeaderCol + 4] || '');
-                    let inmedResp = String(aRow[inmedHeaderCol + 2] || aRow[inmedHeaderCol + 5] || '').trim();
+                    let inmedDate = formatDateValue(colFechaI != null ? aRow[colFechaI] : (aRow[inmedHeaderCol + 1] || aRow[inmedHeaderCol + 4] || ''));
+                    let inmedResp = String((colRespI != null ? aRow[colRespI] : (aRow[inmedHeaderCol + 2] || aRow[inmedHeaderCol + 5])) || '').trim();
 
-                    if (inmedDesc && !inmedDesc.includes('Acciones Inmediatas') && inmedDesc.length > 3) {
+                    if (inmedDesc && !esCabInmed(normalizar(inmedDesc)) && inmedDesc.length > 3) {
                         if (!inmedResp || inmedResp.trim() === '') inmedResp = 'No Hay Responsable';
                         inmedResp = inmedResp.replace(/\r?\n|\r/g, ' / ').trim();
 
@@ -320,10 +358,10 @@ function parseSingleACRExcel(filePath, index) {
 
                     // Acciones Preventivas (right side cols: prevHeaderCol onwards)
                     const prevDesc = String(aRow[prevHeaderCol] || aRow[prevHeaderCol + 1] || '').trim();
-                    let prevDate = formatDateValue(aRow[prevHeaderCol + 1] || aRow[prevHeaderCol + 4] || '');
-                    let prevResp = String(aRow[prevHeaderCol + 2] || aRow[prevHeaderCol + 5] || '').trim();
+                    let prevDate = formatDateValue(colFechaP != null ? aRow[colFechaP] : (aRow[prevHeaderCol + 1] || aRow[prevHeaderCol + 4] || ''));
+                    let prevResp = String((colRespP != null ? aRow[colRespP] : (aRow[prevHeaderCol + 2] || aRow[prevHeaderCol + 5])) || '').trim();
 
-                    if (prevDesc && !prevDesc.includes('Acciones Preventivas') && prevDesc.length > 3) {
+                    if (prevDesc && !esCabPrev(normalizar(prevDesc)) && prevDesc.length > 3) {
                         if (!prevResp || prevResp.trim() === '') prevResp = 'No Hay Responsable';
                         prevResp = prevResp.replace(/\r?\n|\r/g, ' / ').trim();
 
