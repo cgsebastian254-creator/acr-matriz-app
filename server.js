@@ -1469,6 +1469,7 @@ async function arrancar() {
     await docs.cargar('turnos', () => ({ tipos: require('./lib/tecnicos').tiposTurnoPorDefecto(), asignaciones: {} }));
     await docs.cargar('notificaciones', () => require('./lib/notificaciones').configPorDefecto());
     await docs.cargar('daily_archivo_indice', []);
+    await docs.cargar('correos_acr', () => ({ ids: [], registro: [], inicializado: false }));
     const pendientes = readJson(DAILY_DATA_FILE);
     if (rutasExtra.migrarPendientes(pendientes)) writeJson(DAILY_DATA_FILE, pendientes);
     const archivar = () => rutasExtra.archivarPendientes({ leerDaily: () => readJson(DAILY_DATA_FILE), escribirDaily: t => writeJson(DAILY_DATA_FILE, t) })

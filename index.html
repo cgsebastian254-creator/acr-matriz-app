@@ -377,6 +377,15 @@
             <p style="font-size: 12px; color: var(--text-muted); margin: -6px 0 16px;">
                 Los ACR llegan solos desde la carpeta "ACRs 2026" de SharePoint. Eliminar aquí solo lo quita de la matriz: si el archivo sigue en SharePoint y se vuelve a modificar, reaparece.
             </p>
+            <div class="section-card" id="buzon-card">
+                <div class="section-title">
+                    <span>📬 Últimos ACR recibidos desde SharePoint</span>
+                    <div class="grupo-botones">
+                        <button class="btn btn-secondary btn-sm" onclick="revisarBuzonAhora(this)">🔄 Revisar ahora</button>
+                    </div>
+                </div>
+                <div id="buzon-registro" style="font-size: 13px; color: var(--text-muted);">Cargando…</div>
+            </div>
             <div id="archivos-contenedor"></div>
         </section>
 

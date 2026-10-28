@@ -1107,3 +1107,45 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }).catch(() => {});
 });
+
+// =====================================================================
+// ÚLTIMOS CORREOS DE ACR RECIBIDOS (con el resultado de cada uno)
+// =====================================================================
+async function cargarRegistroBuzon() {
+    const caja = document.getElementById('buzon-registro');
+    if (!caja) return;
+    try {
+        const st = await (await fetch('/api/status')).json();
+        const b = st.buzonACR || {};
+        if (!b.configurado) { caja.textContent = 'La lectura automática desde SharePoint no está configurada.'; return; }
+        const fecha = iso => iso ? new Date(iso).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }) : 'nunca';
+        const filas = (b.registro || []).slice(0, 12).map(r => `
+            <div class="buzon-fila ${r.ok ? 'ok' : 'error'}">
+                <span class="buzon-icono">${r.ok ? '✅' : '⚠️'}</span>
+                <div>
+                    <div><strong>${escaparHTML(r.archivo || r.asunto || 'Correo')}</strong>${r.linea ? ` <span class="badge badge-linea">${escaparHTML(r.linea)}</span>` : ''}</div>
+                    <div class="buzon-detalle">${escaparHTML(r.detalle || '')}</div>
+                    <div class="buzon-meta">${escaparHTML(fecha(r.fecha))}${r.de ? ' · ' + escaparHTML(r.de) : ''}</div>
+                </div>
+            </div>`).join('');
+        caja.innerHTML = `
+            <div style="margin-bottom: 10px;">Última revisión del buzón: <strong>${escaparHTML(fecha(b.ultimaRevision))}</strong>${b.ultimoError ? ` · <span style="color: var(--status-red);">❌ ${escaparHTML(b.ultimoError)}</span>` : ''}</div>
+            ${filas || '<div>Aún no hay correos registrados desde esta versión. Cada ACR que se guarde en SharePoint aparecerá aquí con su resultado.</div>'}`;
+    } catch (e) {
+        caja.textContent = 'No se pudo cargar el estado del buzón.';
+    }
+}
+async function revisarBuzonAhora(btn) {
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Revisando…'; }
+    try {
+        await fetch('/api/acrs/sync', { method: 'POST' });
+        await cargarDatosACRs();
+    } catch (e) { /* se muestra lo que haya */ }
+    await cargarRegistroBuzon();
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 Revisar ahora'; }
+}
+document.addEventListener('DOMContentLoaded', cargarRegistroBuzon);
+(function () {
+    const original = switchTab;
+    switchTab = function (tab) { original(tab); if (tab === 'archivos') cargarRegistroBuzon(); };
+})();

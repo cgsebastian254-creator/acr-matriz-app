@@ -18,6 +18,12 @@
 // =====================================================================
 const { ImapFlow } = require('imapflow');
 const { simpleParser } = require('mailparser');
+const docs = require('./lib/docs');
+
+// Se recuerdan los correos ya procesados (por Message-ID) para no depender de que sigan
+// "sin leer": si alguien abre el correo en Gmail antes que la app, igual se procesa.
+const DOC = 'correos_acr';
+const DIAS_ATRAS = 4;
 
 function crearReceptorCorreo({ procesarExcel, eliminarACR, confirmarIngreso, log = console.log }) {
     const user = process.env.IMAP_USER || '';
@@ -32,11 +38,22 @@ function crearReceptorCorreo({ procesarExcel, eliminarACR, confirmarIngreso, log
         ultimaRevision: null,
         ultimoError: '',
         procesados: 0,
-        rechazados: 0
+        rechazados: 0,
+        registro: []
     };
     if (!estado.configurado) return { estado, iniciar() {}, revisar: async () => {} };
 
     let enCurso = false;
+
+    function memoria() {
+        const m = docs.obtener(DOC, () => ({ ids: [], registro: [], inicializado: false }));
+        estado.registro = m.registro;
+        return m;
+    }
+    function anotar(m, entrada) {
+        m.registro = [{ fecha: new Date().toISOString(), ...entrada }, ...(m.registro || [])].slice(0, 40);
+        estado.registro = m.registro;
+    }
 
     function remitenteValido(direccion) {
         const d = String(direccion || '').toLowerCase().split('@')[1] || '';
@@ -86,7 +103,7 @@ function crearReceptorCorreo({ procesarExcel, eliminarACR, confirmarIngreso, log
         if (pedido.clave !== token || !remitenteValido(de.address)) {
             estado.rechazados++;
             log(`📭 Correo rechazado (clave o remitente no válidos): ${de.address || 'desconocido'}`);
-            return { rechazado: true };
+            return { rechazado: true, resumen: { ok: false, de: de.address || '', detalle: pedido.clave !== token ? 'La clave del asunto no coincide' : `Remitente no permitido (${de.address || 'desconocido'})` } };
         }
         const usuario = de.name || de.address || 'SharePoint';
 
@@ -94,13 +111,13 @@ function crearReceptorCorreo({ procesarExcel, eliminarACR, confirmarIngreso, log
             const r = eliminarACR(pedido.dato);
             log(`📭 ${r ? 'Eliminado' : 'No encontrado'} por correo: ${pedido.dato}`);
             estado.procesados++;
-            return { eliminado: r };
+            return { eliminado: r, resumen: { ok: true, de: de.address || '', archivo: pedido.dato, detalle: r ? 'ACR eliminado (se borró de SharePoint)' : 'Aviso de eliminación: el ACR no estaba en la app' } };
         }
 
         const adjuntos = (correo.attachments || []).filter(a => /\.(xlsx|xlsm|xls)$/i.test(a.filename || ''));
         if (!adjuntos.length) {
             log('📭 Correo ACR-SYNC sin adjunto de Excel; se ignora.');
-            return { sinAdjunto: true };
+            return { sinAdjunto: true, resumen: { ok: false, de: de.address || '', archivo: pedido.dato, detalle: 'El correo llegó sin el Excel adjunto' } };
         }
         const resultados = [];
         for (const a of adjuntos) {
@@ -112,7 +129,19 @@ function crearReceptorCorreo({ procesarExcel, eliminarACR, confirmarIngreso, log
                 : `📭 No se pudo leer ${a.filename}: ${r.body.error}`);
         }
         estado.procesados++;
-        return { resultados };
+        const r0 = resultados[0] || {};
+        return {
+            resultados,
+            resumen: {
+                ok: resultados.length > 0 && resultados.every(r => r.status === 200),
+                de: de.address || '',
+                archivo: adjuntos.map(a => a.filename).join(', '),
+                linea: r0.body && r0.body.acr ? r0.body.acr.linea : '',
+                detalle: resultados.map(r => r.status === 200
+                    ? `${r.body.reemplazado ? 'Actualizado' : 'Nuevo'}: ${r.body.acr.codigoACR} (${r.body.acr.tareas} acciones)`
+                    : r.body.error).join(' · ') || 'Sin archivos válidos'
+            }
+        };
     }
 
     async function revisar() {
@@ -128,21 +157,36 @@ function crearReceptorCorreo({ procesarExcel, eliminarACR, confirmarIngreso, log
         try {
             await cliente.connect();
             const candado = await cliente.getMailboxLock('INBOX');
+            const m = memoria();
+            let cambio = false;
             try {
-                const uids = await cliente.search({ seen: false, subject: 'ACR-' }, { uid: true });
-                for (const uid of uids || []) {
+                const desde = new Date(Date.now() - DIAS_ATRAS * 86400000);
+                const uids = (await cliente.search({ since: desde, subject: 'ACR-' }, { uid: true })) || [];
+                const vistos = new Set(m.ids);
+                for (const uid of uids) {
+                    const info = await cliente.fetchOne(String(uid), { envelope: true, flags: true }, { uid: true });
+                    const id = (info.envelope && info.envelope.messageId) || `uid-${uid}`;
+                    if (vistos.has(id)) continue;
+                    const leido = info.flags && info.flags.has('\\Seen');
+                    // Primera vez con esta versión: los correos ya leídos se dan por procesados
+                    if (!m.inicializado && leido) { m.ids.push(id); vistos.add(id); cambio = true; continue; }
                     const msg = await cliente.fetchOne(String(uid), { source: true }, { uid: true });
+                    let r = {};
                     try {
-                        await procesarMensaje(msg.source);
+                        r = await procesarMensaje(msg.source) || {};
                     } catch (e) {
                         log(`📭 Error procesando un correo: ${e.message}`);
+                        r = { resumen: { ok: false, detalle: 'Error procesando el correo: ' + e.message } };
                     }
-                    // Se marca como leído para no procesarlo dos veces
+                    if (r.resumen) anotar(m, { asunto: (info.envelope && info.envelope.subject || '').replace(/ACR-(SYNC|DELETE)\s+\S+/i, 'ACR-$1').slice(0, 200), ...r.resumen });
+                    m.ids.push(id); vistos.add(id); cambio = true;
                     await cliente.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true });
                 }
             } finally {
                 candado.release();
             }
+            if (!m.inicializado) { m.inicializado = true; cambio = true; }
+            if (cambio) { m.ids = m.ids.slice(-800); await docs.guardar(DOC, m); }
             await cliente.logout();
             estado.ultimaRevision = new Date().toISOString();
             estado.ultimoError = '';
@@ -163,6 +207,7 @@ function crearReceptorCorreo({ procesarExcel, eliminarACR, confirmarIngreso, log
     }
 
     function iniciar() {
+        memoria();
         log(`📬 Revisando el buzón ${user} cada ${intervalo / 1000} s.`);
         revisar();
         setInterval(revisar, intervalo);
