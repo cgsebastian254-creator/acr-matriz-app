@@ -1179,3 +1179,9 @@ tr.e360-diferencia td.col-fija { color: #fcd34d; }
     .e360-fuentes { grid-template-columns: 1fr 1fr; }
     .e360-resumen { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+.portada-op.bloqueado { opacity: .55; filter: grayscale(.6); }
+.portada-op.bloqueado:hover { transform: none; box-shadow: none; }
+.acceso-lista { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.acceso-chip { background: rgba(16, 185, 129, .15); border: 1px solid rgba(16, 185, 129, .4); color: #a7f3d0; border-radius: 999px; padding: 5px 12px; font-size: 13px; display: inline-flex; gap: 6px; align-items: center; }
+.acceso-chip button { background: none; border: none; color: #fca5a5; cursor: pointer; font-size: 13px; }
+.acceso-agregar { display: flex; gap: 8px; max-width: 460px; }

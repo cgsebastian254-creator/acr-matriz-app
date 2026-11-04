@@ -856,6 +856,20 @@ function isAgent(req) {
 }
 
 // Archivos que nunca se deben servir como estáticos
+// Correos que pueden ver el módulo Técnicos (se editan desde la app; ADMINS_TECNICOS en Render da los iniciales)
+const ADMINS_TECNICOS_INICIALES = (process.env.ADMINS_TECNICOS || 'sara.s.moreno@kcc.com,sara.s.moreno@arbex.com')
+    .split(/[;,\s]+/).map(x => x.trim().toLowerCase()).filter(Boolean);
+function adminsTecnicos() {
+    return docs.obtener('tecnicos_acceso', () => ({ admins: ADMINS_TECNICOS_INICIALES })).admins || [];
+}
+function esAdminTecnicos(sesion) {
+    // Sin ingreso por correo (contraseña única o app abierta) no hay forma de distinguir personas
+    if (LOGIN_MODE !== 'correo') return true;
+    const correo = sesion && sesion.correo ? sesion.correo.toLowerCase() : '';
+    const lista = adminsTecnicos();
+    return !lista.length || lista.includes(correo);
+}
+
 const BLOCKED_FILES = new Set(['server.js', 'excelScanner.js', 'sync-agent.js', 'storage.js', 'alertas.js', 'mail-ingest.js', 'package.json', 'package-lock.json', '.env', '.gitignore']);
 const BLOCKED_DIRS = ['scripts', 'node_modules', '.git', 'lib', 'data'];
 
@@ -1031,8 +1045,32 @@ const server = http.createServer((req, res) => {
         return sendJson(res, 200, {
             modo: LOGIN_MODE,
             correo: sesion ? sesion.correo : '',
-            nombre: sesion && sesion.correo ? nombreDesdeCorreo(sesion.correo) : ''
+            nombre: sesion && sesion.correo ? nombreDesdeCorreo(sesion.correo) : '',
+            tecnicosAdmin: esAdminTecnicos(sesion)
         });
+    }
+
+    // ---------- Módulo Técnicos: solo administradores (matriz, ranking, 360° con evaluadores) ----------
+    if (/^\/api\/(tecnicos|habilidades|360|turnos|acceso-tecnicos)(\/|$)/.test(pathname) && !esAdminTecnicos(sesion)) {
+        return sendJson(res, 403, { error: 'No tienes acceso al módulo Técnicos. Pide acceso a un administrador de la matriz de polivalencia.', sinAcceso: true });
+    }
+    if (pathname === '/api/acceso-tecnicos' && req.method === 'GET') {
+        return sendJson(res, 200, { admins: adminsTecnicos() });
+    }
+    if (pathname === '/api/acceso-tecnicos' && req.method === 'POST') {
+        readBody(req, 64 * 1024, async body => {
+            try {
+                const p = JSON.parse(body || '{}');
+                const lista = [...new Set((Array.isArray(p.admins) ? p.admins : String(p.admins || '').split(/[;,\s]+/))
+                    .map(x => String(x).trim().toLowerCase()).filter(Boolean))];
+                const malos = lista.filter(c => !correoPermitido(c));
+                if (malos.length) return sendJson(res, 400, { error: `Solo correos corporativos: ${malos.join(', ')}` });
+                if (sesion && sesion.correo && !lista.includes(sesion.correo.toLowerCase())) lista.push(sesion.correo.toLowerCase());
+                await docs.guardar('tecnicos_acceso', { admins: lista });
+                sendJson(res, 200, { success: true, admins: lista });
+            } catch (e) { sendJson(res, 400, { error: e.message }); }
+        });
+        return;
     }
 
     if (sesion && sesion.correo && !sesion.nombre) sesion.nombre = nombreDesdeCorreo(sesion.correo);
@@ -1042,6 +1080,7 @@ const server = http.createServer((req, res) => {
     if (pathname.startsWith('/api/') && rutasExtra.manejar(req, res, pathname, parsedUrl, sesion, {
         sendJson, readBody, broadcastEvent, ahoraTexto, notificador, enviarNotificacion, correoCorporativo, estadoPowerAutomate,
         via: ALERTAS_VIA,
+        esAdminTecnicos: () => esAdminTecnicos(sesion),
         leerACRs: () => readJson(DATA_FILE),
         leerDaily: () => readJson(DAILY_DATA_FILE),
         escribirDaily: tasks => writeJson(DAILY_DATA_FILE, tasks)
@@ -1486,6 +1525,7 @@ async function arrancar() {
     await docs.cargar('turnos', () => ({ tipos: require('./lib/tecnicos').tiposTurnoPorDefecto(), asignaciones: {} }));
     await docs.cargar('notificaciones', () => require('./lib/notificaciones').configPorDefecto());
     await docs.cargar('daily_archivo_indice', []);
+    await docs.cargar('tecnicos_acceso', () => ({ admins: ADMINS_TECNICOS_INICIALES }));
     await docs.cargar('evaluacion360', () => ({ campanas: [], solicitudes: [] }));
     await docs.cargar('correos_acr', () => ({ ids: [], registro: [], inicializado: false }));
     const pendientes = readJson(DAILY_DATA_FILE);

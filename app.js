@@ -97,7 +97,7 @@ function iniciarRealtimeSSE() {
                 clearTimeout(window.__recargaTec);
                 window.__recargaTec = setTimeout(() => { if (typeof recargarTecnicos === 'function') recargarTecnicos(data.type); }, 1500);
                 const propio = typeof usuarioActual !== 'undefined' && data.user && (data.user === usuarioActual.nombre || data.user === usuarioActual.correo);
-                if (data.user && data.message && !propio && !/^Actualizó la matriz de/.test(data.message)) mostrarNotificacionToast(data.user, data.message);
+                if (window.esAdminTec && data.user && data.message && !propio && !/^Actualizó la matriz de/.test(data.message)) mostrarNotificacionToast(data.user, data.message);
             } else if (data.type === 'daily_updated') {
                 console.log('⚡ Evento Reunión Diaria recibido:', data.message);
                 dailyTasksData = data.dailyTasks;
@@ -1089,6 +1089,8 @@ function prellenarUsuario() {
 
 document.addEventListener('DOMContentLoaded', () => {
     fetch('/api/me').then(r => r.json()).then(me => {
+        window.esAdminTec = !!(me && me.tecnicosAdmin);
+        if (typeof aplicarAccesoTecnicos === 'function') aplicarAccesoTecnicos();
         if (!me || !me.correo) return;
         usuarioActual = me;
         const salir = document.querySelector('a[href="/logout"]');

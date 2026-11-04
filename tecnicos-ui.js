@@ -44,7 +44,9 @@ async function postJSON(url, datos) {
 // ---------------------------------------------------------------
 async function cargarTecnicos() {
     try {
-        const d = await (await fetch('/api/tecnicos')).json();
+        const r = await fetch('/api/tecnicos');
+        if (r.status === 403) { tec.sinAcceso = true; aplicarAccesoTecnicos(); return; }
+        const d = await r.json();
         Object.assign(tec, d, { cargado: true });
         llenarSelectoresRoles();
         renderKpisTecnicos();
@@ -227,6 +229,7 @@ function renderVistaTec(vista) {
     if (vista === 'ranking') renderRanking();
     if (vista === 'e360') cargar360();
     if (vista === 'acciones' && !accionesCambiadas) renderAcciones(true);
+    if (vista === 'acciones') cargarAcceso();
 }
 
 // ---------------------------------------------------------------
@@ -834,7 +837,21 @@ function renderEstadoPowerAutomate() {
 // =====================================================================
 // PORTADA: elegir módulo (ACR o Técnicos)
 // =====================================================================
+function aplicarAccesoTecnicos() {
+    const bloqueado = window.esAdminTec === false || tec.sinAcceso;
+    const op = document.querySelector('.portada-op.tec');
+    if (op) {
+        op.classList.toggle('bloqueado', !!bloqueado);
+        const dato = document.getElementById('portada-dato-tec');
+        if (bloqueado && dato) dato.textContent = '🔒 Solo administradores de la matriz';
+    }
+    if (bloqueado && document.body.classList.contains('modo-tec')) abrirModulo('acr');
+}
 function abrirModulo(modulo) {
+    if (modulo === 'tecnicos' && (window.esAdminTec === false || tec.sinAcceso)) {
+        alert('🔒 El módulo Técnicos es solo para los administradores de la matriz de polivalencia. Si necesitas acceso, pídelo a Sara Moreno.');
+        return;
+    }
     document.body.classList.remove('modo-portada', 'modo-acr', 'modo-tec');
     document.body.classList.add(modulo === 'tecnicos' ? 'modo-tec' : 'modo-acr');
     document.getElementById('btn-portada').style.display = '';
@@ -860,7 +877,7 @@ function renderPortada() {
         a.textContent = `${acrsData.length} ACR · ${abiertas} acciones abiertas`;
     }
     const t = document.getElementById('portada-dato-tec');
-    if (t && tec.cargado) {
+    if (t && tec.cargado && !tec.sinAcceso && window.esAdminTec !== false) {
         const activos = tec.tecnicos.filter(x => x.activo !== false);
         t.textContent = `${activos.length} técnicos · ${rolesCatalogo().length} especialidades`;
     }
@@ -1410,4 +1427,38 @@ function detalle360(id) {
         </table></div>
         <p style="font-size: 12px; color: var(--text-muted); margin-top: 10px;">⚠️ marca las acciones donde las miradas difieren 2 niveles o más. El final de cada acción es el promedio ponderado de las fuentes que la calificaron.</p>`;
     document.getElementById('modal-analisis').classList.add('active');
+}
+
+// =====================================================================
+// ACCESO al módulo Técnicos (solo estos correos ven matriz, ranking y 360°)
+// =====================================================================
+let accesoAdmins = [];
+async function cargarAcceso() {
+    const cont = document.getElementById('acceso-tecnicos');
+    if (!cont) return;
+    try { accesoAdmins = (await (await fetch('/api/acceso-tecnicos')).json()).admins || []; } catch (e) { return; }
+    renderAcceso();
+}
+function renderAcceso() {
+    const cont = document.getElementById('acceso-tecnicos');
+    cont.innerHTML = `
+        <div class="acceso-lista">${accesoAdmins.map((c, i) => `<span class="acceso-chip">${escaparHTML(c)}${c === (usuarioActual.correo || '').toLowerCase() ? ' (tú)' : `<button title="Quitar" onclick="accesoAdmins.splice(${i}, 1); guardarAcceso();">✕</button>`}</span>`).join('')}</div>
+        <div class="acceso-agregar">
+            <input type="email" id="acceso-nuevo" class="form-control" placeholder="correo@kcc.com" onkeydown="if (event.key === 'Enter') agregarAcceso()">
+            <button class="btn btn-primary btn-sm" onclick="agregarAcceso()">➕ Dar acceso</button>
+        </div>`;
+}
+function agregarAcceso() {
+    const c = document.getElementById('acceso-nuevo').value.trim().toLowerCase();
+    if (!c) return;
+    if (!accesoAdmins.includes(c)) accesoAdmins.push(c);
+    guardarAcceso();
+}
+async function guardarAcceso() {
+    try {
+        const r = await postJSON('/api/acceso-tecnicos', { admins: accesoAdmins });
+        accesoAdmins = r.admins;
+        renderAcceso();
+        mostrarNotificacionToast('Acceso', 'Lista de administradores actualizada.');
+    } catch (err) { alert('❌ ' + err.message); cargarAcceso(); }
 }

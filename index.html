@@ -379,6 +379,11 @@
                 </div>
                 <p style="font-size: 12px; color: var(--text-muted);">Los pesos de cada especialidad deben sumar 100%. Si quitas una acción, las calificaciones que ya tenía dejan de contar en el puntaje. También puedes <a href="#" onclick="document.getElementById('archivo-matriz').click(); return false;">importar la matriz desde Excel</a>.</p>
                 <input type="file" id="archivo-matriz" accept=".xlsx,.xls,.xlsm" style="display: none;" onchange="importarMatrizExcel(this)">
+                <div class="section-card" style="margin-top: 18px;">
+                    <div class="section-title"><span>🔐 Quién puede ver el módulo Técnicos</span></div>
+                    <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 10px;">Solo estos correos pueden abrir la matriz, el ranking y la evaluación 360° (con los nombres de los evaluadores). Los demás usuarios de la app ven solo ACR. Los técnicos responden su cuestionario con el enlace personal, sin entrar a la app.</p>
+                    <div id="acceso-tecnicos">Cargando…</div>
+                </div>
             </div>
         </section>
 
