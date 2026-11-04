@@ -101,3 +101,8 @@ Los filtros de la empresa retienen los correos externos, así que las alertas sa
 - **Aviso de pendiente no realizado** (6:00 p. m. por defecto): una sola vez por pendiente.
 - Los correos salen por el mismo flujo de Power Automate de `/feeds/envios.xml` (no hace falta otro flujo). El flujo, al revisar la app cada pocos minutos, también la mantiene despierta en Render.
 - Respaldo completo de todos los datos en JSON: botón en Notificaciones (`/api/respaldo`).
+
+## Evaluación 360° (Técnicos → 🔄 Evaluación 360°)
+- Cada técnico es calificado por cuatro fuentes con las mismas acciones de su especialidad: autoevaluación, un compañero, el supervisor de línea e ingeniería (⭐ Calificar). Pesos por defecto 10/20/30/40 %, editables por evaluación.
+- Los evaluadores reciben un enlace personal `/evaluar/<token>` (sin usuario ni contraseña) por correo (Power Automate) o WhatsApp.
+- El nivel final de cada acción es el promedio ponderado de las fuentes que la calificaron; se exporta a Excel (resumen, detalle por acción y comentarios).

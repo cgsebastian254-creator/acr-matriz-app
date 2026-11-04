@@ -5,6 +5,7 @@ const os = require('os');
 const storage = require('./storage');
 const docs = require('./lib/docs');
 const rutasExtra = require('./lib/rutas');
+const ev360 = require('./lib/evaluacion360');
 const { crearNotificador } = require('./lib/notificaciones');
 
 const PORT = process.env.PORT || 3000;
@@ -1015,6 +1016,8 @@ const server = http.createServer((req, res) => {
         res.end();
         return;
     }
+    // Cuestionario de evaluación 360°: se abre con el enlace personal, sin iniciar sesión
+    if (pathname.startsWith('/evaluar/') && ev360.manejarPublico(req, res, pathname, { readBody, sendJson, broadcastEvent, datosTecnicos: rutasExtra.datosTecnicos })) return;
     const sesion = leerSesion(req);
     if (!RUTAS_PUBLICAS.has(pathname) && !RUTAS_CON_TOKEN.has(pathname) && !sesion) {
         if (pathname.startsWith('/api/')) return sendJson(res, 401, { error: 'Sesión vencida. Vuelve a ingresar.', login: true });
@@ -1033,6 +1036,9 @@ const server = http.createServer((req, res) => {
     }
 
     if (sesion && sesion.correo && !sesion.nombre) sesion.nombre = nombreDesdeCorreo(sesion.correo);
+    if (pathname.startsWith('/api/360') && ev360.manejar(req, res, pathname, parsedUrl, sesion, {
+        sendJson, readBody, broadcastEvent, enviarNotificacion, urlPublica: () => urlPublica(req), datosTecnicos: rutasExtra.datosTecnicos
+    })) return;
     if (pathname.startsWith('/api/') && rutasExtra.manejar(req, res, pathname, parsedUrl, sesion, {
         sendJson, readBody, broadcastEvent, ahoraTexto, notificador, enviarNotificacion, correoCorporativo, estadoPowerAutomate,
         via: ALERTAS_VIA,
@@ -1480,6 +1486,7 @@ async function arrancar() {
     await docs.cargar('turnos', () => ({ tipos: require('./lib/tecnicos').tiposTurnoPorDefecto(), asignaciones: {} }));
     await docs.cargar('notificaciones', () => require('./lib/notificaciones').configPorDefecto());
     await docs.cargar('daily_archivo_indice', []);
+    await docs.cargar('evaluacion360', () => ({ campanas: [], solicitudes: [] }));
     await docs.cargar('correos_acr', () => ({ ids: [], registro: [], inicializado: false }));
     const pendientes = readJson(DAILY_DATA_FILE);
     if (rutasExtra.migrarPendientes(pendientes)) writeJson(DAILY_DATA_FILE, pendientes);

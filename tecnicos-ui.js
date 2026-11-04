@@ -209,7 +209,7 @@ function renderTurnoHoy() {
 // ---------------------------------------------------------------
 // Sub-vistas de la pestaña
 // ---------------------------------------------------------------
-const VISTAS_TEC = ['perfiles', 'calificar', 'matriz', 'ranking', 'buscar', 'acciones'];
+const VISTAS_TEC = ['perfiles', 'calificar', 'matriz', 'e360', 'ranking', 'buscar', 'acciones'];
 function vistaTecnicos(vista) {
     if (vista === 'turnos') vista = 'perfiles';
     if (vistaTecActual === 'acciones' && vista !== 'acciones' && accionesCambiadas && !confirm('Tienes cambios sin guardar en las acciones a calificar. ¿Salir sin guardar?')) return;
@@ -225,6 +225,7 @@ function renderVistaTec(vista) {
     if (vista === 'calificar') renderCalificar();
     if (vista === 'matriz') renderMatrizPolivalencia();
     if (vista === 'ranking') renderRanking();
+    if (vista === 'e360') cargar360();
     if (vista === 'acciones' && !accionesCambiadas) renderAcciones(true);
 }
 
@@ -1174,3 +1175,239 @@ async function guardarAcciones() {
     } catch (err) { alert('❌ ' + err.message); }
 }
 window.addEventListener('beforeunload', e => { if (accionesCambiadas) { e.preventDefault(); e.returnValue = ''; } });
+
+// =====================================================================
+// EVALUACIÓN 360°: autoevaluación, compañero, supervisor e ingeniería
+// =====================================================================
+const e360 = { datos: null, campanaId: '' };
+const TIPOS_360 = ['auto', 'par', 'supervisor', 'ingenieria'];
+
+async function cargar360(id) {
+    if (id !== undefined) e360.campanaId = id;
+    try {
+        e360.datos = await (await fetch('/api/360' + (e360.campanaId ? '?campana=' + encodeURIComponent(e360.campanaId) : ''))).json();
+        if (e360.datos.campana) e360.campanaId = e360.datos.campana.id;
+    } catch (e) { document.getElementById('e360-contenido').innerHTML = '<div class="vacio">No se pudo cargar la evaluación.</div>'; return; }
+    render360();
+}
+
+async function nuevaCampana360() {
+    const sugerido = `Evaluación ${tec.periodoActual || ''}`.trim();
+    const nombre = (prompt('Nombre de la evaluación:', sugerido) || '').trim();
+    if (!nombre) return;
+    try {
+        const r = await postJSON('/api/360/campana', { nombre });
+        await cargar360(r.campana.id);
+    } catch (err) { alert('❌ ' + err.message); }
+}
+
+function enlace360(token) { return `${(e360.datos && e360.datos.urlBase) || location.origin}/evaluar/${token}`; }
+function solicitud360(r, tipo) { return (r.solicitudes || []).filter(s => s.tipo === tipo); }
+
+function celda360(t, r, tipo) {
+    if (tipo === 'ingenieria') {
+        const a = avance(t);
+        return `<div class="e360-celda ${a.hechas === a.total && a.total ? 'ok' : a.hechas ? 'parcial' : ''}">
+            <span class="e360-estado">${a.hechas === a.total && a.total ? '✅ Completa' : a.hechas ? `⏳ ${a.hechas}/${a.total}` : '— Sin calificar'}</span>
+            <span class="e360-puntaje">${pct(r.puntajes.ingenieria)}</span>
+            <button class="link" onclick="irACalificar('${attr(t.id)}')">⭐ Calificar</button></div>`;
+    }
+    const sols = solicitud360(r, tipo);
+    if (!sols.length) {
+        return `<div class="e360-celda vacia"><span class="e360-estado">— Sin asignar</span>${botonAsignar360(t, tipo)}</div>`;
+    }
+    return sols.map(s => {
+        const hecha = s.estado === 'respondida';
+        const tel = (s.evaluador.telefono || '').replace(/\D/g, '');
+        const msg = encodeURIComponent(`Hola ${s.evaluador.nombre}, por favor diligencia esta evaluación de polivalencia${tipo === 'auto' ? ' (autoevaluación)' : ' de ' + t.nombre}: ${enlace360(s.token)}`);
+        return `<div class="e360-celda ${hecha ? 'ok' : ''}">
+            <span class="e360-estado">${hecha ? '✅ Respondida' : s.enviada ? '📨 Enviada' : '⏳ Pendiente'}</span>
+            ${tipo !== 'auto' ? `<span class="e360-evaluador">${escaparHTML(s.evaluador.nombre)}</span>` : ''}
+            ${hecha ? `<span class="e360-puntaje">${pct(r.puntajes[tipo])}</span>` : ''}
+            <div class="e360-acciones">
+                <button title="Copiar enlace" onclick="copiarEnlace360('${attr(s.token)}')">🔗</button>
+                <a title="Enviar por WhatsApp" href="https://wa.me/${tel.length === 10 ? '57' + tel : tel}?text=${msg}" target="_blank" rel="noopener">💬</a>
+                <a title="Abrir el cuestionario" href="${attr(enlace360(s.token))}" target="_blank" rel="noopener">↗</a>
+                ${tipo !== 'auto' ? botonAsignar360(t, tipo, true) : ''}
+                <button title="Quitar asignación" onclick="quitar360('${attr(s.token)}', ${hecha})">✕</button>
+            </div></div>`;
+    }).join('');
+}
+
+function botonAsignar360(t, tipo, corto) {
+    if (tipo === 'auto') return `<button class="link" onclick="asignar360('auto', '${attr(t.id)}')">➕ Crear</button>`;
+    if (tipo === 'par') {
+        const opciones = tec.tecnicos.filter(x => x.activo !== false && x.rol === t.rol && x.id !== t.id)
+            .map(x => `<option value="${attr(x.id)}">${escaparHTML(x.nombre)}</option>`).join('');
+        return `<select class="e360-select" title="Elegir compañero" onchange="if (this.value) asignarManual360('${attr(t.id)}', 'par', { evaluadorTecnicoId: this.value })"><option value="">${corto ? '✏️' : '➕ Elegir…'}</option>${opciones}</select>`;
+    }
+    return `<button class="${corto ? '' : 'link'}" title="Asignar supervisor" onclick="pedirSupervisor360('${attr(t.id)}')">${corto ? '✏️' : '➕ Asignar'}</button>`;
+}
+
+function render360() {
+    const cont = document.getElementById('e360-contenido');
+    if (!cont || !e360.datos || !tec.cargado) return;
+    const d = e360.datos;
+    const sel = document.getElementById('e360-campana');
+    sel.innerHTML = d.campanas.length ? d.campanas.slice().reverse().map(c => `<option value="${attr(c.id)}">${escaparHTML(c.nombre)}${c.cerrada ? ' (cerrada)' : ''}</option>`).join('') : '<option value="">Sin evaluaciones</option>';
+    if (d.campana) sel.value = d.campana.id;
+    if (!d.campana) {
+        cont.innerHTML = `<div class="section-card e360-intro">
+            <h3>🔄 Evaluación 360°</h3>
+            <p>Cada técnico es calificado en las mismas acciones de su especialidad por <strong>él mismo</strong>, <strong>un compañero</strong>, <strong>su supervisor de línea</strong> e <strong>ingeniería</strong>. El resultado final es el promedio ponderado de las cuatro miradas.</p>
+            <p>Los evaluadores no necesitan cuenta: reciben un enlace personal por correo o WhatsApp y responden desde el celular.</p>
+            <button class="btn btn-primary" onclick="nuevaCampana360()">➕ Crear la primera evaluación</button></div>`;
+        return;
+    }
+    const c = d.campana;
+    const filtro = document.getElementById('e360-rol').value;
+    const q = normalizarTexto(document.getElementById('e360-buscar').value);
+    const porId = Object.fromEntries(d.resultados.map(r => [r.tecnicoId, r]));
+    const lista = tec.tecnicos.filter(t => t.activo !== false && (filtro === 'TODOS' || t.rol === filtro) && porId[t.id])
+        .filter(t => !q || normalizarTexto([t.nombre, ...(porId[t.id].solicitudes || []).map(s => s.evaluador.nombre)].join(' ')).includes(q))
+        .sort((a, b) => a.rol.localeCompare(b.rol) || a.nombre.localeCompare(b.nombre, 'es'));
+    const cuenta = tipo => {
+        const s = lista.flatMap(t => solicitud360(porId[t.id], tipo));
+        return { total: s.length, hechas: s.filter(x => x.estado === 'respondida').length, sinAsignar: lista.filter(t => !solicitud360(porId[t.id], tipo).length).length };
+    };
+    const ing = { hechas: lista.filter(t => { const a = avance(t); return a.total && a.hechas === a.total; }).length };
+    const suma = Object.values(c.pesos).reduce((a, b) => a + b, 0);
+    const tarjeta = (tipo, icono, extra) => {
+        const k = tipo === 'ingenieria' ? { total: lista.length, hechas: ing.hechas, sinAsignar: 0 } : cuenta(tipo);
+        const p = k.total ? Math.round(k.hechas / k.total * 100) : 0;
+        return `<div class="e360-fuente">
+            <div class="e360-fuente-cab"><span>${icono} ${escaparHTML(d.tipos[tipo].corto)}</span>
+                <label title="Peso en el resultado final"><input type="number" min="0" max="100" step="5" value="${Math.round(c.pesos[tipo] * 100)}" data-tipo="${tipo}" class="e360-peso" oninput="marcarPesos360()">%</label></div>
+            <div class="tt-avance"><div><span style="width:${p}%"></span></div><small>${k.hechas}/${k.total}${tipo === 'ingenieria' ? ' completas' : ' respondidas'}</small></div>
+            ${k.sinAsignar ? `<small class="texto-aviso">${k.sinAsignar} sin asignar</small>` : ''}
+            ${extra || ''}
+        </div>`;
+    };
+    cont.innerHTML = `
+        <div class="e360-fuentes">
+            ${tarjeta('auto', '🙋', `<button class="btn btn-secondary btn-sm" onclick="asignar360('auto')">👤 Crear autoevaluaciones</button>`)}
+            ${tarjeta('par', '🤝', `<button class="btn btn-secondary btn-sm" onclick="asignar360('companeros')">🎲 Asignar compañeros al azar</button>`)}
+            ${tarjeta('supervisor', '👔', `<button class="btn btn-secondary btn-sm" onclick="pedirSupervisor360()">👔 Asignar supervisor</button>`)}
+            ${tarjeta('ingenieria', '🛠️', `<button class="btn btn-secondary btn-sm" onclick="vistaTecnicos('calificar')">⭐ Ir a calificar</button>`)}
+        </div>
+        <div class="e360-barra-acciones">
+            <span id="e360-suma" class="${Math.abs(suma - 1) < 0.005 ? 'suma-ok' : 'suma-mal'}">Pesos: ${Math.round(suma * 100)}%${Math.abs(suma - 1) < 0.005 ? ' ✅' : ' (se reparten sobre lo que sume)'}</span>
+            <div class="grupo-botones">
+                <button class="btn btn-secondary btn-sm" id="e360-guardar-pesos" style="display: none;" onclick="guardarPesos360()">💾 Guardar pesos</button>
+                <button class="btn btn-primary btn-sm" onclick="enviar360()">📨 Enviar correos pendientes</button>
+            </div>
+        </div>
+        <div class="section-card" style="padding: 0;">
+            <div class="tabla-desplazable"><table class="grid-tabla tabla-360">
+                <thead><tr><th class="col-fija">Técnico</th><th>🙋 Autoevaluación</th><th>🤝 Compañero</th><th>👔 Supervisor</th><th>🛠️ Ingeniería</th><th>Final ponderado</th></tr></thead>
+                <tbody>${lista.map(t => {
+                    const r = porId[t.id];
+                    return `<tr>
+                        <td class="col-fija"><button class="link" onclick="detalle360('${attr(t.id)}')">${ICONO_ROL[t.rol] || '👤'} ${escaparHTML(t.nombre)}</button><small class="e360-rol">${escaparHTML(t.rol)}${t.correo ? '' : ' · sin correo'}</small></td>
+                        ${TIPOS_360.map(tipo => `<td>${celda360(t, r, tipo)}</td>`).join('')}
+                        <td><div class="e360-final"><strong>${pct(r.puntajes.final)}</strong><button class="btn btn-secondary btn-sm" onclick="detalle360('${attr(t.id)}')">🔍 Detalle</button></div></td>
+                    </tr>`;
+                }).join('') || '<tr><td colspan="6" style="padding: 20px; color: var(--text-muted);">No hay técnicos con esos filtros.</td></tr>'}</tbody>
+            </table></div>
+        </div>
+        <p style="font-size: 12px; color: var(--text-muted);">🔗 copia el enlace · 💬 lo manda por WhatsApp (usa el celular del perfil) · ↗ abre el cuestionario · ✏️ cambia el evaluador · ✕ quita la asignación. "Enviar correos" agrupa en un solo correo todas las evaluaciones de cada persona que tenga correo registrado. Para el correo de autoevaluaciones y compañeros, registra el correo en el perfil del técnico.</p>`;
+}
+
+function marcarPesos360() {
+    const ins = [...document.querySelectorAll('.e360-peso')];
+    const suma = ins.reduce((s, i) => s + (Number(i.value) || 0), 0);
+    const el = document.getElementById('e360-suma');
+    el.textContent = `Pesos: ${suma}%${suma === 100 ? ' ✅' : ' — deben sumar 100%'}`;
+    el.className = suma === 100 ? 'suma-ok' : 'suma-mal';
+    document.getElementById('e360-guardar-pesos').style.display = '';
+}
+async function guardarPesos360() {
+    const pesos = {};
+    document.querySelectorAll('.e360-peso').forEach(i => { pesos[i.dataset.tipo] = (Number(i.value) || 0) / 100; });
+    const suma = Object.values(pesos).reduce((a, b) => a + b, 0);
+    if (Math.abs(suma - 1) > 0.001 && !confirm(`Los pesos suman ${Math.round(suma * 100)}%. ¿Guardar así? (el final se calcula repartiendo sobre lo que sume)`)) return;
+    try { await postJSON('/api/360/campana', { id: e360.campanaId, pesos }); await cargar360(); mostrarNotificacionToast('Evaluación 360°', 'Pesos guardados.'); }
+    catch (err) { alert('❌ ' + err.message); }
+}
+
+async function asignar360(modo, tecnicoId) {
+    const rol = document.getElementById('e360-rol').value;
+    const ambito = rol === 'TODOS' ? 'todos los técnicos' : `los técnicos de ${rol}`;
+    if (!tecnicoId && modo === 'companeros' && !confirm(`Asignar al azar un compañero de su misma especialidad a ${ambito} que aún no tengan uno.\n\n¿Continuar?`)) return;
+    try {
+        const r = tecnicoId
+            ? await postJSON('/api/360/asignar', { campanaId: e360.campanaId, modo: 'manual', tipo: 'auto', tecnicoId, evaluadorTecnicoId: tecnicoId })
+            : await postJSON('/api/360/asignar', { campanaId: e360.campanaId, modo, rol });
+        await cargar360();
+        mostrarNotificacionToast('Evaluación 360°', `${r.asignadas} evaluaciones asignadas.`);
+    } catch (err) { alert('❌ ' + err.message); }
+}
+async function asignarManual360(tecnicoId, tipo, datos) {
+    try { await postJSON('/api/360/asignar', { campanaId: e360.campanaId, modo: 'manual', tipo, tecnicoId, ...datos }); await cargar360(); }
+    catch (err) { alert('❌ ' + err.message); }
+}
+async function pedirSupervisor360(tecnicoId) {
+    const t = tecnicoId ? tec.tecnicos.find(x => x.id === tecnicoId) : null;
+    const rol = document.getElementById('e360-rol').value;
+    const nombre = (prompt(t ? `Supervisor que evaluará a ${t.nombre}:` : `Nombre del supervisor de línea.\nSe asignará a ${rol === 'TODOS' ? 'todos los técnicos' : 'los técnicos de ' + rol} que aún no tengan supervisor (filtra por especialidad o búsqueda antes si es para un grupo):`) || '').trim();
+    if (!nombre) return;
+    const correo = (prompt(`Correo de ${nombre} (para enviarle los enlaces; déjalo vacío si se los mandas por WhatsApp):`) || '').trim();
+    const telefono = correo ? '' : (prompt(`Celular de ${nombre} (opcional, para WhatsApp):`) || '').trim();
+    try {
+        let r;
+        if (t) r = await postJSON('/api/360/asignar', { campanaId: e360.campanaId, modo: 'manual', tipo: 'supervisor', tecnicoId, nombre, correo, telefono });
+        else {
+            const q = normalizarTexto(document.getElementById('e360-buscar').value);
+            const ids = tec.tecnicos.filter(x => x.activo !== false && (rol === 'TODOS' || x.rol === rol) && (!q || normalizarTexto(x.nombre).includes(q))).map(x => x.id);
+            r = await postJSON('/api/360/asignar', { campanaId: e360.campanaId, modo: 'supervisor', nombre, correo, telefono, tecnicos: ids });
+        }
+        await cargar360();
+        mostrarNotificacionToast('Evaluación 360°', `${r.asignadas} evaluaciones asignadas a ${nombre}.`);
+    } catch (err) { alert('❌ ' + err.message); }
+}
+async function quitar360(token, respondida) {
+    if (!confirm(respondida ? 'Esta evaluación YA fue respondida. Si la quitas se pierden sus calificaciones. ¿Quitarla?' : '¿Quitar esta asignación? El enlace dejará de funcionar.')) return;
+    try { await postJSON('/api/360/quitar', { token }); await cargar360(); } catch (err) { alert('❌ ' + err.message); }
+}
+async function copiarEnlace360(token) {
+    try { await navigator.clipboard.writeText(enlace360(token)); mostrarNotificacionToast('Enlace copiado', 'Pégalo en un correo, chat o WhatsApp.'); }
+    catch (e) { prompt('Copia el enlace:', enlace360(token)); }
+}
+async function enviar360() {
+    if (!confirm('Se enviará un correo a cada evaluador con correo registrado, con los enlaces de sus evaluaciones pendientes que aún no se han enviado.\n\n¿Enviar?')) return;
+    try {
+        const r = await postJSON('/api/360/enviar', { campanaId: e360.campanaId });
+        alert(`📨 ${r.correos} correos en cola (${r.evaluaciones} evaluaciones). Salen desde Outlook en 1 a 5 minutos.${r.sinCorreo ? `\n\n⚠️ ${r.sinCorreo} evaluaciones no tienen correo: mándalas con 💬 WhatsApp o 🔗 copiando el enlace.` : ''}`);
+        await cargar360();
+    } catch (err) { alert('❌ ' + err.message); }
+}
+function exportar360() {
+    if (!e360.campanaId) return alert('Primero crea una evaluación.');
+    window.location.href = '/api/360/exportar?campana=' + encodeURIComponent(e360.campanaId);
+}
+
+function detalle360(id) {
+    const t = tec.tecnicos.find(x => x.id === id);
+    const r = e360.datos && e360.datos.resultados.find(x => x.tecnicoId === id);
+    if (!t || !r) return;
+    const habs = tec.habilidades.filter(h => h.rol === t.rol);
+    const pesos = e360.datos.campana.pesos;
+    const v = (tipo, hid) => { const n = (r.fuentes[tipo] || {})[hid]; return n ? `<td class="nivel-celda n${Math.round(n)}">${Math.round(n * 10) / 10}</td>` : '<td class="nivel-celda n0">—</td>'; };
+    const dif = hid => {
+        const vals = ['auto', 'par', 'supervisor', 'ingenieria'].map(k => (r.fuentes[k] || {})[hid]).filter(Boolean);
+        return vals.length > 1 && Math.max(...vals) - Math.min(...vals) >= 2;
+    };
+    document.getElementById('analisis-titulo').textContent = `${t.nombre} · Evaluación 360°`;
+    document.getElementById('analisis-contenido').innerHTML = `
+        <div class="e360-resumen">${['auto', 'par', 'supervisor', 'ingenieria'].map(k => `<div><span>${pct(r.puntajes[k])}</span>${escaparHTML(e360.datos.tipos[k].corto)} · ${Math.round(pesos[k] * 100)}%</div>`).join('')}<div class="final"><span>${pct(r.puntajes.final)}</span>Final ponderado</div></div>
+        <div class="tabla-desplazable" style="max-height: 55vh;"><table class="grid-tabla">
+            <thead><tr><th class="col-fija">Acción</th><th>Auto</th><th>Compañero</th><th>Supervisor</th><th>Ingeniería</th><th>Final</th></tr></thead>
+            <tbody>${habs.map(h => `<tr${dif(h.id) ? ' class="e360-diferencia" title="Las evaluaciones difieren 2 niveles o más: vale la pena conversarlo"' : ''}>
+                <td class="col-fija" style="white-space: normal;">${dif(h.id) ? '⚠️ ' : ''}${escaparHTML(h.nombre)} <small style="color: var(--text-muted);">${Math.round(h.peso * 1000) / 10}%</small></td>
+                ${v('auto', h.id)}${v('par', h.id)}${v('supervisor', h.id)}${v('ingenieria', h.id)}
+                ${r.final[h.id] ? `<td class="nivel-celda n${Math.round(r.final[h.id])}"><strong>${(Math.round(r.final[h.id] * 100) / 100).toFixed(2)}</strong></td>` : '<td class="nivel-celda n0">—</td>'}
+            </tr>`).join('')}</tbody>
+        </table></div>
+        <p style="font-size: 12px; color: var(--text-muted); margin-top: 10px;">⚠️ marca las acciones donde las miradas difieren 2 niveles o más. El final de cada acción es el promedio ponderado de las fuentes que la calificaron.</p>`;
+    document.getElementById('modal-analisis').classList.add('active');
+}

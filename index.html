@@ -263,6 +263,7 @@
                 <button class="subtab activo" data-vista="perfiles" onclick="vistaTecnicos('perfiles')">🪪 Técnicos</button>
                 <button class="subtab" data-vista="calificar" onclick="vistaTecnicos('calificar')">⭐ Calificar</button>
                 <button class="subtab" data-vista="matriz" onclick="vistaTecnicos('matriz')">🧩 Matriz</button>
+                <button class="subtab" data-vista="e360" onclick="vistaTecnicos('e360')">🔄 Evaluación 360°</button>
                 <button class="subtab" data-vista="ranking" onclick="vistaTecnicos('ranking')">🏆 Ranking</button>
                 <button class="subtab" data-vista="buscar" onclick="vistaTecnicos('buscar')">🔎 Buscar técnico</button>
                 <button class="subtab" data-vista="acciones" onclick="vistaTecnicos('acciones')">⚙️ Acciones a calificar</button>
@@ -319,6 +320,22 @@
                     <div class="tabla-desplazable"><table class="grid-tabla" id="matriz-polivalencia"></table></div>
                 </div>
                 <p style="font-size: 12px; color: var(--text-muted);">La fila "Promedio del equipo" muestra dónde está la brecha de formación. Las calificaciones se guardan por semestre (<span id="matriz-periodo"></span>) para ver si cada técnico mejora.</p>
+            </div>
+
+            <!-- Evaluación 360° -->
+            <div id="tec-vista-e360" style="display: none;">
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <select id="e360-campana" class="select-input" onchange="cargar360(this.value)"></select>
+                        <button class="btn btn-secondary" onclick="nuevaCampana360()">➕ Nueva evaluación</button>
+                        <select id="e360-rol" class="select-input sel-roles" data-todos="1" onchange="render360()"></select>
+                        <input type="text" id="e360-buscar" class="search-input" placeholder="🔍 Técnico o evaluador..." oninput="render360()">
+                    </div>
+                    <div class="grupo-botones">
+                        <button class="btn btn-secondary" onclick="exportar360()">⬇️ Resultados en Excel</button>
+                    </div>
+                </div>
+                <div id="e360-contenido"></div>
             </div>
 
             <!-- Ranking -->
