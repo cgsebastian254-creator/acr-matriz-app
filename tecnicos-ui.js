@@ -5,7 +5,8 @@ const tec = { tecnicos: [], habilidades: [], niveles: {}, periodoActual: '', car
 const turnos = { tipos: [], asignaciones: {}, rangos: [], semana: '' };
 let diaInicioOffset = 0;
 
-const ICONO_ROL = { 'Mecánico': '🔧', 'Electricista': '⚡', 'Instrumentista': '📟', 'Lubricador': '🛢️', 'Ingeniero': '👷' };
+const ICONO_ROL = { 'Mecánico': '🔧', 'Electricista': '⚡', 'Instrumentista': '📟', 'Lubricador': '🛢️', 'Calderista': '🔥', 'Ingeniero': '👷' };
+const MOSTRAR_TURNOS = false;   // la programación de turnos está apagada por ahora
 const DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
 function ahoraBogotaCliente() {
@@ -45,6 +46,8 @@ async function cargarTecnicos() {
     try {
         const d = await (await fetch('/api/tecnicos')).json();
         Object.assign(tec, d, { cargado: true });
+        llenarSelectoresRoles();
+        renderKpisTecnicos();
         const dl = document.getElementById('lista-tecnicos');
         if (dl) dl.innerHTML = tec.tecnicos.filter(t => t.activo !== false).map(t => `<option value="${escaparHTML(t.nombre)}">${escaparHTML(t.rol)}</option>`).join('');
     } catch (e) { console.error('No se pudieron cargar los técnicos', e); }
@@ -60,6 +63,7 @@ async function cargarRangoTurnos(desde, hasta) {
 
 async function recargarTecnicos(tipo) {
     if (tipo !== 'turnos_updated') await cargarTecnicos();
+    if (!MOSTRAR_TURNOS) { renderTodoTecnicos(); return; }
     const hoy = ahoraBogotaCliente().fecha;
     const semana = turnos.semana || lunesISO(hoy);
     await cargarRangoTurnos(sumarDiasISO(lunesISO(hoy), -7), sumarDiasISO(lunesISO(hoy), 20));
@@ -67,11 +71,11 @@ async function recargarTecnicos(tipo) {
     renderTodoTecnicos();
 }
 
+let vistaTecActual = 'perfiles';
 function renderTodoTecnicos() {
     renderTurnoHoy();
-    if (document.getElementById('tab-tecnicos')?.classList.contains('active')) {
-        renderBuscador(); renderPerfiles(); renderMatrizPolivalencia(); renderTurnos();
-    }
+    renderKpisTecnicos();
+    if (document.getElementById('tab-tecnicos')?.classList.contains('active')) renderVistaTec(vistaTecActual);
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -205,15 +209,23 @@ function renderTurnoHoy() {
 // ---------------------------------------------------------------
 // Sub-vistas de la pestaña
 // ---------------------------------------------------------------
+const VISTAS_TEC = ['perfiles', 'calificar', 'matriz', 'ranking', 'buscar', 'acciones'];
 function vistaTecnicos(vista) {
+    if (vista === 'turnos') vista = 'perfiles';
+    if (vistaTecActual === 'acciones' && vista !== 'acciones' && accionesCambiadas && !confirm('Tienes cambios sin guardar en las acciones a calificar. ¿Salir sin guardar?')) return;
+    if (vista !== 'acciones') accionesCambiadas = false;
+    vistaTecActual = vista;
     document.querySelectorAll('#tab-tecnicos .subtab').forEach(b => b.classList.toggle('activo', b.dataset.vista === vista));
-    ['buscar', 'perfiles', 'matriz', 'turnos'].forEach(v => {
-        document.getElementById('tec-vista-' + v).style.display = v === vista ? '' : 'none';
-    });
+    VISTAS_TEC.forEach(v => { const el = document.getElementById('tec-vista-' + v); if (el) el.style.display = v === vista ? '' : 'none'; });
+    renderVistaTec(vista);
+}
+function renderVistaTec(vista) {
     if (vista === 'buscar') renderBuscador();
     if (vista === 'perfiles') renderPerfiles();
+    if (vista === 'calificar') renderCalificar();
     if (vista === 'matriz') renderMatrizPolivalencia();
-    if (vista === 'turnos') cargarTurnos();
+    if (vista === 'ranking') renderRanking();
+    if (vista === 'acciones' && !accionesCambiadas) renderAcciones(true);
 }
 
 // ---------------------------------------------------------------
@@ -279,7 +291,7 @@ function renderBuscador() {
     if (!cont || !tec.cargado) return;
     const q = normalizarTexto(document.getElementById('buscar-tec-texto').value);
     const rol = document.getElementById('buscar-tec-rol').value;
-    const disp = document.getElementById('buscar-tec-turno').value;
+    const disp = document.getElementById('buscar-tec-turno')?.value || 'TODOS';
     const hoy = ahoraBogotaCliente().fecha;
     const tokens = q.split(/[^a-z0-9ñ]+/).filter(x => x.length > 1 && !VACIAS.has(x));
     let lista = tec.tecnicos.filter(t => t.activo !== false && (rol === 'TODOS' || t.rol === rol)).map(t => {
@@ -303,7 +315,7 @@ function renderBuscador() {
     cont.innerHTML = lista.slice(0, 60).map(({ t, razones, cod, ahora }) => tarjetaTecnico(t, {
         razones, cod, ahora,
         acciones: `<button class="btn btn-secondary btn-sm" onclick="abrirPerfil('${attr(t.id)}')">🪪 Perfil</button>
-                   <button class="btn btn-primary btn-sm" onclick="asignarAPendiente('${attr(t.id)}')">📝 Asignar pendiente</button>`
+                   <button class="btn btn-primary btn-sm" onclick="irACalificar('${attr(t.id)}')">⭐ Calificar</button>`
     })).join('');
 }
 
@@ -320,7 +332,8 @@ function tarjetaTecnico(t, { razones = [], cod, ahora, acciones = '' } = {}) {
             </div>
             <div class="tt-puntaje" title="Puntaje ponderado de la matriz de polivalencia">${pct(t.puntaje)}${variacion}</div>
         </div>
-        <div class="tt-turno">Hoy: ${badgeTurno(cod)} ${ahora ? '<span class="badge badge-realizado">🟢 En turno ahora</span>' : ''}</div>
+        ${MOSTRAR_TURNOS ? `<div class="tt-turno">Hoy: ${badgeTurno(cod)} ${ahora ? '<span class="badge badge-realizado">🟢 En turno ahora</span>' : ''}</div>` : ''}
+        ${barraAvance(t)}
         ${razones.length ? `<ul class="tt-razones">${razones.slice(0, 4).map(r => `<li>${escaparHTML(r)}</li>`).join('')}</ul>` : ''}
         ${(t.especialidades || []).length ? `<div class="tt-esp">${t.especialidades.slice(0, 6).map(e => `<span>${escaparHTML(e)}</span>`).join('')}</div>` : ''}
         <div class="tt-acciones">
@@ -368,12 +381,25 @@ function renderPerfiles() {
     if (!cont || !tec.cargado) return;
     const q = normalizarTexto(document.getElementById('perfiles-buscar').value);
     const rol = document.getElementById('perfiles-rol').value;
+    const orden = document.getElementById('perfiles-orden')?.value || 'nombre';
     const lista = tec.tecnicos.filter(t => (rol === 'TODOS' || t.rol === rol) &&
-        (!q || normalizarTexto([t.nombre, t.linea, t.cargo, ...(t.especialidades || [])].join(' ')).includes(q)))
-        .sort((a, b) => (b.activo !== false) - (a.activo !== false) || a.nombre.localeCompare(b.nombre, 'es'));
-    cont.innerHTML = lista.length ? lista.map(t => tarjetaTecnico(t, {
-        acciones: `<button class="btn btn-primary btn-sm" onclick="abrirPerfil('${attr(t.id)}')">✏️ Ver / editar</button>${t.activo === false ? ' <span class="badge badge-gris">Inactivo</span>' : ''}`
-    })).join('') : `<div class="vacio">${tec.tecnicos.length ? 'Ningún técnico coincide.' : 'Aún no hay técnicos. Usa "➕ Nuevo técnico" o "📥 Importar matriz (Excel)" con el archivo de la matriz de competencias (hojas DimTecnico, DimHabilidad y FactEvaluacion).'}</div>`;
+        (!q || normalizarTexto([t.nombre, t.rol, t.linea, t.cargo, ...(t.especialidades || [])].join(' ')).includes(q)))
+        .sort((a, b) => (b.activo !== false) - (a.activo !== false)
+            || (orden === 'puntaje' ? (b.puntaje ?? -1) - (a.puntaje ?? -1) : 0)
+            || (orden === 'pendientes' ? avance(a).hechas / (avance(a).total || 1) - avance(b).hechas / (avance(b).total || 1) : 0)
+            || a.nombre.localeCompare(b.nombre, 'es'));
+    // Agrupados por especialidad
+    const grupos = {};
+    lista.forEach(t => (grupos[t.rol] = grupos[t.rol] || []).push(t));
+    const roles = rolesCatalogo().filter(r => grupos[r]).concat(Object.keys(grupos).filter(r => !rolesCatalogo().includes(r)));
+    cont.innerHTML = lista.length ? roles.map(r => `
+        <div class="grupo-rol">
+            <div class="grupo-rol-titulo">${ICONO_ROL[r] || '👤'} ${escaparHTML(r)} <span>${grupos[r].length}</span></div>
+            <div class="tarjetas-tecnicos">${grupos[r].map(t => tarjetaTecnico(t, {
+                acciones: `<button class="btn btn-primary btn-sm" onclick="irACalificar('${attr(t.id)}')">⭐ Calificar</button>
+                           <button class="btn btn-secondary btn-sm" onclick="abrirPerfil('${attr(t.id)}')">✏️ Perfil</button>${t.activo === false ? ' <span class="badge badge-gris">Inactivo</span>' : ''}`
+            })).join('')}</div>
+        </div>`).join('') : `<div class="vacio">${tec.tecnicos.length ? 'Ningún técnico coincide.' : 'Aún no hay técnicos. Usa <strong>➕ Nuevo técnico</strong> para crear el primero: nombre, especialidad y listo, después lo calificas en ⭐ Calificar.'}</div>`;
 }
 
 let perfilNiveles = {};
@@ -382,7 +408,11 @@ function abrirPerfil(id) {
     document.getElementById('perfil-titulo').textContent = t ? t.nombre : 'Nuevo técnico';
     document.getElementById('perfil-id').value = t ? t.id : '';
     document.getElementById('perfil-nombre').value = t ? t.nombre : '';
-    document.getElementById('perfil-rol').value = t ? t.rol : 'Mecánico';
+    const selRol = document.getElementById('perfil-rol');
+    const rolPorDefecto = (document.getElementById('perfiles-rol')?.value || 'TODOS') !== 'TODOS' ? document.getElementById('perfiles-rol').value : (rolesCatalogo()[0] || 'Mecánico');
+    const rolElegido = t ? t.rol : rolPorDefecto;
+    if (![...selRol.options].some(o => o.value === rolElegido)) selRol.add(new Option(rolElegido, rolElegido));
+    selRol.value = rolElegido;
     document.getElementById('perfil-cargo').value = t ? t.cargo || '' : '';
     const selLinea = document.getElementById('perfil-linea');
     if (t && t.linea && ![...selLinea.options].some(o => o.value === t.linea)) selLinea.add(new Option(t.linea, t.linea));
@@ -412,11 +442,11 @@ function abrirPerfil(id) {
             <div class="perfil-kpis">
                 <div><span>${pct(t.puntaje)}</span>Puntaje ${escaparHTML(t.periodo || '')}</div>
                 <div><span>${t.variacion == null ? '—' : (t.variacion >= 0 ? '▲ ' : '▼ ') + Math.abs(Math.round(t.variacion * 100)) + ' pts'}</span>vs ${escaparHTML(t.periodoAnterior || 'semestre anterior')}</div>
-                <div><span>${badgeTurno(codigoTurno(t.id, hoy))}</span>Turno de hoy</div>
+                <div><span>${avance(t).hechas}/${avance(t).total}</span>Acciones calificadas</div>
             </div>
             ${fuertes.length ? `<p class="perfil-linea">💪 <strong>Experto en:</strong> ${fuertes.map(escaparHTML).join(', ')}</p>` : ''}
             ${formar.length ? `<p class="perfil-linea">📚 <strong>Por formar:</strong> ${formar.map(escaparHTML).join(', ')}</p>` : ''}`;
-        extra.innerHTML = `
+        extra.innerHTML = !MOSTRAR_TURNOS ? '' : `
             <div class="form-group" style="margin-top: 14px;"><label>Esta semana</label>
                 <div class="semana-mini">${semana.map((f, i) => `<div class="${f === hoy ? 'hoy' : ''}"><small>${DIAS_CORTOS[i]} ${f.slice(8)}</small>${(() => { const c = codigoTurno(t.id, f); const tt = tipoTurno(c); return tt ? `<b style="color:${tt.color}">${escaparHTML(tt.codigo)}</b>` : '<b>—</b>'; })()}</div>`).join('')}</div>
             </div>
@@ -514,7 +544,7 @@ function renderMatrizPolivalencia() {
     const lista = tec.tecnicos.filter(t => t.rol === rol && t.activo !== false);
     if (document.getElementById('matriz-orden').value === 'nombre') lista.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
     else lista.sort((a, b) => (b.puntaje ?? -1) - (a.puntaje ?? -1));
-    if (!lista.length) { tabla.innerHTML = `<tr><td style="padding: 20px; color: var(--text-muted);">No hay ${rol === 'Mecánico' ? 'mecánicos' : 'electricistas'} registrados.</td></tr>`; return; }
+    if (!lista.length) { tabla.innerHTML = `<tr><td style="padding: 20px; color: var(--text-muted);">Todavía no hay técnicos de ${escaparHTML(rol)}. Créalos en 🪪 Técnicos → ➕ Nuevo técnico.</td></tr>`; return; }
     const cats = [];
     habs.forEach(h => { const c = cats.find(x => x.nombre === h.categoria); if (c) c.n++; else cats.push({ nombre: h.categoria, n: 1 }); });
     // Fila final: promedio por habilidad (dónde está la brecha del equipo)
@@ -524,13 +554,13 @@ function renderMatrizPolivalencia() {
     };
     tabla.innerHTML = `
         <thead>
-            <tr><th rowspan="2" class="col-fija">#&nbsp;Técnico</th><th rowspan="2">Hoy</th>${cats.map(c => `<th colspan="${c.n}" class="cat">${escaparHTML(c.nombre)}</th>`).join('')}<th rowspan="2">Puntaje</th></tr>
+            <tr><th rowspan="2" class="col-fija">#&nbsp;Técnico</th>${MOSTRAR_TURNOS ? '<th rowspan="2">Hoy</th>' : ''}${cats.map(c => `<th colspan="${c.n}" class="cat">${escaparHTML(c.nombre)}</th>`).join('')}<th rowspan="2">Puntaje</th></tr>
             <tr>${habs.map(h => `<th class="hab" title="${attr(h.descripcion)} · peso ${Math.round(h.peso * 100)}%"><span>${escaparHTML(h.nombre)}</span></th>`).join('')}</tr>
         </thead>
         <tbody>
             ${lista.map((t, i) => `<tr>
                 <td class="col-fija"><button class="link" onclick="abrirPerfil('${attr(t.id)}')">${i + 1}. ${escaparHTML(t.nombre)}</button></td>
-                <td>${(() => { const tt = tipoTurno(codigoTurno(t.id, hoy)); return tt ? `<span class="cod-turno" style="background:${tt.color}">${escaparHTML(tt.codigo)}</span>` : '—'; })()}</td>
+                ${MOSTRAR_TURNOS ? `<td>${(() => { const tt = tipoTurno(codigoTurno(t.id, hoy)); return tt ? `<span class="cod-turno" style="background:${tt.color}">${escaparHTML(tt.codigo)}</span>` : '—'; })()}</td>` : ''}
                 ${habs.map(h => {
                     const n = Number((t.niveles || {})[h.id]) || 0;
                     return editar
@@ -539,7 +569,7 @@ function renderMatrizPolivalencia() {
                 }).join('')}
                 <td class="puntaje-celda">${pct(t.puntaje)}${t.variacion != null ? `<small class="${t.variacion >= 0 ? 'sube' : 'baja'}">${t.variacion >= 0 ? '▲' : '▼'}${Math.abs(Math.round(t.variacion * 100))}</small>` : ''}</td>
             </tr>`).join('')}
-            <tr class="fila-promedio"><td class="col-fija">Promedio del equipo</td><td></td>${habs.map(h => { const p = promedio(h); return `<td class="nivel-celda n${p ? Math.round(p) : 0}">${p ? p.toFixed(1) : '—'}</td>`; }).join('')}<td></td></tr>
+            <tr class="fila-promedio"><td class="col-fija">Promedio del equipo</td>${MOSTRAR_TURNOS ? '<td></td>' : ''}${habs.map(h => { const p = promedio(h); return `<td class="nivel-celda n${p ? Math.round(p) : 0}">${p ? p.toFixed(1) : '—'}</td>`; }).join('')}<td></td></tr>
         </tbody>`;
 }
 
@@ -799,3 +829,348 @@ function renderEstadoPowerAutomate() {
         <div>Último correo automático: <strong>${escaparHTML(st.ultimoRecordatorio ? fechaTxt(st.ultimoRecordatorio) : 'aún no')}</strong></div>
         ${(pa.ultimosEnvios || []).length ? `<div style="margin-top: 8px;">Últimos correos en cola:</div><ul style="margin: 4px 0 0 18px;">${pa.ultimosEnvios.map(e => `<li>${escaparHTML(fecha(e.fecha))} → ${escaparHTML((e.para || []).join(', '))}: ${escaparHTML(e.asunto)}</li>`).join('')}</ul>` : ''}`;
 }
+
+// =====================================================================
+// PORTADA: elegir módulo (ACR o Técnicos)
+// =====================================================================
+function abrirModulo(modulo) {
+    document.body.classList.remove('modo-portada', 'modo-acr', 'modo-tec');
+    document.body.classList.add(modulo === 'tecnicos' ? 'modo-tec' : 'modo-acr');
+    document.getElementById('btn-portada').style.display = '';
+    if (modulo === 'tecnicos') { switchTab('tecnicos'); vistaTecnicos(vistaTecActual || 'perfiles'); }
+    else if (currentTab === 'tecnicos' || !currentTab) switchTab('dashboard');
+    else switchTab(currentTab);
+    history.replaceState(null, '', '#' + (modulo === 'tecnicos' ? 'tecnicos' : 'acr'));
+    window.scrollTo(0, 0);
+}
+function irPortada() {
+    if (vistaTecActual === 'acciones' && accionesCambiadas && !confirm('Tienes cambios sin guardar en las acciones a calificar. ¿Salir sin guardar?')) return;
+    accionesCambiadas = false;
+    document.body.classList.remove('modo-acr', 'modo-tec');
+    document.body.classList.add('modo-portada');
+    document.getElementById('btn-portada').style.display = 'none';
+    history.replaceState(null, '', location.pathname);
+    renderPortada();
+}
+function renderPortada() {
+    const a = document.getElementById('portada-dato-acr');
+    if (a && typeof acrsData !== 'undefined') {
+        const abiertas = acrsData.reduce((n, x) => n + (x.tareas || []).filter(t => t.estado !== 'Realizado').length, 0);
+        a.textContent = `${acrsData.length} ACR · ${abiertas} acciones abiertas`;
+    }
+    const t = document.getElementById('portada-dato-tec');
+    if (t && tec.cargado) {
+        const activos = tec.tecnicos.filter(x => x.activo !== false);
+        t.textContent = `${activos.length} técnicos · ${rolesCatalogo().length} especialidades`;
+    }
+}
+document.addEventListener('DOMContentLoaded', () => {
+    const h = location.hash.replace('#', '');
+    if (h === 'acr' || h === 'tecnicos') abrirModulo(h);
+    else { document.body.classList.add('modo-portada'); renderPortada(); }
+    setTimeout(renderPortada, 1500);
+});
+
+// =====================================================================
+// Especialidades, avance y KPIs
+// =====================================================================
+function rolesCatalogo() {
+    const r = [];
+    (tec.habilidades || []).forEach(h => { if (!r.includes(h.rol)) r.push(h.rol); });
+    return r;
+}
+function llenarSelectoresRoles() {
+    const roles = rolesCatalogo();
+    document.querySelectorAll('select.sel-roles').forEach(sel => {
+        const antes = sel.value;
+        const todos = sel.dataset.todos === '1';
+        sel.innerHTML = (todos ? '<option value="TODOS">Especialidad: Todas</option>' : '') +
+            roles.map(r => `<option value="${attr(r)}">${ICONO_ROL[r] || '👤'} ${escaparHTML(r)}</option>`).join('');
+        if ([...sel.options].some(o => o.value === antes)) sel.value = antes;
+    });
+}
+function avance(t) {
+    const habs = tec.habilidades.filter(h => h.rol === t.rol);
+    const hechas = habs.filter(h => Number((t.niveles || {})[h.id]) > 0).length;
+    return { hechas, total: habs.length };
+}
+function barraAvance(t) {
+    const a = avance(t);
+    const p = a.total ? Math.round(a.hechas / a.total * 100) : 0;
+    return `<div class="tt-avance" title="Acciones calificadas este semestre"><div><span style="width:${p}%"></span></div><small>${a.hechas}/${a.total} calificadas</small></div>`;
+}
+function puntajeLocal(niveles, rol) {
+    let suma = 0, pesos = 0;
+    tec.habilidades.filter(h => h.rol === rol).forEach(h => {
+        const n = Number(niveles[h.id]);
+        if (n) { suma += n / 4 * h.peso; pesos += h.peso; }
+    });
+    return pesos ? suma / pesos : null;
+}
+function renderKpisTecnicos() {
+    const cont = document.getElementById('tec-kpis');
+    if (!cont || !tec.cargado) return;
+    document.getElementById('tec-periodo').textContent = tec.periodoActual || '';
+    const activos = tec.tecnicos.filter(t => t.activo !== false);
+    const completos = activos.filter(t => { const a = avance(t); return a.total && a.hechas === a.total; }).length;
+    const conPuntaje = activos.filter(t => t.puntaje != null);
+    const prom = conPuntaje.length ? conPuntaje.reduce((s, t) => s + t.puntaje, 0) / conPuntaje.length : null;
+    cont.innerHTML = `
+        <div><span>${activos.length}</span>Técnicos</div>
+        <div><span>${completos}</span>Calificados al 100%</div>
+        <div><span>${pct(prom)}</span>Puntaje promedio</div>`;
+    renderPortada();
+}
+
+// =====================================================================
+// CALIFICAR: un técnico a la vez, con botones grandes 1-4
+// =====================================================================
+let calificarId = '';
+function irACalificar(id) {
+    const t = tec.tecnicos.find(x => x.id === id);
+    if (!t) return;
+    calificarId = id;
+    document.getElementById('calificar-rol').value = t.rol;
+    if (document.body.classList.contains('modo-tec')) vistaTecnicos('calificar');
+    else { abrirModulo('tecnicos'); vistaTecnicos('calificar'); }
+}
+function listaCalificar() {
+    const rol = document.getElementById('calificar-rol').value;
+    return tec.tecnicos.filter(t => t.activo !== false && t.rol === rol).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+}
+function moverCalificar(n) {
+    const lista = listaCalificar();
+    if (!lista.length) return;
+    const i = Math.max(0, lista.findIndex(t => t.id === calificarId));
+    calificarId = lista[(i + n + lista.length) % lista.length].id;
+    renderCalificar();
+    document.getElementById('tec-vista-calificar').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function renderCalificar(cambioRol) {
+    const cont = document.getElementById('calificar-contenido');
+    if (!cont || !tec.cargado) return;
+    const sel = document.getElementById('calificar-tecnico');
+    const lista = listaCalificar();
+    if (!cambioRol && sel.value && lista.some(t => t.id === sel.value) && sel.value !== calificarId && document.activeElement === sel) calificarId = sel.value;
+    if (!lista.some(t => t.id === calificarId)) calificarId = lista[0] ? lista[0].id : '';
+    sel.innerHTML = lista.map(t => { const a = avance(t); return `<option value="${attr(t.id)}">${escaparHTML(t.nombre)} — ${a.hechas}/${a.total}${a.hechas === a.total && a.total ? ' ✅' : ''}</option>`; }).join('') || '<option value="">Sin técnicos</option>';
+    sel.value = calificarId;
+    const t = lista.find(x => x.id === calificarId);
+    if (!t) {
+        cont.innerHTML = `<div class="vacio">No hay técnicos de ${escaparHTML(document.getElementById('calificar-rol').value)} todavía. <a href="#" onclick="abrirPerfil(); return false;">➕ Crear técnico</a></div>`;
+        return;
+    }
+    const habs = tec.habilidades.filter(h => h.rol === t.rol);
+    const cats = [...new Set(habs.map(h => h.categoria))];
+    const a = avance(t);
+    const p = t.puntaje;
+    const grados = Math.round((p || 0) * 360);
+    cont.innerHTML = `
+        <div class="calif-cabecera">
+            <div class="calif-anillo" style="background: conic-gradient(var(--accent-cyan) ${grados}deg, rgba(148,163,184,.18) 0);"><div><strong>${pct(p)}</strong><small>puntaje</small></div></div>
+            <div class="calif-datos">
+                <h3>${ICONO_ROL[t.rol] || '👤'} ${escaparHTML(t.nombre)}</h3>
+                <p>${escaparHTML(t.rol)}${t.cargo ? ' · ' + escaparHTML(t.cargo) : ''}${t.linea ? ' · ' + escaparHTML(t.linea) : ''} · semestre ${escaparHTML(tec.periodoActual)}</p>
+                <div class="calif-progreso"><div><span style="width:${a.total ? a.hechas / a.total * 100 : 0}%"></span></div><small>${a.hechas} de ${a.total} acciones calificadas</small></div>
+                ${t.variacion != null ? `<p class="${t.variacion >= 0 ? 'sube' : 'baja'}" style="margin:6px 0 0; font-size: 13px;">${t.variacion >= 0 ? '▲' : '▼'} ${Math.abs(Math.round(t.variacion * 100))} puntos vs ${escaparHTML(t.periodoAnterior)}</p>` : ''}
+            </div>
+            <div class="grupo-botones"><button class="btn btn-secondary btn-sm" onclick="abrirPerfil('${attr(t.id)}')">✏️ Editar perfil</button></div>
+        </div>
+        <div class="calif-leyenda">${[1, 2, 3, 4].map(n => `<span class="nivel n${n}">${n} ${tec.niveles[n]}</span>`).join('')}<small>Toca otra vez el mismo número para borrarlo. Se guarda solo.</small></div>
+        ${cats.map(c => `
+            <div class="calif-cat">
+                <div class="calif-cat-titulo">${escaparHTML(c)}</div>
+                ${habs.filter(h => h.categoria === c).map(h => {
+                    const n = Number((t.niveles || {})[h.id]) || 0;
+                    return `<div class="calif-fila ${n ? 'hecha' : ''}">
+                        <div class="calif-texto"><strong>${escaparHTML(h.nombre)}</strong>${h.descripcion ? `<small>${escaparHTML(h.descripcion)}</small>` : ''}</div>
+                        <span class="calif-peso" title="Peso en el puntaje">${Math.round(h.peso * 1000) / 10}%</span>
+                        <div class="calif-botones">${[1, 2, 3, 4].map(v => `<button class="nivel n${v} ${n === v ? 'sel' : ''}" title="${tec.niveles[v]}" onclick="calificarAccion('${attr(t.id)}', '${h.id}', ${v})">${v}</button>`).join('')}</div>
+                    </div>`;
+                }).join('')}
+            </div>`).join('')}
+        <div class="calif-pie">
+            <button class="btn btn-secondary" onclick="moverCalificar(-1)">◀ Anterior</button>
+            <button class="btn btn-primary" onclick="moverCalificar(1)">Siguiente técnico ▶</button>
+        </div>`;
+}
+async function calificarAccion(id, hab, valor) {
+    const t = tec.tecnicos.find(x => x.id === id);
+    if (!t) return;
+    const previo = Number((t.niveles || {})[hab]) || 0;
+    const nuevo = previo === valor ? 0 : valor;
+    t.niveles = { ...(t.niveles || {}) };
+    if (nuevo) t.niveles[hab] = nuevo; else delete t.niveles[hab];
+    t.puntaje = puntajeLocal(t.niveles, t.rol);
+    renderCalificar();
+    renderKpisTecnicos();
+    try {
+        const r = await postJSON('/api/tecnicos/evaluar', { id, niveles: { [hab]: nuevo }, usuario: usuarioActual.nombre });
+        Object.assign(t, { puntaje: r.puntaje, variacion: r.variacion, periodo: r.periodo, periodoAnterior: r.periodoAnterior });
+        if (vistaTecActual === 'calificar') renderCalificar();
+    } catch (err) {
+        if (previo) t.niveles[hab] = previo; else delete t.niveles[hab];
+        t.puntaje = puntajeLocal(t.niveles, t.rol);
+        renderCalificar();
+        alert('❌ No se guardó la calificación: ' + err.message);
+    }
+}
+
+// =====================================================================
+// RANKING por especialidad
+// =====================================================================
+function renderRanking() {
+    const cont = document.getElementById('ranking-contenido');
+    if (!cont || !tec.cargado) return;
+    const filtro = document.getElementById('ranking-rol').value;
+    const roles = rolesCatalogo().filter(r => filtro === 'TODOS' || r === filtro);
+    const bloques = roles.map(rol => {
+        const lista = tec.tecnicos.filter(t => t.activo !== false && t.rol === rol && t.puntaje != null).sort((a, b) => b.puntaje - a.puntaje);
+        if (!lista.length) return filtro === 'TODOS' ? '' : `<div class="vacio">Aún no hay técnicos de ${escaparHTML(rol)} calificados.</div>`;
+        const podio = [lista[1], lista[0], lista[2]].map((t, i) => t ? `
+            <div class="podio-lugar p${[2, 1, 3][i]}">
+                <div class="podio-medalla">${['🥈', '🥇', '🥉'][i]}</div>
+                <strong>${escaparHTML(t.nombre)}</strong>
+                <span>${pct(t.puntaje)}</span>
+                <div class="podio-base">${[2, 1, 3][i]}</div>
+            </div>` : '<div class="podio-lugar vacio-podio"></div>').join('');
+        const barras = lista.map((t, i) => `
+            <div class="rank-fila" onclick="irACalificar('${attr(t.id)}')" title="Ver y calificar">
+                <span class="rank-pos">${i + 1}</span>
+                <span class="rank-nombre">${escaparHTML(t.nombre)}<small>${avance(t).hechas}/${avance(t).total} calificadas</small></span>
+                <div class="rank-barra"><span style="width:${Math.round(t.puntaje * 100)}%; background:${t.puntaje >= .875 ? 'var(--status-green)' : t.puntaje >= .75 ? '#84cc16' : t.puntaje >= .5 ? 'var(--status-yellow)' : 'var(--status-red)'};"></span></div>
+                <span class="rank-pct">${pct(t.puntaje)}${t.variacion != null ? `<small class="${t.variacion >= 0 ? 'sube' : 'baja'}">${t.variacion >= 0 ? '▲' : '▼'}${Math.abs(Math.round(t.variacion * 100))}</small>` : ''}</span>
+            </div>`).join('');
+        return `<div class="section-card">
+            <div class="section-title"><span>${ICONO_ROL[rol] || '👤'} ${escaparHTML(rol)}</span><span style="font-size: 12px; color: var(--text-muted);">${lista.length} calificados</span></div>
+            <div class="podio">${podio}</div>
+            <div class="rank-lista">${barras}</div>
+        </div>`;
+    }).join('');
+    cont.innerHTML = bloques || '<div class="vacio">Todavía no hay técnicos calificados. Empieza en ⭐ Calificar.</div>';
+}
+
+// =====================================================================
+// ACCIONES A CALIFICAR (catálogo editable por especialidad)
+// =====================================================================
+let accionesEdit = [];
+let accionesCambiadas = false;
+const GENERALES = ['bloqueo y aislamiento', 'apr y estandares', 'orden y 5s', 'reduccion de averias', 'aumento de mtbf', 'calidad del preventivo',
+    'conocimientos administrativos', 'planeacion - mrp', 'manejo de sap', 'tipos de mantenimiento y/o tpm', 'habilidades de control de procesos',
+    'trabajo en equipo', 'toma de decisiones', 'comunicacion', 'lototo'];
+
+function renderAcciones(recargar) {
+    if (recargar || !accionesEdit.length) accionesEdit = JSON.parse(JSON.stringify(tec.habilidades || []));
+    const tabla = document.getElementById('tabla-acciones');
+    if (!tabla) return;
+    const sel = document.getElementById('acciones-rol');
+    const rolesEdit = [];
+    accionesEdit.forEach(h => { if (!rolesEdit.includes(h.rol)) rolesEdit.push(h.rol); });
+    const antes = sel.value;
+    sel.innerHTML = rolesEdit.map(r => `<option value="${attr(r)}">${ICONO_ROL[r] || '👤'} ${escaparHTML(r)}</option>`).join('');
+    if (rolesEdit.includes(antes)) sel.value = antes;
+    const rol = sel.value;
+    const cats = [...new Set(accionesEdit.map(h => h.categoria).concat(['Competencias Técnicas', 'Confiabilidad del Activo', 'Seguridad', 'Habilidades Blandas']))];
+    const filas = accionesEdit.map((h, i) => ({ h, i })).filter(x => x.h.rol === rol);
+    const calificados = id => tec.tecnicos.filter(t => (t.niveles || {})[id]).length;
+    tabla.innerHTML = `
+        <thead><tr><th>#</th><th>Categoría</th><th>Acción a calificar</th><th>Descripción</th><th>Peso %</th><th>Tipo</th><th></th></tr></thead>
+        <tbody>${filas.map(({ h, i }, k) => `
+            <tr>
+                <td>${k + 1}</td>
+                <td><input class="form-control" list="lista-categorias" value="${attr(h.categoria)}" oninput="editarAccion(${i}, 'categoria', this.value)"></td>
+                <td><input class="form-control" value="${attr(h.nombre)}" placeholder="Nombre de la acción" oninput="editarAccion(${i}, 'nombre', this.value)"></td>
+                <td><input class="form-control" value="${attr(h.descripcion)}" placeholder="Qué se evalúa" oninput="editarAccion(${i}, 'descripcion', this.value)"></td>
+                <td><input class="form-control peso" type="number" min="0" max="100" step="0.5" value="${Math.round(h.peso * 1000) / 10}" oninput="editarAccion(${i}, 'peso', this.value / 100)"></td>
+                <td><select class="form-control" onchange="editarAccion(${i}, 'tipo', this.value)"><option ${h.tipo !== 'Resultado' ? 'selected' : ''}>Capacidad</option><option ${h.tipo === 'Resultado' ? 'selected' : ''}>Resultado</option></select></td>
+                <td><button class="btn btn-danger btn-sm" title="Quitar acción${calificados(h.id) ? ' (' + calificados(h.id) + ' técnicos ya calificados)' : ''}" onclick="quitarAccion(${i})">🗑️</button></td>
+            </tr>`).join('')}</tbody>`;
+    let dl = document.getElementById('lista-categorias');
+    if (!dl) { dl = document.createElement('datalist'); dl.id = 'lista-categorias'; document.body.appendChild(dl); }
+    dl.innerHTML = cats.map(c => `<option value="${attr(c)}">`).join('');
+    actualizarSumaPesos();
+}
+function actualizarSumaPesos() {
+    const rol = document.getElementById('acciones-rol').value;
+    const suma = accionesEdit.filter(h => h.rol === rol).reduce((s, h) => s + (Number(h.peso) || 0), 0);
+    const ok = Math.abs(suma - 1) < 0.005;
+    document.getElementById('acciones-suma').innerHTML = `
+        <span class="${ok ? 'suma-ok' : 'suma-mal'}">${ok ? '✅' : '⚠️'} Suma de pesos de ${escaparHTML(rol)}: <strong>${Math.round(suma * 1000) / 10}%</strong>${ok ? '' : ' — debe dar 100%. Usa "⚖️ Ajustar pesos a 100%".'}</span>
+        <span>${accionesEdit.filter(h => h.rol === rol).length} acciones${accionesCambiadas ? ' · <strong style="color: var(--status-yellow);">cambios sin guardar</strong>' : ''}</span>`;
+}
+function editarAccion(i, campo, valor) {
+    accionesEdit[i][campo] = campo === 'peso' ? Math.max(0, Number(valor) || 0) : valor;
+    accionesCambiadas = true;
+    actualizarSumaPesos();
+}
+function agregarAccion() {
+    const rol = document.getElementById('acciones-rol').value;
+    const ultima = [...accionesEdit].reverse().find(h => h.rol === rol);
+    const pos = accionesEdit.lastIndexOf(ultima) + 1 || accionesEdit.length;
+    const nueva = { id: '', rol, categoria: ultima ? ultima.categoria : 'Competencias Técnicas', nombre: '', descripcion: '', peso: 0, tipo: 'Capacidad' };
+    accionesEdit.splice(pos, 0, nueva);
+    accionesCambiadas = true;
+    renderAcciones();
+    const k = accionesEdit.filter(h => h.rol === rol).indexOf(nueva);
+    const fila = document.querySelectorAll('#tabla-acciones tbody tr')[k];
+    if (fila) { fila.scrollIntoView({ block: 'center' }); fila.querySelectorAll('input')[1].focus(); }
+}
+function quitarAccion(i) {
+    const h = accionesEdit[i];
+    const n = tec.tecnicos.filter(t => (t.niveles || {})[h.id]).length;
+    if (!confirm(`¿Quitar "${h.nombre || 'acción sin nombre'}"?${n ? `\n\n${n} técnicos ya tienen calificación en esta acción; dejará de contar en su puntaje.` : ''}`)) return;
+    accionesEdit.splice(i, 1);
+    accionesCambiadas = true;
+    renderAcciones();
+}
+function ajustarPesos() {
+    const rol = document.getElementById('acciones-rol').value;
+    const del = accionesEdit.filter(h => h.rol === rol);
+    if (!del.length) return;
+    // Las acciones nuevas (peso 0) reciben el peso promedio de las demás antes de repartir
+    const conPeso = del.filter(h => Number(h.peso) > 0);
+    const promedio = conPeso.length ? conPeso.reduce((s, h) => s + Number(h.peso), 0) / conPeso.length : 1;
+    del.forEach(h => { if (!(Number(h.peso) > 0)) h.peso = promedio; });
+    let suma = del.reduce((s, h) => s + (Number(h.peso) || 0), 0);
+    if (!suma) del.forEach(h => { h.peso = 1 / del.length; });
+    else del.forEach(h => { h.peso = (Number(h.peso) || 0) / suma; });
+    // Redondeo a décimas de porcentaje y el sobrante a la acción de mayor peso
+    del.forEach(h => { h.peso = Math.round(h.peso * 1000) / 1000; });
+    const resto = Math.round((1 - del.reduce((s, h) => s + h.peso, 0)) * 1000) / 1000;
+    if (resto) { const mayor = del.reduce((a, b) => (b.peso > a.peso ? b : a)); mayor.peso = Math.round((mayor.peso + resto) * 1000) / 1000; }
+    accionesCambiadas = true;
+    renderAcciones();
+}
+function nuevaEspecialidad() {
+    const nombre = (prompt('Nombre de la nueva especialidad (ej. Soldador, Tornero, Electromecánico):') || '').trim();
+    if (!nombre) return;
+    if (accionesEdit.some(h => normalizarTexto(h.rol) === normalizarTexto(nombre))) return alert('Esa especialidad ya existe.');
+    const base = rolesCatalogo()[0];
+    const copiar = base && confirm(`¿Copiar las competencias generales (seguridad, confiabilidad, SAP, TPM, habilidades blandas) de ${base}?\n\nDespués agregas las acciones técnicas propias de ${nombre}.`);
+    if (copiar) {
+        accionesEdit.filter(h => h.rol === base && GENERALES.includes(normalizarTexto(h.nombre))).forEach(h => accionesEdit.push({ ...h, id: '', rol: nombre }));
+    }
+    accionesEdit.push({ id: '', rol: nombre, categoria: 'Competencias Técnicas', nombre: '', descripcion: '', peso: 0, tipo: 'Capacidad' });
+    accionesCambiadas = true;
+    renderAcciones();
+    document.getElementById('acciones-rol').value = nombre;
+    renderAcciones();
+}
+async function guardarAcciones() {
+    const vacias = accionesEdit.filter(h => !String(h.nombre || '').trim());
+    if (vacias.length && !confirm(`${vacias.length} acciones no tienen nombre y no se guardarán. ¿Continuar?`)) return;
+    const malas = [];
+    [...new Set(accionesEdit.map(h => h.rol))].forEach(rol => {
+        const suma = accionesEdit.filter(h => h.rol === rol && String(h.nombre || '').trim()).reduce((s, h) => s + (Number(h.peso) || 0), 0);
+        if (Math.abs(suma - 1) >= 0.005) malas.push(`${rol}: ${Math.round(suma * 1000) / 10}%`);
+    });
+    if (malas.length && !confirm(`Los pesos no suman 100% en:\n${malas.join('\n')}\n\nEl puntaje igual se calcula sobre lo que sí suma, pero lo ideal es ajustarlos. ¿Guardar así?`)) return;
+    try {
+        const r = await postJSON('/api/habilidades', { habilidades: accionesEdit.filter(h => String(h.nombre || '').trim()), usuario: usuarioActual.nombre });
+        accionesCambiadas = false;
+        await cargarTecnicos();
+        renderAcciones(true);
+        mostrarNotificacionToast('Polivalencia', `Acciones guardadas (${r.habilidades.length}).`);
+    } catch (err) { alert('❌ ' + err.message); }
+}
+window.addEventListener('beforeunload', e => { if (accionesCambiadas) { e.preventDefault(); e.returnValue = ''; } });

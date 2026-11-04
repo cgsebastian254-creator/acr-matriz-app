@@ -26,6 +26,7 @@
             </div>
         </div>
         <div class="navbar-actions">
+            <button class="btn btn-secondary" id="btn-portada" onclick="irPortada()" title="Elegir módulo" style="display: none;">🏠 Módulos</button>
             <!-- Real-Time Online Status Badge -->
             <span id="live-user-count" class="badge badge-realizado" style="font-size: 12px; padding: 6px 12px;">
                 🟢 Conectando Real-Time...
@@ -35,6 +36,28 @@
         </div>
     </header>
  
+    <!-- PORTADA: elegir módulo -->
+    <section id="portada">
+        <div class="portada-caja">
+            <h2>¿Qué quieres gestionar hoy?</h2>
+            <p>Planta Conversión · Mantenimiento</p>
+            <div class="portada-opciones">
+                <button class="portada-op acr" onclick="abrirModulo('acr')">
+                    <span class="portada-icono">📋</span>
+                    <strong>ACR</strong>
+                    <small>Análisis de causa raíz, acciones, catálogo de fallas y alertas</small>
+                    <span class="portada-dato" id="portada-dato-acr"></span>
+                </button>
+                <button class="portada-op tec" onclick="abrirModulo('tecnicos')">
+                    <span class="portada-icono">👷</span>
+                    <strong>Técnicos</strong>
+                    <small>Matriz de polivalencia: perfiles, calificación por especialidad y ranking</small>
+                    <span class="portada-dato" id="portada-dato-tec"></span>
+                </button>
+            </div>
+        </div>
+    </section>
+
     <!-- Navigation Tabs -->
     <nav class="tabs-header">
         <button class="tab-btn active" onclick="switchTab('dashboard')">
@@ -227,6 +250,121 @@
             </div>
         </section>
  
+        <!-- MÓDULO TÉCNICOS: MATRIZ DE POLIVALENCIA -->
+        <section id="tab-tecnicos" class="tab-content">
+            <div class="tec-encabezado">
+                <div>
+                    <h2>👷 Matriz de Polivalencia</h2>
+                    <p>Escala 1 No sabe · 2 Básico · 3 Autónomo · 4 Experto. Puntaje = Σ (nivel ÷ 4) × peso. Semestre <strong id="tec-periodo"></strong>.</p>
+                </div>
+                <div class="tec-kpis" id="tec-kpis"></div>
+            </div>
+            <div class="subtabs">
+                <button class="subtab activo" data-vista="perfiles" onclick="vistaTecnicos('perfiles')">🪪 Técnicos</button>
+                <button class="subtab" data-vista="calificar" onclick="vistaTecnicos('calificar')">⭐ Calificar</button>
+                <button class="subtab" data-vista="matriz" onclick="vistaTecnicos('matriz')">🧩 Matriz</button>
+                <button class="subtab" data-vista="ranking" onclick="vistaTecnicos('ranking')">🏆 Ranking</button>
+                <button class="subtab" data-vista="buscar" onclick="vistaTecnicos('buscar')">🔎 Buscar técnico</button>
+                <button class="subtab" data-vista="acciones" onclick="vistaTecnicos('acciones')">⚙️ Acciones a calificar</button>
+            </div>
+
+            <!-- Técnicos -->
+            <div id="tec-vista-perfiles">
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <input type="text" id="perfiles-buscar" class="search-input" placeholder="🔍 Buscar por nombre, línea o especialidad..." oninput="renderPerfiles()">
+                        <select id="perfiles-rol" class="select-input sel-roles" data-todos="1" onchange="renderPerfiles()"></select>
+                        <select id="perfiles-orden" class="select-input" onchange="renderPerfiles()">
+                            <option value="nombre">Ordenar: nombre</option>
+                            <option value="puntaje">Ordenar: mayor puntaje</option>
+                            <option value="pendientes">Ordenar: sin calificar primero</option>
+                        </select>
+                    </div>
+                    <div class="grupo-botones">
+                        <button class="btn btn-primary" onclick="abrirPerfil()">➕ Nuevo técnico</button>
+                    </div>
+                </div>
+                <div id="perfiles-lista" class="tarjetas-tecnicos"></div>
+            </div>
+
+            <!-- Calificar -->
+            <div id="tec-vista-calificar" style="display: none;">
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <select id="calificar-rol" class="select-input sel-roles" onchange="renderCalificar(true)"></select>
+                        <select id="calificar-tecnico" class="select-input" onchange="renderCalificar()"></select>
+                        <button class="btn btn-secondary" onclick="moverCalificar(-1)">◀ Anterior</button>
+                        <button class="btn btn-primary" onclick="moverCalificar(1)">Siguiente ▶</button>
+                    </div>
+                </div>
+                <div id="calificar-contenido"></div>
+            </div>
+
+            <!-- Matriz -->
+            <div id="tec-vista-matriz" style="display: none;">
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <select id="matriz-rol" class="select-input sel-roles" onchange="renderMatrizPolivalencia()"></select>
+                        <select id="matriz-orden" class="select-input" onchange="renderMatrizPolivalencia()">
+                            <option value="puntaje">Ordenar: mayor puntaje</option>
+                            <option value="nombre">Ordenar: nombre</option>
+                        </select>
+                        <label class="interruptor"><input type="checkbox" id="matriz-editar" onchange="renderMatrizPolivalencia()"> ✏️ Modo edición</label>
+                    </div>
+                    <div class="leyenda-niveles">
+                        <span class="nivel n1">1 No sabe</span><span class="nivel n2">2 Básico</span><span class="nivel n3">3 Autónomo</span><span class="nivel n4">4 Experto</span>
+                    </div>
+                </div>
+                <div class="section-card" style="padding: 0;">
+                    <div class="tabla-desplazable"><table class="grid-tabla" id="matriz-polivalencia"></table></div>
+                </div>
+                <p style="font-size: 12px; color: var(--text-muted);">La fila "Promedio del equipo" muestra dónde está la brecha de formación. Las calificaciones se guardan por semestre (<span id="matriz-periodo"></span>) para ver si cada técnico mejora.</p>
+            </div>
+
+            <!-- Ranking -->
+            <div id="tec-vista-ranking" style="display: none;">
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <select id="ranking-rol" class="select-input sel-roles" data-todos="1" onchange="renderRanking()"></select>
+                    </div>
+                </div>
+                <div id="ranking-contenido"></div>
+            </div>
+
+            <!-- Buscar -->
+            <div id="tec-vista-buscar" style="display: none;">
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <input type="text" id="buscar-tec-texto" class="search-input" placeholder="🔎 ¿Qué necesitas? Ej: cambiar un rodillo, eléctrico, rodamientos, SAP, calibración…" oninput="renderBuscador()">
+                        <select id="buscar-tec-rol" class="select-input sel-roles" data-todos="1" onchange="renderBuscador()"></select>
+                    </div>
+                </div>
+                <div id="buscar-chips" class="chips-rapidos"></div>
+                <div id="buscar-resultados" class="tarjetas-tecnicos"></div>
+            </div>
+
+            <!-- Acciones a calificar -->
+            <div id="tec-vista-acciones" style="display: none;">
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <select id="acciones-rol" class="select-input sel-roles" onchange="renderAcciones()"></select>
+                        <button class="btn btn-secondary" onclick="nuevaEspecialidad()">➕ Nueva especialidad</button>
+                    </div>
+                    <div class="grupo-botones">
+                        <button class="btn btn-secondary" onclick="agregarAccion()">➕ Agregar acción</button>
+                        <button class="btn btn-secondary" onclick="ajustarPesos()">⚖️ Ajustar pesos a 100%</button>
+                        <button class="btn btn-success" onclick="guardarAcciones()">💾 Guardar cambios</button>
+                    </div>
+                </div>
+                <div id="acciones-suma" class="acciones-suma"></div>
+                <div class="section-card" style="padding: 0;">
+                    <div class="tabla-desplazable"><table class="grid-tabla tabla-acciones" id="tabla-acciones"></table></div>
+                </div>
+                <p style="font-size: 12px; color: var(--text-muted);">Los pesos de cada especialidad deben sumar 100%. Si quitas una acción, las calificaciones que ya tenía dejan de contar en el puntaje. También puedes <a href="#" onclick="document.getElementById('archivo-matriz').click(); return false;">importar la matriz desde Excel</a>.</p>
+                <input type="file" id="archivo-matriz" accept=".xlsx,.xls,.xlsm" style="display: none;" onchange="importarMatrizExcel(this)">
+            </div>
+        </section>
+
         <!-- TAB 4: CATÁLOGO DE FALLAS -->
         <section id="tab-catalogo" class="tab-content">
             <div class="filter-bar">
@@ -583,12 +721,7 @@
                 <div class="perfil-grid">
                     <div class="form-group"><label>Nombre completo</label><input type="text" id="perfil-nombre" class="form-control" required></div>
                     <div class="form-group"><label>Rol</label>
-                        <select id="perfil-rol" class="form-control" onchange="renderNivelesPerfil()">
-                            <option value="Mecánico">🔧 Mecánico</option>
-                            <option value="Electricista">⚡ Electricista</option>
-                            <option value="Instrumentista">Instrumentista</option>
-                            <option value="Lubricador">Lubricador</option>
-                        </select>
+                        <select id="perfil-rol" class="form-control sel-roles" onchange="renderNivelesPerfil()"></select>
                     </div>
                     <div class="form-group"><label>Cargo</label><input type="text" id="perfil-cargo" class="form-control" placeholder="Técnico A / Líder de turno"></div>
                     <div class="form-group"><label>Línea o área base</label>
@@ -607,7 +740,7 @@
                     <div class="form-group"><label>Estado</label>
                         <select id="perfil-activo" class="form-control">
                             <option value="true">Activo</option>
-                            <option value="false">Inactivo (no aparece en turnos ni búsquedas)</option>
+                            <option value="false">Inactivo (no aparece en búsquedas ni ranking)</option>
                         </select>
                     </div>
                 </div>

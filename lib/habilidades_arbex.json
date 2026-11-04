@@ -1,0 +1,893 @@
+[
+ {
+  "id": "H001",
+  "rol": "Mecánico",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Diagnóstico mecánico",
+  "descripcion": "Identificación de fallas mecánicas y causa raíz",
+  "peso": 0.1,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H002",
+  "rol": "Mecánico",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Ajustes sistemas transmisión",
+  "descripcion": "Ajuste y tensionado de correas / cadenas",
+  "peso": 0.05,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H003",
+  "rol": "Mecánico",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Montaje de rodamientos",
+  "descripcion": "Técnicas adecuadas de montaje/desmontaje",
+  "peso": 0.05,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H004",
+  "rol": "Mecánico",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Lubricación y tribología",
+  "descripcion": "Aplicación correcta de lubricantes y frecuencias",
+  "peso": 0.04,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H005",
+  "rol": "Mecánico",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Interpretación de planos mecánicos",
+  "descripcion": "Lectura de planos, ensambles y tolerancias",
+  "peso": 0.06,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H006",
+  "rol": "Mecánico",
+  "categoria": "Confiabilidad del Activo",
+  "nombre": "Reducción de averías",
+  "descripcion": "Impacto en la eliminación de fallas repetitivas",
+  "peso": 0.1,
+  "tipo": "Resultado"
+ },
+ {
+  "id": "H007",
+  "rol": "Mecánico",
+  "categoria": "Confiabilidad del Activo",
+  "nombre": "Aumento de MTBF",
+  "descripcion": "Mejora en comportamiento del activo",
+  "peso": 0.07,
+  "tipo": "Resultado"
+ },
+ {
+  "id": "H008",
+  "rol": "Mecánico",
+  "categoria": "Confiabilidad del Activo",
+  "nombre": "Calidad del preventivo",
+  "descripcion": "Hallazgos y precisión en inspecciones mecánicas",
+  "peso": 0.07,
+  "tipo": "Resultado"
+ },
+ {
+  "id": "H009",
+  "rol": "Mecánico",
+  "categoria": "Seguridad",
+  "nombre": "Bloqueo y aislamiento",
+  "descripcion": "Cumplimiento de procedimientos de seguridad mecánica",
+  "peso": 0.05,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H010",
+  "rol": "Mecánico",
+  "categoria": "Seguridad",
+  "nombre": "APR y estándares",
+  "descripcion": "Calidad del análisis previo",
+  "peso": 0.03,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H011",
+  "rol": "Mecánico",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Manejo de SAP",
+  "descripcion": "",
+  "peso": 0.08,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H012",
+  "rol": "Mecánico",
+  "categoria": "Seguridad",
+  "nombre": "Orden y 5S",
+  "descripcion": "Cuidado del área y herramientas",
+  "peso": 0.05,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H013",
+  "rol": "Mecánico",
+  "categoria": "Habilidades Blandas",
+  "nombre": "Trabajo en equipo",
+  "descripcion": "Coordinación con producción y otros técnicos",
+  "peso": 0.03,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H014",
+  "rol": "Mecánico",
+  "categoria": "Habilidades Blandas",
+  "nombre": "Toma de decisiones",
+  "descripcion": "Criterio técnico y oportunidad",
+  "peso": 0.03,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H015",
+  "rol": "Mecánico",
+  "categoria": "Habilidades Blandas",
+  "nombre": "Comunicación",
+  "descripcion": "Claridad en reportes mecánicos",
+  "peso": 0.03,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H016",
+  "rol": "Mecánico",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Tipos de mantenimiento y/o TPM",
+  "descripcion": "",
+  "peso": 0.04,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H017",
+  "rol": "Mecánico",
+  "categoria": "Confiabilidad del Activo",
+  "nombre": "Conocimientos administrativos",
+  "descripcion": "",
+  "peso": 0.04,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H018",
+  "rol": "Mecánico",
+  "categoria": "Confiabilidad del Activo",
+  "nombre": "Planeación - MRP",
+  "descripcion": "",
+  "peso": 0.04,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H019",
+  "rol": "Mecánico",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Habilidades de control de procesos",
+  "descripcion": "",
+  "peso": 0.04,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H020",
+  "rol": "Electricista",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Capacidad para identificar causa raíz",
+  "descripcion": "Diagnóstico de fallas",
+  "peso": 0.1,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H021",
+  "rol": "Electricista",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Calidad del trabajo eléctrico/electrónico",
+  "descripcion": "",
+  "peso": 0.05,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H022",
+  "rol": "Electricista",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Interpretación de planos",
+  "descripcion": "Lectura de P&ID y diagramas",
+  "peso": 0.06,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H023",
+  "rol": "Electricista",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Uso de instrumentos",
+  "descripcion": "Multímetro, megger, termografía",
+  "peso": 0.04,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H024",
+  "rol": "Electricista",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Gestión documentaria",
+  "descripcion": "OT completas y claridad",
+  "peso": 0.06,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H025",
+  "rol": "Electricista",
+  "categoria": "Confiabilidad del Activo",
+  "nombre": "Reducción de averías",
+  "descripcion": "Impacto en eliminar fallas repetitivas",
+  "peso": 0.1,
+  "tipo": "Resultado"
+ },
+ {
+  "id": "H026",
+  "rol": "Electricista",
+  "categoria": "Confiabilidad del Activo",
+  "nombre": "Aumento de MTBF",
+  "descripcion": "Mejora en desempeño del activo",
+  "peso": 0.07,
+  "tipo": "Resultado"
+ },
+ {
+  "id": "H027",
+  "rol": "Electricista",
+  "categoria": "Confiabilidad del Activo",
+  "nombre": "Calidad del preventivo",
+  "descripcion": "Hallazgos y precisión",
+  "peso": 0.07,
+  "tipo": "Resultado"
+ },
+ {
+  "id": "H028",
+  "rol": "Electricista",
+  "categoria": "Seguridad",
+  "nombre": "LOTOTO",
+  "descripcion": "Cumplimiento estricto",
+  "peso": 0.05,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H029",
+  "rol": "Electricista",
+  "categoria": "Seguridad",
+  "nombre": "APR y estándares",
+  "descripcion": "Calidad del análisis previo",
+  "peso": 0.03,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H030",
+  "rol": "Electricista",
+  "categoria": "Seguridad",
+  "nombre": "Orden y 5S",
+  "descripcion": "Cuidado de herramientas y área",
+  "peso": 0.03,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H031",
+  "rol": "Electricista",
+  "categoria": "Habilidades Blandas",
+  "nombre": "Trabajo en equipo",
+  "descripcion": "Colaboración con producción y otros técnicos",
+  "peso": 0.05,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H032",
+  "rol": "Electricista",
+  "categoria": "Habilidades Blandas",
+  "nombre": "Toma de decisiones",
+  "descripcion": "Actuar rápido con criterio",
+  "peso": 0.03,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H033",
+  "rol": "Electricista",
+  "categoria": "Habilidades Blandas",
+  "nombre": "Comunicación",
+  "descripcion": "Claridad en reportes",
+  "peso": 0.03,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H034",
+  "rol": "Electricista",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Sistemas de transmisión y potencia eléctrica/electrónica",
+  "descripcion": "Diagnóstico de fallas",
+  "peso": 0.03,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H035",
+  "rol": "Electricista",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Manejo de SAP",
+  "descripcion": "",
+  "peso": 0.04,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H036",
+  "rol": "Electricista",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Tipos de mantenimiento y/o TPM",
+  "descripcion": "",
+  "peso": 0.04,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H037",
+  "rol": "Electricista",
+  "categoria": "Confiabilidad del Activo",
+  "nombre": "Conocimientos administrativos",
+  "descripcion": "",
+  "peso": 0.04,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H038",
+  "rol": "Electricista",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Habilidades de control de procesos",
+  "descripcion": "",
+  "peso": 0.04,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H039",
+  "rol": "Electricista",
+  "categoria": "Confiabilidad del Activo",
+  "nombre": "Planeación - MRP",
+  "descripcion": "",
+  "peso": 0.04,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H040",
+  "rol": "Instrumentista",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Diagnóstico de instrumentación",
+  "descripcion": "Identificación de fallas en sensores, transmisores y lazos de control - causa raíz",
+  "peso": 0.1,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H041",
+  "rol": "Instrumentista",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Calibración de instrumentos",
+  "descripcion": "Calibración de transmisores de presión, nivel, temperatura y flujo",
+  "peso": 0.06,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H042",
+  "rol": "Instrumentista",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Configuracion de lazos de control",
+  "descripcion": "Parametrización y sintonía de lazos PID",
+  "peso": 0.05,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H043",
+  "rol": "Instrumentista",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Interpretación de planos e instrumentación",
+  "descripcion": "Lectura de P&ID, diagramas de lazo y arquitectura de control",
+  "peso": 0.06,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H044",
+  "rol": "Instrumentista",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Programación básica de control",
+  "descripcion": "Diagnóstico y ajustes básicos de lógica en PLC/HMI/SCADA",
+  "peso": 0.05,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H045",
+  "rol": "Instrumentista",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Redes y protocolos industriales",
+  "descripcion": "Manejo de HART, 4-20mA, Profibus, Modbus, Ethernet/IP",
+  "peso": 0.04,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H046",
+  "rol": "Instrumentista",
+  "categoria": "Confiabilidad del Activo",
+  "nombre": "Reducción de averías",
+  "descripcion": "Impacto en la eliminación de fallas repetitivas de instrumentación",
+  "peso": 0.08,
+  "tipo": "Resultado"
+ },
+ {
+  "id": "H047",
+  "rol": "Instrumentista",
+  "categoria": "Confiabilidad del Activo",
+  "nombre": "Aumento de MTBF",
+  "descripcion": "Mejora en comportamiento de lazos e instrumentos críticos",
+  "peso": 0.07,
+  "tipo": "Resultado"
+ },
+ {
+  "id": "H048",
+  "rol": "Instrumentista",
+  "categoria": "Confiabilidad del Activo",
+  "nombre": "Calidad del preventivo",
+  "descripcion": "Hallazgos y precisión en calibraciones e inspecciones",
+  "peso": 0.07,
+  "tipo": "Resultado"
+ },
+ {
+  "id": "H049",
+  "rol": "Instrumentista",
+  "categoria": "Seguridad",
+  "nombre": "Bloqueo y aislamiento",
+  "descripcion": "Cumplimiento de LOTOTO en energia eléctrica, neumática e hidráulica",
+  "peso": 0.05,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H050",
+  "rol": "Instrumentista",
+  "categoria": "Seguridad",
+  "nombre": "APR y estándares",
+  "descripcion": "Calidad del análisis previo",
+  "peso": 0.03,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H051",
+  "rol": "Instrumentista",
+  "categoria": "Seguridad",
+  "nombre": "Orden y 5S",
+  "descripcion": "Cuidado del área y herramientas de precisión",
+  "peso": 0.03,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H052",
+  "rol": "Instrumentista",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Manejo de SAP",
+  "descripcion": "",
+  "peso": 0.05,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H053",
+  "rol": "Instrumentista",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Tipos de mantenimiento y/o TPM",
+  "descripcion": "",
+  "peso": 0.04,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H054",
+  "rol": "Instrumentista",
+  "categoria": "Confiabilidad del Activo",
+  "nombre": "Conocimientos administrativos",
+  "descripcion": "",
+  "peso": 0.04,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H055",
+  "rol": "Instrumentista",
+  "categoria": "Confiabilidad del Activo",
+  "nombre": "Planeación - MRP",
+  "descripcion": "",
+  "peso": 0.04,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H056",
+  "rol": "Instrumentista",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Habilidades de control de procesos",
+  "descripcion": "",
+  "peso": 0.05,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H057",
+  "rol": "Instrumentista",
+  "categoria": "Habilidades Blandas",
+  "nombre": "Trabajo en equipo",
+  "descripcion": "Coordinación con producción, mecánica y electricidad",
+  "peso": 0.03,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H058",
+  "rol": "Instrumentista",
+  "categoria": "Habilidades Blandas",
+  "nombre": "Toma de decisiones",
+  "descripcion": "Criterio técnico y oportunidad ante fallas de proceso",
+  "peso": 0.03,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H059",
+  "rol": "Instrumentista",
+  "categoria": "Habilidades Blandas",
+  "nombre": "Comunicación",
+  "descripcion": "Claridad en reportes de calibración y lazos de control",
+  "peso": 0.03,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H060",
+  "rol": "Calderista",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Diagnóstico de fallas en calderas y sistemas a presión",
+  "descripcion": "Identificación de fallas y causa raíz en calderas, recipientes y redes de vapor",
+  "peso": 0.1,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H061",
+  "rol": "Calderista",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Soldadura",
+  "descripcion": "Ejecución de soldadura SMAW/TIG/MIG según procedimientos calificados (WPS)",
+  "peso": 0.08,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H062",
+  "rol": "Calderista",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Interpretación de planos e isométricos",
+  "descripcion": "Lectura de planos de calderas, tubería e isométricos",
+  "peso": 0.06,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H063",
+  "rol": "Calderista",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Códigos y normas de calderas",
+  "descripcion": "Aplicación de codigo ASME y normativa de recipientes a presión",
+  "peso": 0.05,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H064",
+  "rol": "Calderista",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Ensayos no destructivos",
+  "descripcion": "Control de espesores, corrosion y detección de defectos (END básico)",
+  "peso": 0.05,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H065",
+  "rol": "Calderista",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Corte y conformado",
+  "descripcion": "Corte, doblado y conformado de lámina y tubería",
+  "peso": 0.04,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H066",
+  "rol": "Calderista",
+  "categoria": "Confiabilidad del Activo",
+  "nombre": "Reducción de averías",
+  "descripcion": "Impacto en la eliminación de fallas repetitivas en calderas y redes de vapor",
+  "peso": 0.09,
+  "tipo": "Resultado"
+ },
+ {
+  "id": "H067",
+  "rol": "Calderista",
+  "categoria": "Confiabilidad del Activo",
+  "nombre": "Aumento de MTBF",
+  "descripcion": "Mejora en comportamiento de calderas y recipientes a presión",
+  "peso": 0.07,
+  "tipo": "Resultado"
+ },
+ {
+  "id": "H068",
+  "rol": "Calderista",
+  "categoria": "Confiabilidad del Activo",
+  "nombre": "Calidad del preventivo",
+  "descripcion": "Hallazgos y precisión en inspecciones de calderas",
+  "peso": 0.07,
+  "tipo": "Resultado"
+ },
+ {
+  "id": "H069",
+  "rol": "Calderista",
+  "categoria": "Seguridad",
+  "nombre": "Bloqueo y aislamiento",
+  "descripcion": "Cumplimiento de bloqueo en sistemas de presión, vapor y combustion",
+  "peso": 0.06,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H070",
+  "rol": "Calderista",
+  "categoria": "Seguridad",
+  "nombre": "APR y estándares",
+  "descripcion": "Calidad del análisis previo, especialmente en trabajos en caliente",
+  "peso": 0.04,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H071",
+  "rol": "Calderista",
+  "categoria": "Seguridad",
+  "nombre": "Orden y 5S",
+  "descripcion": "Cuidado del área y herramientas",
+  "peso": 0.03,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H072",
+  "rol": "Calderista",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Manejo de SAP",
+  "descripcion": "",
+  "peso": 0.04,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H073",
+  "rol": "Calderista",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Tipos de mantenimiento y/o TPM",
+  "descripcion": "",
+  "peso": 0.04,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H074",
+  "rol": "Calderista",
+  "categoria": "Confiabilidad del Activo",
+  "nombre": "Conocimientos administrativos",
+  "descripcion": "",
+  "peso": 0.04,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H075",
+  "rol": "Calderista",
+  "categoria": "Confiabilidad del Activo",
+  "nombre": "Planeación - MRP",
+  "descripcion": "",
+  "peso": 0.04,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H076",
+  "rol": "Calderista",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Habilidades de control de procesos",
+  "descripcion": "",
+  "peso": 0.03,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H077",
+  "rol": "Calderista",
+  "categoria": "Habilidades Blandas",
+  "nombre": "Trabajo en equipo",
+  "descripcion": "Coordinación con producción y otros técnicos",
+  "peso": 0.03,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H078",
+  "rol": "Calderista",
+  "categoria": "Habilidades Blandas",
+  "nombre": "Toma de decisiones",
+  "descripcion": "Criterio técnico y oportunidad",
+  "peso": 0.02,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H079",
+  "rol": "Calderista",
+  "categoria": "Habilidades Blandas",
+  "nombre": "Comunicación",
+  "descripcion": "Claridad en reportes técnicos",
+  "peso": 0.02,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H080",
+  "rol": "Lubricador",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Diagnóstico de fallas por lubricación",
+  "descripcion": "Identificación de fallas asociadas a lubricación deficiente y causa raíz",
+  "peso": 0.09,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H081",
+  "rol": "Lubricador",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Lubricación y tribología",
+  "descripcion": "Selección y aplicación correcta de lubricantes según componente y condicion",
+  "peso": 0.1,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H082",
+  "rol": "Lubricador",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Análisis de aceites",
+  "descripcion": "Toma de muestras e interpretación básica de resultados de laboratorio",
+  "peso": 0.07,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H083",
+  "rol": "Lubricador",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Gestión de rutas de lubricación",
+  "descripcion": "Cumplimiento y calidad de rutas, frecuencias y estándares de lubricación",
+  "peso": 0.06,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H084",
+  "rol": "Lubricador",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Control de contaminación",
+  "descripcion": "Manejo de limpieza ISO, filtrado y almacenamiento de lubricantes",
+  "peso": 0.05,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H085",
+  "rol": "Lubricador",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Manejo de equipos de aplicación",
+  "descripcion": "Uso de engrasadoras, bombas y equipos de trasiego",
+  "peso": 0.04,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H086",
+  "rol": "Lubricador",
+  "categoria": "Confiabilidad del Activo",
+  "nombre": "Reducción de averías",
+  "descripcion": "Impacto en la eliminación de fallas repetitivas por lubricación",
+  "peso": 0.09,
+  "tipo": "Resultado"
+ },
+ {
+  "id": "H087",
+  "rol": "Lubricador",
+  "categoria": "Confiabilidad del Activo",
+  "nombre": "Aumento de MTBF",
+  "descripcion": "Mejora en comportamiento del activo por buena lubricación",
+  "peso": 0.07,
+  "tipo": "Resultado"
+ },
+ {
+  "id": "H088",
+  "rol": "Lubricador",
+  "categoria": "Confiabilidad del Activo",
+  "nombre": "Calidad del preventivo",
+  "descripcion": "Hallazgos y precisión en inspecciones y rutas de lubricación",
+  "peso": 0.07,
+  "tipo": "Resultado"
+ },
+ {
+  "id": "H089",
+  "rol": "Lubricador",
+  "categoria": "Seguridad",
+  "nombre": "Bloqueo y aislamiento",
+  "descripcion": "Cumplimiento de procedimientos de seguridad en lubricación",
+  "peso": 0.05,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H090",
+  "rol": "Lubricador",
+  "categoria": "Seguridad",
+  "nombre": "APR y estándares",
+  "descripcion": "Calidad del análisis previo",
+  "peso": 0.03,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H091",
+  "rol": "Lubricador",
+  "categoria": "Seguridad",
+  "nombre": "Orden y 5S",
+  "descripcion": "Cuidado del área, herramientas y almacen de lubricantes",
+  "peso": 0.04,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H092",
+  "rol": "Lubricador",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Manejo de SAP",
+  "descripcion": "",
+  "peso": 0.04,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H093",
+  "rol": "Lubricador",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Tipos de mantenimiento y/o TPM",
+  "descripcion": "",
+  "peso": 0.04,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H094",
+  "rol": "Lubricador",
+  "categoria": "Confiabilidad del Activo",
+  "nombre": "Conocimientos administrativos",
+  "descripcion": "",
+  "peso": 0.03,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H095",
+  "rol": "Lubricador",
+  "categoria": "Confiabilidad del Activo",
+  "nombre": "Planeación - MRP",
+  "descripcion": "",
+  "peso": 0.03,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H096",
+  "rol": "Lubricador",
+  "categoria": "Competencias Técnicas",
+  "nombre": "Habilidades de control de procesos",
+  "descripcion": "",
+  "peso": 0.03,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H097",
+  "rol": "Lubricador",
+  "categoria": "Habilidades Blandas",
+  "nombre": "Trabajo en equipo",
+  "descripcion": "Coordinación con producción y otros técnicos",
+  "peso": 0.03,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H098",
+  "rol": "Lubricador",
+  "categoria": "Habilidades Blandas",
+  "nombre": "Toma de decisiones",
+  "descripcion": "Criterio técnico y oportunidad",
+  "peso": 0.02,
+  "tipo": "Capacidad"
+ },
+ {
+  "id": "H099",
+  "rol": "Lubricador",
+  "categoria": "Habilidades Blandas",
+  "nombre": "Comunicación",
+  "descripcion": "Claridad en reportes de lubricación",
+  "peso": 0.02,
+  "tipo": "Capacidad"
+ }
+]

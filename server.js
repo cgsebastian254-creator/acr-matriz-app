@@ -1466,6 +1466,17 @@ async function arrancar() {
         console.log('🗄️  Base de datos conectada: los datos son permanentes.');
     }
     await docs.cargar('tecnicos', () => ({ tecnicos: [], habilidades: require('./lib/tecnicos').habilidadesPorDefecto() }));
+    // Si el catálogo es el inicial (28 habilidades) y nadie ha sido calificado, se pasa a la matriz ARBEX
+    {
+        const T = require('./lib/tecnicos');
+        const d = docs.obtener('tecnicos');
+        const sinCalificar = !(d.tecnicos || []).some(t => (t.evaluaciones || []).some(e => Object.keys(e.niveles || {}).length));
+        if (sinCalificar && (d.habilidades || []).length === T.habilidadesIniciales().length) {
+            d.habilidades = T.habilidadesPorDefecto();
+            await docs.guardar('tecnicos', d);
+            console.log(`🧩 Catálogo de polivalencia actualizado a la matriz ARBEX (${d.habilidades.length} acciones).`);
+        }
+    }
     await docs.cargar('turnos', () => ({ tipos: require('./lib/tecnicos').tiposTurnoPorDefecto(), asignaciones: {} }));
     await docs.cargar('notificaciones', () => require('./lib/notificaciones').configPorDefecto());
     await docs.cargar('daily_archivo_indice', []);

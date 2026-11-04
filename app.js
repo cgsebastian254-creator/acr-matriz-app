@@ -93,8 +93,11 @@ function iniciarRealtimeSSE() {
                     mostrarNotificacionToast('Alertas O365', data.success ? 'Correo procesado en el PC corporativo.' : 'No se pudo enviar el correo. Revisa la consola.');
                 }
             } else if (data.type === 'tecnicos_updated' || data.type === 'turnos_updated') {
-                if (typeof recargarTecnicos === 'function') recargarTecnicos(data.type);
-                if (data.user && data.message) mostrarNotificacionToast(data.user, data.message);
+                // Varias calificaciones seguidas = una sola recarga; sin avisos por cada calificación
+                clearTimeout(window.__recargaTec);
+                window.__recargaTec = setTimeout(() => { if (typeof recargarTecnicos === 'function') recargarTecnicos(data.type); }, 1500);
+                const propio = typeof usuarioActual !== 'undefined' && data.user && (data.user === usuarioActual.nombre || data.user === usuarioActual.correo);
+                if (data.user && data.message && !propio && !/^Actualizó la matriz de/.test(data.message)) mostrarNotificacionToast(data.user, data.message);
             } else if (data.type === 'daily_updated') {
                 console.log('⚡ Evento Reunión Diaria recibido:', data.message);
                 dailyTasksData = data.dailyTasks;
