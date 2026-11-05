@@ -333,7 +333,8 @@ function tarjetaTecnico(t, { razones = [], cod, ahora, acciones = '' } = {}) {
             <div class="tt-avatar">${ICONO_ROL[t.rol] || '👤'}</div>
             <div class="tt-nombre">
                 <strong>${escaparHTML(t.nombre)}</strong>
-                <small>${escaparHTML(t.rol)}${t.cargo ? ' · ' + escaparHTML(t.cargo) : ''}${t.linea ? ' · ' + escaparHTML(t.linea) : ''}</small>
+                <small>${escaparHTML(t.rol)}${t.cargo ? ' · ' + escaparHTML(t.cargo) : ''}${t.area ? ' · ' + escaparHTML(t.area) : ''}${t.linea ? ' · ' + escaparHTML(t.linea) : ''}</small>
+                ${t.supervisor ? `<small>👔 ${escaparHTML(t.supervisor)}</small>` : ''}
             </div>
             <div class="tt-puntaje" title="Calificación de ingeniería">${pct(t.puntaje)}${variacion}${chip360(t)}</div>
         </div>
@@ -387,8 +388,9 @@ function renderPerfiles() {
     const q = normalizarTexto(document.getElementById('perfiles-buscar').value);
     const rol = document.getElementById('perfiles-rol').value;
     const orden = document.getElementById('perfiles-orden')?.value || 'nombre';
-    const lista = tec.tecnicos.filter(t => (rol === 'TODOS' || t.rol === rol) &&
-        (!q || normalizarTexto([t.nombre, t.rol, t.linea, t.cargo, ...(t.especialidades || [])].join(' ')).includes(q)))
+    const area = filtroArea('perfiles-area');
+    const lista = tec.tecnicos.filter(t => (rol === 'TODOS' || t.rol === rol) && (area === 'TODAS' || (t.area || '') === area) &&
+        (!q || normalizarTexto([t.nombre, t.rol, t.linea, t.cargo, t.area, t.supervisor, ...(t.especialidades || [])].join(' ')).includes(q)))
         .sort((a, b) => (b.activo !== false) - (a.activo !== false)
             || (orden === 'puntaje' ? (b.puntaje ?? -1) - (a.puntaje ?? -1) : 0)
             || (orden === 'pendientes' ? avance(a).hechas / (avance(a).total || 1) - avance(b).hechas / (avance(b).total || 1) : 0)
@@ -426,6 +428,9 @@ function abrirPerfil(id) {
     document.getElementById('perfil-correo').value = t ? t.correo || '' : '';
     document.getElementById('perfil-especialidades').value = t ? (t.especialidades || []).join(', ') : '';
     document.getElementById('perfil-notas').value = t ? t.notas || '' : '';
+    document.getElementById('perfil-area').value = t ? t.area || '' : (filtroArea('perfiles-area') !== 'TODAS' ? filtroArea('perfiles-area') : '');
+    document.getElementById('perfil-supervisor').value = t ? t.supervisor || '' : '';
+    document.getElementById('perfil-supervisor-correo').value = t ? t.supervisorCorreo || '' : '';
     document.getElementById('perfil-activo').value = t && t.activo === false ? 'false' : 'true';
     document.getElementById('perfil-periodo').textContent = tec.periodoActual;
     document.getElementById('perfil-eliminar').style.display = t ? '' : 'none';
@@ -498,6 +503,9 @@ async function guardarPerfil(e) {
         correo: document.getElementById('perfil-correo').value,
         especialidades: document.getElementById('perfil-especialidades').value,
         notas: document.getElementById('perfil-notas').value,
+        area: document.getElementById('perfil-area').value,
+        supervisor: document.getElementById('perfil-supervisor').value,
+        supervisorCorreo: document.getElementById('perfil-supervisor-correo').value,
         activo: document.getElementById('perfil-activo').value === 'true',
         niveles: perfilNiveles,
         usuario: usuarioActual.nombre
@@ -521,11 +529,11 @@ async function eliminarPerfil() {
     } catch (err) { alert('❌ ' + err.message); }
 }
 
-async function importarMatrizExcel(input) {
+async function importarMatrizExcel(input, soloTecnicos) {
     const archivo = input.files[0];
     input.value = '';
     if (!archivo) return;
-    if (!confirm(`¿Importar "${archivo.name}"?\n\nSe agregan o actualizan los técnicos por nombre/código, y si el archivo trae la hoja DimHabilidad se reemplaza el catálogo de habilidades.`)) return;
+    if (soloTecnicos ? !confirm(`¿Cargar "${archivo.name}"?\n\nSe actualizan los técnicos por nombre (área, cargo, supervisor, correo...) y se crean los que no existan. Las calificaciones no cambian.`) : !confirm(`¿Importar "${archivo.name}"?\n\nSe agregan o actualizan los técnicos por nombre/código, y si el archivo trae la hoja DimHabilidad se reemplaza el catálogo de habilidades.`)) return;
     try {
         const r = await fetch('/api/tecnicos/importar', { method: 'POST', body: archivo });
         const j = await r.json();
@@ -903,7 +911,18 @@ function rolesCatalogo() {
     (tec.habilidades || []).forEach(h => { if (!r.includes(h.rol)) r.push(h.rol); });
     return r;
 }
+function areasTecnicos() {
+    const a = new Set(['TM', 'Conversión']);
+    tec.tecnicos.forEach(t => t.area && a.add(t.area));
+    return [...a];
+}
+function filtroArea(id) { const el = document.getElementById(id); return el ? el.value : 'TODAS'; }
 function llenarSelectoresRoles() {
+    document.querySelectorAll('select.sel-areas').forEach(sel => {
+        const antes = sel.value;
+        sel.innerHTML = '<option value="TODAS">Área: Todas</option>' + areasTecnicos().map(a => `<option value="${attr(a)}">${escaparHTML(a)}</option>`).join('') + '<option value="">Sin área</option>';
+        if ([...sel.options].some(o => o.value === antes)) sel.value = antes;
+    });
     const roles = rolesCatalogo();
     document.querySelectorAll('select.sel-roles').forEach(sel => {
         const antes = sel.value;
@@ -1289,7 +1308,8 @@ function render360() {
     const filtro = document.getElementById('e360-rol').value;
     const q = normalizarTexto(document.getElementById('e360-buscar').value);
     const porId = Object.fromEntries(d.resultados.map(r => [r.tecnicoId, r]));
-    const lista = tec.tecnicos.filter(t => t.activo !== false && (filtro === 'TODOS' || t.rol === filtro) && porId[t.id])
+    const area360 = filtroArea('e360-area');
+    const lista = tec.tecnicos.filter(t => t.activo !== false && (filtro === 'TODOS' || t.rol === filtro) && (area360 === 'TODAS' || (t.area || '') === area360) && porId[t.id])
         .filter(t => !q || normalizarTexto([t.nombre, ...(porId[t.id].solicitudes || []).map(s => s.evaluador.nombre)].join(' ')).includes(q))
         .sort((a, b) => a.rol.localeCompare(b.rol) || a.nombre.localeCompare(b.nombre, 'es'));
     const cuenta = tipo => {
@@ -1313,7 +1333,7 @@ function render360() {
         <div class="e360-fuentes">
             ${tarjeta('auto', '🙋', `<button class="btn btn-secondary btn-sm" onclick="asignar360('auto')">👤 Crear autoevaluaciones</button>`)}
             ${tarjeta('par', '🤝', `<button class="btn btn-secondary btn-sm" onclick="asignar360('companeros')">🎲 Asignar compañeros al azar</button>`)}
-            ${tarjeta('supervisor', '👔', `<button class="btn btn-secondary btn-sm" onclick="pedirSupervisor360()">👔 Asignar supervisor</button>`)}
+            ${tarjeta('supervisor', '👔', `<button class="btn btn-secondary btn-sm" onclick="asignarSupervisoresPerfil360()">👔 Supervisores del perfil</button><button class="btn btn-secondary btn-sm" onclick="pedirSupervisor360()">✏️ Asignar uno a varios</button>`)}
             ${tarjeta('ingenieria', '🛠️', `<button class="btn btn-secondary btn-sm" onclick="vistaTecnicos('calificar')">⭐ Ir a calificar</button>`)}
         </div>
         <div class="e360-barra-acciones">
@@ -1363,7 +1383,7 @@ async function asignar360(modo, tecnicoId) {
     try {
         const r = tecnicoId
             ? await postJSON('/api/360/asignar', { campanaId: e360.campanaId, modo: 'manual', tipo: 'auto', tecnicoId, evaluadorTecnicoId: tecnicoId })
-            : await postJSON('/api/360/asignar', { campanaId: e360.campanaId, modo, rol });
+            : await postJSON('/api/360/asignar', { campanaId: e360.campanaId, modo, rol, area: filtroArea('e360-area') });
         await cargar360();
         mostrarNotificacionToast('Evaluación 360°', `${r.asignadas} evaluaciones asignadas.`);
     } catch (err) { alert('❌ ' + err.message); }
@@ -1384,7 +1404,8 @@ async function pedirSupervisor360(tecnicoId) {
         if (t) r = await postJSON('/api/360/asignar', { campanaId: e360.campanaId, modo: 'manual', tipo: 'supervisor', tecnicoId, nombre, correo, telefono });
         else {
             const q = normalizarTexto(document.getElementById('e360-buscar').value);
-            const ids = tec.tecnicos.filter(x => x.activo !== false && (rol === 'TODOS' || x.rol === rol) && (!q || normalizarTexto(x.nombre).includes(q))).map(x => x.id);
+            const area = filtroArea('e360-area');
+            const ids = tec.tecnicos.filter(x => x.activo !== false && (rol === 'TODOS' || x.rol === rol) && (area === 'TODAS' || (x.area || '') === area) && (!q || normalizarTexto(x.nombre).includes(q))).map(x => x.id);
             r = await postJSON('/api/360/asignar', { campanaId: e360.campanaId, modo: 'supervisor', nombre, correo, telefono, tecnicos: ids });
         }
         await cargar360();
@@ -1523,3 +1544,11 @@ function resumen360Html(t) {
     </div>`;
 }
 document.addEventListener('DOMContentLoaded', () => document.querySelectorAll('.sel-fuente').forEach(sel => { sel.value = fuenteVista; }));
+
+async function asignarSupervisoresPerfil360() {
+    try {
+        const r = await postJSON('/api/360/asignar', { campanaId: e360.campanaId, modo: 'supervisores-perfil', rol: document.getElementById('e360-rol').value, area: filtroArea('e360-area') });
+        await cargar360();
+        alert(`👔 ${r.asignadas} evaluaciones de supervisor asignadas según el perfil de cada técnico.${r.sinSupervisor ? `\n\n⚠️ ${r.sinSupervisor} técnicos no tienen supervisor en su perfil. Complétalo en el perfil o con ⬇️ Lista en Excel → 📥 Cargar Excel.` : ''}`);
+    } catch (err) { alert('❌ ' + err.message); }
+}

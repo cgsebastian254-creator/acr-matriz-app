@@ -275,6 +275,7 @@
                     <div class="filter-group">
                         <input type="text" id="perfiles-buscar" class="search-input" placeholder="🔍 Buscar por nombre, línea o especialidad..." oninput="renderPerfiles()">
                         <select id="perfiles-rol" class="select-input sel-roles" data-todos="1" onchange="renderPerfiles()"></select>
+                        <select id="perfiles-area" class="select-input sel-areas" onchange="renderPerfiles()"></select>
                         <select id="perfiles-orden" class="select-input" onchange="renderPerfiles()">
                             <option value="nombre">Ordenar: nombre</option>
                             <option value="puntaje">Ordenar: mayor puntaje</option>
@@ -283,6 +284,9 @@
                     </div>
                     <div class="grupo-botones">
                         <button class="btn btn-primary" onclick="abrirPerfil()">➕ Nuevo técnico</button>
+                        <button class="btn btn-secondary" onclick="window.location.href='/api/tecnicos/plantilla'" title="Excel con todos los técnicos para completar área, cargo y supervisor">⬇️ Lista en Excel</button>
+                        <button class="btn btn-secondary" onclick="document.getElementById('archivo-tecnicos').click()">📥 Cargar Excel</button>
+                        <input type="file" id="archivo-tecnicos" accept=".xlsx,.xls,.xlsm" style="display: none;" onchange="importarMatrizExcel(this, true)">
                     </div>
                 </div>
                 <div id="perfiles-lista" class="tarjetas-tecnicos"></div>
@@ -333,6 +337,7 @@
                         <select id="e360-campana" class="select-input" onchange="cargar360(this.value)"></select>
                         <button class="btn btn-secondary" onclick="nuevaCampana360()">➕ Nueva evaluación</button>
                         <select id="e360-rol" class="select-input sel-roles" data-todos="1" onchange="render360()"></select>
+                        <select id="e360-area" class="select-input sel-areas" onchange="render360()"></select>
                         <input type="text" id="e360-buscar" class="search-input" placeholder="🔍 Técnico o evaluador..." oninput="render360()">
                     </div>
                     <div class="grupo-botones">
@@ -604,6 +609,7 @@
     </div>
  
     <datalist id="lista-maquinas"></datalist>
+    <datalist id="lista-areas"><option value="TM"><option value="Conversión"></datalist>
     <datalist id="lista-tecnicos"></datalist>
 
     <!-- Modal Nuevo pendiente de Reunión Diaria -->
@@ -754,7 +760,10 @@
                         <select id="perfil-rol" class="form-control sel-roles" onchange="renderNivelesPerfil()"></select>
                     </div>
                     <div class="form-group"><label>Cargo</label><input type="text" id="perfil-cargo" class="form-control" placeholder="Técnico A / Líder de turno"></div>
-                    <div class="form-group"><label>Línea o área base</label>
+                    <div class="form-group"><label>Área</label>
+                        <input type="text" id="perfil-area" class="form-control" list="lista-areas" placeholder="TM o Conversión">
+                    </div>
+                    <div class="form-group"><label>Línea o máquina base</label>
                         <select id="perfil-linea" class="form-control">
                             <option value="">Todas / rotativo</option>
                             <option value="Forte">Forte</option>
@@ -767,6 +776,8 @@
                     </div>
                     <div class="form-group"><label>Celular</label><input type="tel" id="perfil-telefono" class="form-control"></div>
                     <div class="form-group"><label>Correo (opcional)</label><input type="email" id="perfil-correo" class="form-control"></div>
+                    <div class="form-group"><label>Supervisor de línea</label><input type="text" id="perfil-supervisor" class="form-control" placeholder="Quién lo evalúa en la 360°"></div>
+                    <div class="form-group"><label>Correo del supervisor</label><input type="email" id="perfil-supervisor-correo" class="form-control" placeholder="supervisor@kcc.com"></div>
                     <div class="form-group"><label>Estado</label>
                         <select id="perfil-activo" class="form-control">
                             <option value="true">Activo</option>
