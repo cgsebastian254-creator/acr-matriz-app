@@ -1263,15 +1263,12 @@ function celda360(t, r, tipo) {
     }
     return sols.map(s => {
         const hecha = s.estado === 'respondida';
-        const tel = (s.evaluador.telefono || '').replace(/\D/g, '');
-        const msg = encodeURIComponent(`Hola ${s.evaluador.nombre}, por favor diligencia esta evaluación de polivalencia${tipo === 'auto' ? ' (autoevaluación)' : ' de ' + t.nombre}: ${enlace360(s.token)}`);
         return `<div class="e360-celda ${hecha ? 'ok' : ''}">
             <span class="e360-estado">${hecha ? '✅ Respondida' : s.enviada ? '📨 Enviada' : '⏳ Pendiente'}</span>
             ${tipo !== 'auto' ? `<span class="e360-evaluador">${escaparHTML(s.evaluador.nombre)}</span>` : ''}
             ${hecha ? `<span class="e360-puntaje">${pct(r.puntajes[tipo])}</span>` : ''}
             <div class="e360-acciones">
                 <button title="Copiar enlace" onclick="copiarEnlace360('${attr(s.token)}')">🔗</button>
-                <a title="Enviar por WhatsApp" href="https://wa.me/${tel.length === 10 ? '57' + tel : tel}?text=${msg}" target="_blank" rel="noopener">💬</a>
                 <a title="Abrir el cuestionario" href="${attr(enlace360(s.token))}" target="_blank" rel="noopener">↗</a>
                 ${tipo !== 'auto' ? botonAsignar360(t, tipo, true) : ''}
                 <button title="Quitar asignación" onclick="quitar360('${attr(s.token)}', ${hecha})">✕</button>
@@ -1300,7 +1297,7 @@ function render360() {
         cont.innerHTML = `<div class="section-card e360-intro">
             <h3>🔄 Evaluación 360°</h3>
             <p>Cada técnico es calificado en las mismas acciones de su especialidad por <strong>él mismo</strong>, <strong>un compañero</strong>, <strong>su supervisor de línea</strong> e <strong>ingeniería</strong>. El resultado final es el promedio ponderado de las cuatro miradas.</p>
-            <p>Los evaluadores no necesitan cuenta: reciben un enlace personal por correo o WhatsApp y responden desde el celular.</p>
+            <p>Los evaluadores no necesitan cuenta: reciben un enlace personal por correo y responden desde el celular o el computador.</p>
             <button class="btn btn-primary" onclick="nuevaCampana360()">➕ Crear la primera evaluación</button></div>`;
         return;
     }
@@ -1356,7 +1353,7 @@ function render360() {
                 }).join('') || '<tr><td colspan="6" style="padding: 20px; color: var(--text-muted);">No hay técnicos con esos filtros.</td></tr>'}</tbody>
             </table></div>
         </div>
-        <p style="font-size: 12px; color: var(--text-muted);">🔗 copia el enlace · 💬 lo manda por WhatsApp (usa el celular del perfil) · ↗ abre el cuestionario · ✏️ cambia el evaluador · ✕ quita la asignación. "Enviar correos" agrupa en un solo correo todas las evaluaciones de cada persona que tenga correo registrado. Para el correo de autoevaluaciones y compañeros, registra el correo en el perfil del técnico.</p>`;
+        <p style="font-size: 12px; color: var(--text-muted);">🔗 copia el enlace · ↗ abre el cuestionario · ✏️ cambia el evaluador · ✕ quita la asignación. "Enviar correos" agrupa en un solo correo todas las evaluaciones de cada persona que tenga correo registrado. Las autoevaluaciones y las de compañero llegan al correo registrado en el perfil de cada técnico; las de supervisor, al correo del supervisor.</p>`;
 }
 
 function marcarPesos360() {
@@ -1397,8 +1394,9 @@ async function pedirSupervisor360(tecnicoId) {
     const rol = document.getElementById('e360-rol').value;
     const nombre = (prompt(t ? `Supervisor que evaluará a ${t.nombre}:` : `Nombre del supervisor de línea.\nSe asignará a ${rol === 'TODOS' ? 'todos los técnicos' : 'los técnicos de ' + rol} que aún no tengan supervisor (filtra por especialidad o búsqueda antes si es para un grupo):`) || '').trim();
     if (!nombre) return;
-    const correo = (prompt(`Correo de ${nombre} (para enviarle los enlaces; déjalo vacío si se los mandas por WhatsApp):`) || '').trim();
-    const telefono = correo ? '' : (prompt(`Celular de ${nombre} (opcional, para WhatsApp):`) || '').trim();
+    const correo = (prompt(`Correo de ${nombre} (le llegarán sus evaluaciones por correo):`) || '').trim();
+    if (!correo && !confirm(`${nombre} quedará sin correo y no le llegará el enlace. ¿Continuar igual?`)) return;
+    const telefono = '';
     try {
         let r;
         if (t) r = await postJSON('/api/360/asignar', { campanaId: e360.campanaId, modo: 'manual', tipo: 'supervisor', tecnicoId, nombre, correo, telefono });
@@ -1424,7 +1422,7 @@ async function enviar360() {
     if (!confirm('Se enviará un correo a cada evaluador con correo registrado, con los enlaces de sus evaluaciones pendientes que aún no se han enviado.\n\n¿Enviar?')) return;
     try {
         const r = await postJSON('/api/360/enviar', { campanaId: e360.campanaId });
-        alert(`📨 ${r.correos} correos en cola (${r.evaluaciones} evaluaciones). Salen desde Outlook en 1 a 5 minutos.${r.sinCorreo ? `\n\n⚠️ ${r.sinCorreo} evaluaciones no tienen correo: mándalas con 💬 WhatsApp o 🔗 copiando el enlace.` : ''}`);
+        alert(`📨 ${r.correos} correos en cola (${r.evaluaciones} evaluaciones). Salen desde Outlook en 1 a 5 minutos.${r.sinCorreo ? `\n\n⚠️ ${r.sinCorreo} evaluaciones no se enviaron porque el evaluador no tiene correo. Agrégalo en su perfil (o en ⬇️ Lista en Excel) y vuelve a enviar.` : ''}`);
         await cargar360();
     } catch (err) { alert('❌ ' + err.message); }
 }
