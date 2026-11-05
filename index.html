@@ -306,6 +306,10 @@
                 <div class="filter-bar">
                     <div class="filter-group">
                         <select id="matriz-rol" class="select-input sel-roles" onchange="renderMatrizPolivalencia()"></select>
+                        <select id="matriz-fuente" class="select-input sel-fuente" onchange="cambiarFuente(this.value)">
+                            <option value="final">Ver: Final ponderado 360°</option>
+                            <option value="ingenieria">Ver: Solo ingeniería</option>
+                        </select>
                         <select id="matriz-orden" class="select-input" onchange="renderMatrizPolivalencia()">
                             <option value="puntaje">Ordenar: mayor puntaje</option>
                             <option value="nombre">Ordenar: nombre</option>
@@ -343,6 +347,10 @@
                 <div class="filter-bar">
                     <div class="filter-group">
                         <select id="ranking-rol" class="select-input sel-roles" data-todos="1" onchange="renderRanking()"></select>
+                        <select id="ranking-fuente" class="select-input sel-fuente" onchange="cambiarFuente(this.value)">
+                            <option value="final">Ranking: Final ponderado 360°</option>
+                            <option value="ingenieria">Ranking: Solo ingeniería</option>
+                        </select>
                     </div>
                 </div>
                 <div id="ranking-contenido"></div>

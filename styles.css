@@ -1185,3 +1185,12 @@ tr.e360-diferencia td.col-fija { color: #fcd34d; }
 .acceso-chip { background: rgba(16, 185, 129, .15); border: 1px solid rgba(16, 185, 129, .4); color: #a7f3d0; border-radius: 999px; padding: 5px 12px; font-size: 13px; display: inline-flex; gap: 6px; align-items: center; }
 .acceso-chip button { background: none; border: none; color: #fca5a5; cursor: pointer; font-size: 13px; }
 .acceso-agregar { display: flex; gap: 8px; max-width: 460px; }
+.chip-360 { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 700; color: #6ee7b7; background: rgba(16, 185, 129, .15); border: 1px solid rgba(16, 185, 129, .4); border-radius: 999px; padding: 1px 8px; vertical-align: middle; }
+.tt-puntaje .chip-360 { display: block; margin: 3px 0 0; text-align: center; }
+.perfil-360 { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; background: rgba(16, 185, 129, .08); border: 1px solid rgba(16, 185, 129, .35); border-radius: 12px; padding: 10px 14px; margin-bottom: 10px; }
+.perfil-360-final strong { display: block; font-size: 26px; font-weight: 800; color: #6ee7b7; line-height: 1; }
+.perfil-360-final small { color: var(--text-muted); font-size: 11px; }
+.perfil-360-partes { display: flex; gap: 12px; flex-wrap: wrap; flex: 1; font-size: 11.5px; color: var(--text-muted); }
+.perfil-360-partes span { display: grid; }
+.perfil-360-partes b { color: var(--text-main); font-size: 15px; }
+.puntaje-celda small { display: block; font-size: 10.5px; font-weight: 500; }

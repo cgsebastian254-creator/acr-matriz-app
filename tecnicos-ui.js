@@ -48,6 +48,7 @@ async function cargarTecnicos() {
         if (r.status === 403) { tec.sinAcceso = true; aplicarAccesoTecnicos(); return; }
         const d = await r.json();
         Object.assign(tec, d, { cargado: true });
+        await cargarResultados360();
         llenarSelectoresRoles();
         renderKpisTecnicos();
         const dl = document.getElementById('lista-tecnicos');
@@ -334,7 +335,7 @@ function tarjetaTecnico(t, { razones = [], cod, ahora, acciones = '' } = {}) {
                 <strong>${escaparHTML(t.nombre)}</strong>
                 <small>${escaparHTML(t.rol)}${t.cargo ? ' · ' + escaparHTML(t.cargo) : ''}${t.linea ? ' · ' + escaparHTML(t.linea) : ''}</small>
             </div>
-            <div class="tt-puntaje" title="Puntaje ponderado de la matriz de polivalencia">${pct(t.puntaje)}${variacion}</div>
+            <div class="tt-puntaje" title="Calificación de ingeniería">${pct(t.puntaje)}${variacion}${chip360(t)}</div>
         </div>
         ${MOSTRAR_TURNOS ? `<div class="tt-turno">Hoy: ${badgeTurno(cod)} ${ahora ? '<span class="badge badge-realizado">🟢 En turno ahora</span>' : ''}</div>` : ''}
         ${barraAvance(t)}
@@ -444,10 +445,11 @@ function abrirPerfil(id) {
         const formar = habs.filter(h => (t.niveles || {})[h.id] && (t.niveles || {})[h.id] <= 2).map(h => h.nombre);
         resumen.innerHTML = `
             <div class="perfil-kpis">
-                <div><span>${pct(t.puntaje)}</span>Puntaje ${escaparHTML(t.periodo || '')}</div>
+                <div><span>${pct(t.puntaje)}</span>Ingeniería ${escaparHTML(t.periodo || "")}</div>
                 <div><span>${t.variacion == null ? '—' : (t.variacion >= 0 ? '▲ ' : '▼ ') + Math.abs(Math.round(t.variacion * 100)) + ' pts'}</span>vs ${escaparHTML(t.periodoAnterior || 'semestre anterior')}</div>
                 <div><span>${avance(t).hechas}/${avance(t).total}</span>Acciones calificadas</div>
             </div>
+            ${resumen360Html(t)}
             ${fuertes.length ? `<p class="perfil-linea">💪 <strong>Experto en:</strong> ${fuertes.map(escaparHTML).join(', ')}</p>` : ''}
             ${formar.length ? `<p class="perfil-linea">📚 <strong>Por formar:</strong> ${formar.map(escaparHTML).join(', ')}</p>` : ''}`;
         extra.innerHTML = !MOSTRAR_TURNOS ? '' : `
@@ -542,23 +544,26 @@ function renderMatrizPolivalencia() {
     if (!tabla || !tec.cargado) return;
     document.getElementById('matriz-periodo').textContent = 'semestre actual ' + tec.periodoActual;
     const rol = document.getElementById('matriz-rol').value;
-    const editar = document.getElementById('matriz-editar').checked;
+    const fuente = fuenteActiva();
+    document.getElementById('matriz-fuente').style.display = hay360() ? '' : 'none';
+    const editar = document.getElementById('matriz-editar').checked && fuente === 'ingenieria';
+    document.getElementById('matriz-editar').parentElement.style.display = fuente === 'ingenieria' ? '' : 'none';
     const habs = tec.habilidades.filter(h => h.rol === rol);
     const hoy = ahoraBogotaCliente().fecha;
     const lista = tec.tecnicos.filter(t => t.rol === rol && t.activo !== false);
     if (document.getElementById('matriz-orden').value === 'nombre') lista.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
-    else lista.sort((a, b) => (b.puntaje ?? -1) - (a.puntaje ?? -1));
+    else lista.sort((a, b) => (puntajeVista(b) ?? -1) - (puntajeVista(a) ?? -1));
     if (!lista.length) { tabla.innerHTML = `<tr><td style="padding: 20px; color: var(--text-muted);">Todavía no hay técnicos de ${escaparHTML(rol)}. Créalos en 🪪 Técnicos → ➕ Nuevo técnico.</td></tr>`; return; }
     const cats = [];
     habs.forEach(h => { const c = cats.find(x => x.nombre === h.categoria); if (c) c.n++; else cats.push({ nombre: h.categoria, n: 1 }); });
     // Fila final: promedio por habilidad (dónde está la brecha del equipo)
     const promedio = h => {
-        const v = lista.map(t => Number((t.niveles || {})[h.id])).filter(Boolean);
+        const v = lista.map(t => Number(nivelesVista(t)[h.id])).filter(Boolean);
         return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
     };
     tabla.innerHTML = `
         <thead>
-            <tr><th rowspan="2" class="col-fija">#&nbsp;Técnico</th>${MOSTRAR_TURNOS ? '<th rowspan="2">Hoy</th>' : ''}${cats.map(c => `<th colspan="${c.n}" class="cat">${escaparHTML(c.nombre)}</th>`).join('')}<th rowspan="2">Puntaje</th></tr>
+            <tr><th rowspan="2" class="col-fija">#&nbsp;Técnico</th>${MOSTRAR_TURNOS ? '<th rowspan="2">Hoy</th>' : ''}${cats.map(c => `<th colspan="${c.n}" class="cat">${escaparHTML(c.nombre)}</th>`).join('')}<th rowspan="2">${fuente === 'final' ? 'Final 360°' : 'Puntaje'}</th></tr>
             <tr>${habs.map(h => `<th class="hab" title="${attr(h.descripcion)} · peso ${Math.round(h.peso * 100)}%"><span>${escaparHTML(h.nombre)}</span></th>`).join('')}</tr>
         </thead>
         <tbody>
@@ -566,12 +571,13 @@ function renderMatrizPolivalencia() {
                 <td class="col-fija"><button class="link" onclick="abrirPerfil('${attr(t.id)}')">${i + 1}. ${escaparHTML(t.nombre)}</button></td>
                 ${MOSTRAR_TURNOS ? `<td>${(() => { const tt = tipoTurno(codigoTurno(t.id, hoy)); return tt ? `<span class="cod-turno" style="background:${tt.color}">${escaparHTML(tt.codigo)}</span>` : '—'; })()}</td>` : ''}
                 ${habs.map(h => {
-                    const n = Number((t.niveles || {})[h.id]) || 0;
+                    const n = Number(nivelesVista(t)[h.id]) || 0;
+                    if (fuente === 'final') return `<td class="nivel-celda n${Math.round(n)}" title="${attr(h.nombre)}: ${n ? n.toFixed(2) + ' (final ponderado)' : 'Sin calificar'}">${n ? (Math.round(n * 10) / 10).toFixed(1) : '—'}</td>`;
                     return editar
                         ? `<td class="nivel-celda n${n}"><select onchange="cambiarNivel('${attr(t.id)}', '${h.id}', this.value)"><option value="0">—</option>${[1, 2, 3, 4].map(v => `<option value="${v}" ${v === n ? 'selected' : ''}>${v}</option>`).join('')}</select></td>`
                         : `<td class="nivel-celda n${n}" title="${attr(h.nombre)}: ${n ? tec.niveles[n] : 'Sin evaluar'}">${n || '—'}</td>`;
                 }).join('')}
-                <td class="puntaje-celda">${pct(t.puntaje)}${t.variacion != null ? `<small class="${t.variacion >= 0 ? 'sube' : 'baja'}">${t.variacion >= 0 ? '▲' : '▼'}${Math.abs(Math.round(t.variacion * 100))}</small>` : ''}</td>
+                <td class="puntaje-celda">${fuente === 'final' ? `${pct(puntajeVista(t))}<small style="color: var(--text-muted);">Ing ${pct(t.puntaje)}</small>` : pct(t.puntaje)}${fuente !== 'final' && t.variacion != null ? `<small class="${t.variacion >= 0 ? 'sube' : 'baja'}">${t.variacion >= 0 ? '▲' : '▼'}${Math.abs(Math.round(t.variacion * 100))}</small>` : ''}</td>
             </tr>`).join('')}
             <tr class="fila-promedio"><td class="col-fija">Promedio del equipo</td>${MOSTRAR_TURNOS ? '<td></td>' : ''}${habs.map(h => { const p = promedio(h); return `<td class="nivel-celda n${p ? Math.round(p) : 0}">${p ? p.toFixed(1) : '—'}</td>`; }).join('')}<td></td></tr>
         </tbody>`;
@@ -990,6 +996,7 @@ function renderCalificar(cambioRol) {
                 <h3>${ICONO_ROL[t.rol] || '👤'} ${escaparHTML(t.nombre)}</h3>
                 <p>${escaparHTML(t.rol)}${t.cargo ? ' · ' + escaparHTML(t.cargo) : ''}${t.linea ? ' · ' + escaparHTML(t.linea) : ''} · semestre ${escaparHTML(tec.periodoActual)}</p>
                 <div class="calif-progreso"><div><span style="width:${a.total ? a.hechas / a.total * 100 : 0}%"></span></div><small>${a.hechas} de ${a.total} acciones calificadas</small></div>
+                ${r360(t) && r360(t).puntajes.final != null ? `<p style="margin:6px 0 0; font-size: 13px;">${chip360(t)} <span style="color: var(--text-muted);">final ponderado con auto, compañero y supervisor</span></p>` : ''}
                 ${t.variacion != null ? `<p class="${t.variacion >= 0 ? 'sube' : 'baja'}" style="margin:6px 0 0; font-size: 13px;">${t.variacion >= 0 ? '▲' : '▼'} ${Math.abs(Math.round(t.variacion * 100))} puntos vs ${escaparHTML(t.periodoAnterior)}</p>` : ''}
             </div>
             <div class="grupo-botones"><button class="btn btn-secondary btn-sm" onclick="abrirPerfil('${attr(t.id)}')">✏️ Editar perfil</button></div>
@@ -1041,9 +1048,11 @@ function renderRanking() {
     const cont = document.getElementById('ranking-contenido');
     if (!cont || !tec.cargado) return;
     const filtro = document.getElementById('ranking-rol').value;
+    document.getElementById('ranking-fuente').style.display = hay360() ? '' : 'none';
+    const fuente = fuenteActiva();
     const roles = rolesCatalogo().filter(r => filtro === 'TODOS' || r === filtro);
     const bloques = roles.map(rol => {
-        const lista = tec.tecnicos.filter(t => t.activo !== false && t.rol === rol && t.puntaje != null).sort((a, b) => b.puntaje - a.puntaje);
+        const lista = tec.tecnicos.filter(t => t.activo !== false && t.rol === rol && puntajeVista(t) != null).map(t => ({ ...t, puntaje: puntajeVista(t), variacion: fuente === 'final' ? null : t.variacion })).sort((a, b) => b.puntaje - a.puntaje);
         if (!lista.length) return filtro === 'TODOS' ? '' : `<div class="vacio">Aún no hay técnicos de ${escaparHTML(rol)} calificados.</div>`;
         const podio = [lista[1], lista[0], lista[2]].map((t, i) => t ? `
             <div class="podio-lugar p${[2, 1, 3][i]}">
@@ -1462,3 +1471,55 @@ async function guardarAcceso() {
         mostrarNotificacionToast('Acceso', 'Lista de administradores actualizada.');
     } catch (err) { alert('❌ ' + err.message); cargarAcceso(); }
 }
+
+// =====================================================================
+// PONDERADO 360° en perfil, tarjetas, matriz, ranking y calificar
+// (usa la evaluación 360° más reciente)
+// =====================================================================
+let fuenteVista = 'final';
+async function cargarResultados360() {
+    try {
+        const r = await fetch('/api/360' + (e360.campanaId ? '?campana=' + encodeURIComponent(e360.campanaId) : ''));
+        if (!r.ok) return;
+        e360.datos = await r.json();
+        if (e360.datos.campana) e360.campanaId = e360.datos.campana.id;
+    } catch (e) { /* sin 360 */ }
+}
+function r360(t) {
+    const d = e360.datos;
+    if (!d || !d.campana) return null;
+    return d.resultados.find(x => x.tecnicoId === t.id) || null;
+}
+function hay360() { return !!(e360.datos && e360.datos.campana); }
+function fuenteActiva() { return hay360() ? fuenteVista : 'ingenieria'; }
+function nivelesVista(t) {
+    if (fuenteActiva() === 'final') { const r = r360(t); return r ? r.final || {} : {}; }
+    return t.niveles || {};
+}
+function puntajeVista(t) {
+    if (fuenteActiva() === 'final') { const r = r360(t); return r ? r.puntajes.final : null; }
+    return t.puntaje;
+}
+function cambiarFuente(v) {
+    fuenteVista = v;
+    document.querySelectorAll('.sel-fuente').forEach(sel => { sel.value = v; });
+    renderVistaTec(vistaTecActual);
+}
+function chip360(t) {
+    const r = r360(t);
+    if (!r || r.puntajes.final == null) return '';
+    const fuentes = ['auto', 'par', 'supervisor', 'ingenieria'].filter(k => r.puntajes[k] != null).length;
+    return `<span class="chip-360" title="Final ponderado de la evaluación 360° (${fuentes} de 4 fuentes)">360° ${pct(r.puntajes.final)}</span>`;
+}
+function resumen360Html(t) {
+    const r = r360(t);
+    if (!r) return '';
+    const d = e360.datos;
+    const partes = ['auto', 'par', 'supervisor', 'ingenieria'].map(k => `<span><b>${pct(r.puntajes[k])}</b>${escaparHTML(d.tipos[k].corto)} · ${Math.round(d.campana.pesos[k] * 100)}%</span>`).join('');
+    return `<div class="perfil-360">
+        <div class="perfil-360-final"><strong>${pct(r.puntajes.final)}</strong><small>Final ponderado 360°<br>${escaparHTML(d.campana.nombre)}</small></div>
+        <div class="perfil-360-partes">${partes}</div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="detalle360('${attr(t.id)}')">🔍 Detalle por acción</button>
+    </div>`;
+}
+document.addEventListener('DOMContentLoaded', () => document.querySelectorAll('.sel-fuente').forEach(sel => { sel.value = fuenteVista; }));
