@@ -538,7 +538,7 @@ async function importarMatrizExcel(input, soloTecnicos) {
         const r = await fetch('/api/tecnicos/importar', { method: 'POST', body: archivo });
         const j = await r.json();
         if (!r.ok) throw new Error(j.error || 'No se pudo importar.');
-        alert(`✅ Importado.\n• ${j.tecnicosNuevos} técnicos nuevos\n• ${j.tecnicosActualizados} actualizados\n• ${j.habilidades || 'sin cambios en las'} habilidades\n• ${j.evaluaciones} calificaciones${(j.avisos || []).length ? '\n\n⚠️ ' + j.avisos.join('\n') : ''}`);
+        alert(`✅ Importado.\n• ${j.tecnicosNuevos} técnicos nuevos\n• ${j.tecnicosActualizados} actualizados${j.renombrados ? `\n• ${j.renombrados} nombres corregidos` : ''}\n• ${j.habilidades || 'sin cambios en las'} habilidades\n• ${j.evaluaciones} calificaciones${(j.avisos || []).length ? '\n\n⚠️ ' + j.avisos.join('\n') : ''}`);
         await cargarTecnicos();
         renderTodoTecnicos();
     } catch (err) { alert('❌ ' + err.message); }
