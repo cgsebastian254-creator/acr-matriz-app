@@ -1281,8 +1281,11 @@ function celda360(t, r, tipo) {
 function botonAsignar360(t, tipo, corto) {
     if (tipo === 'auto') return `<button class="link" onclick="asignar360('auto', '${attr(t.id)}')">➕ Crear</button>`;
     if (tipo === 'par') {
-        const opciones = tec.tecnicos.filter(x => x.activo !== false && x.rol === t.rol && x.id !== t.id)
-            .map(x => `<option value="${attr(x.id)}">${escaparHTML(x.nombre)}</option>`).join('');
+        const otros = tec.tecnicos.filter(x => x.activo !== false && x.id !== t.id).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+        const op = x => `<option value="${attr(x.id)}">${escaparHTML(x.nombre)}${x.rol !== t.rol ? ' · ' + escaparHTML(x.rol) : ''}</option>`;
+        const mismos = otros.filter(x => x.rol === t.rol), resto = otros.filter(x => x.rol !== t.rol);
+        const opciones = (mismos.length ? `<optgroup label="${attr(t.rol)}">${mismos.map(op).join('')}</optgroup>` : '') +
+            `<optgroup label="Otras especialidades">${resto.map(op).join('')}</optgroup>`;
         return `<select class="e360-select" title="Elegir compañero" onchange="if (this.value) asignarManual360('${attr(t.id)}', 'par', { evaluadorTecnicoId: this.value })"><option value="">${corto ? '✏️' : '➕ Elegir…'}</option>${opciones}</select>`;
     }
     return `<button class="${corto ? '' : 'link'}" title="Asignar supervisor" onclick="pedirSupervisor360('${attr(t.id)}')">${corto ? '✏️' : '➕ Asignar'}</button>`;
