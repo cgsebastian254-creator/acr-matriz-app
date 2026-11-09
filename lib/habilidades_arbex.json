@@ -4,7 +4,7 @@
   "rol": "Mecánico",
   "categoria": "Competencias Técnicas",
   "nombre": "Diagnóstico mecánico",
-  "descripcion": "Identificación de fallas mecánicas y causa raíz",
+  "descripcion": "Identifica fallas mecánicas (ruidos, vibraciones, desgastes, desalineaciones) y encuentra la causa raíz, no solo el síntoma.",
   "peso": 0.1,
   "tipo": "Capacidad"
  },
@@ -13,7 +13,7 @@
   "rol": "Mecánico",
   "categoria": "Competencias Técnicas",
   "nombre": "Ajustes sistemas transmisión",
-  "descripcion": "Ajuste y tensionado de correas / cadenas",
+  "descripcion": "Ajusta, alinea y tensiona correas, cadenas, piñones y acoples según la especificación del fabricante.",
   "peso": 0.05,
   "tipo": "Capacidad"
  },
@@ -22,7 +22,7 @@
   "rol": "Mecánico",
   "categoria": "Competencias Técnicas",
   "nombre": "Montaje de rodamientos",
-  "descripcion": "Técnicas adecuadas de montaje/desmontaje",
+  "descripcion": "Monta y desmonta rodamientos con la técnica y la herramienta correctas (extractor, calentador de inducción, ajustes) sin dañarlos.",
   "peso": 0.05,
   "tipo": "Capacidad"
  },
@@ -31,7 +31,7 @@
   "rol": "Mecánico",
   "categoria": "Competencias Técnicas",
   "nombre": "Lubricación y tribología",
-  "descripcion": "Aplicación correcta de lubricantes y frecuencias",
+  "descripcion": "Aplica el lubricante correcto, en la cantidad y la frecuencia adecuadas para cada componente.",
   "peso": 0.04,
   "tipo": "Capacidad"
  },
@@ -40,7 +40,7 @@
   "rol": "Mecánico",
   "categoria": "Competencias Técnicas",
   "nombre": "Interpretación de planos mecánicos",
-  "descripcion": "Lectura de planos, ensambles y tolerancias",
+  "descripcion": "Lee e interpreta planos mecánicos: ensambles, despieces, medidas y tolerancias.",
   "peso": 0.06,
   "tipo": "Capacidad"
  },
@@ -49,7 +49,7 @@
   "rol": "Mecánico",
   "categoria": "Confiabilidad del Activo",
   "nombre": "Reducción de averías",
-  "descripcion": "Impacto en la eliminación de fallas repetitivas",
+  "descripcion": "Elimina fallas repetitivas: cuando una falla se repite, analiza por qué pasa y aplica una solución definitiva, no solo repara.",
   "peso": 0.1,
   "tipo": "Resultado"
  },
@@ -58,7 +58,7 @@
   "rol": "Mecánico",
   "categoria": "Confiabilidad del Activo",
   "nombre": "Aumento de MTBF",
-  "descripcion": "Mejora en comportamiento del activo",
+  "descripcion": "Sus intervenciones hacen que los equipos que atiende duren más tiempo sin fallar (mejora el MTBF).",
   "peso": 0.07,
   "tipo": "Resultado"
  },
@@ -67,7 +67,7 @@
   "rol": "Mecánico",
   "categoria": "Confiabilidad del Activo",
   "nombre": "Calidad del preventivo",
-  "descripcion": "Hallazgos y precisión en inspecciones mecánicas",
+  "descripcion": "En los preventivos e inspecciones encuentra hallazgos reales, los reporta y deja el equipo en mejor condición de como lo encontró.",
   "peso": 0.07,
   "tipo": "Resultado"
  },
@@ -76,7 +76,7 @@
   "rol": "Mecánico",
   "categoria": "Seguridad",
   "nombre": "Bloqueo y aislamiento",
-  "descripcion": "Cumplimiento de procedimientos de seguridad mecánica",
+  "descripcion": "Aplica siempre el bloqueo y aislamiento de energías (LOTOTO) antes de intervenir un equipo, sin saltarse pasos.",
   "peso": 0.05,
   "tipo": "Capacidad"
  },
@@ -85,7 +85,7 @@
   "rol": "Mecánico",
   "categoria": "Seguridad",
   "nombre": "APR y estándares",
-  "descripcion": "Calidad del análisis previo",
+  "descripcion": "Hace el APR (análisis previo de riesgos) completo y a conciencia antes de cada trabajo, y cumple los estándares de seguridad.",
   "peso": 0.03,
   "tipo": "Capacidad"
  },
@@ -94,7 +94,7 @@
   "rol": "Mecánico",
   "categoria": "Competencias Técnicas",
   "nombre": "Manejo de SAP",
-  "descripcion": "",
+  "descripcion": "Maneja SAP: crea avisos, consulta y cierra órdenes de trabajo, notifica tiempos y busca repuestos o materiales.",
   "peso": 0.08,
   "tipo": "Capacidad"
  },
@@ -103,7 +103,7 @@
   "rol": "Mecánico",
   "categoria": "Seguridad",
   "nombre": "Orden y 5S",
-  "descripcion": "Cuidado del área y herramientas",
+  "descripcion": "Mantiene ordenadas su área y sus herramientas, y deja limpio el equipo y el sitio de trabajo al terminar (5S).",
   "peso": 0.05,
   "tipo": "Capacidad"
  },
@@ -112,7 +112,7 @@
   "rol": "Mecánico",
   "categoria": "Habilidades Blandas",
   "nombre": "Trabajo en equipo",
-  "descripcion": "Coordinación con producción y otros técnicos",
+  "descripcion": "Trabaja en equipo con producción y con técnicos de otras especialidades: apoya, coordina y comparte lo que sabe.",
   "peso": 0.03,
   "tipo": "Capacidad"
  },
@@ -121,7 +121,7 @@
   "rol": "Mecánico",
   "categoria": "Habilidades Blandas",
   "nombre": "Toma de decisiones",
-  "descripcion": "Criterio técnico y oportunidad",
+  "descripcion": "Ante una falla toma decisiones técnicas acertadas y a tiempo, y sabe cuándo escalar el problema.",
   "peso": 0.03,
   "tipo": "Capacidad"
  },
@@ -130,7 +130,7 @@
   "rol": "Mecánico",
   "categoria": "Habilidades Blandas",
   "nombre": "Comunicación",
-  "descripcion": "Claridad en reportes mecánicos",
+  "descripcion": "Comunica con claridad, de palabra y por escrito (OT, bitácora, entrega de turno), qué encontró, qué hizo y qué quedó pendiente.",
   "peso": 0.03,
   "tipo": "Capacidad"
  },
@@ -139,7 +139,7 @@
   "rol": "Mecánico",
   "categoria": "Competencias Técnicas",
   "nombre": "Tipos de mantenimiento y/o TPM",
-  "descripcion": "",
+  "descripcion": "Maneja los diferentes tipos de mantenimiento (correctivo, preventivo, predictivo y autónomo) y aplica herramientas TPM como tarjetas, limpieza-inspección y lecciones de un punto.",
   "peso": 0.04,
   "tipo": "Capacidad"
  },
@@ -148,7 +148,7 @@
   "rol": "Mecánico",
   "categoria": "Confiabilidad del Activo",
   "nombre": "Conocimientos administrativos",
-  "descripcion": "",
+  "descripcion": "Maneja la parte administrativa de su trabajo: diligencia formatos y reportes, hace solicitudes de compra o servicio y controla tiempos y costos.",
   "peso": 0.04,
   "tipo": "Capacidad"
  },
@@ -157,7 +157,7 @@
   "rol": "Mecánico",
   "categoria": "Confiabilidad del Activo",
   "nombre": "Planeación - MRP",
-  "descripcion": "",
+  "descripcion": "Planea sus trabajos con anticipación: identifica los repuestos y materiales que necesita, verifica existencias (MRP) y los pide a tiempo.",
   "peso": 0.04,
   "tipo": "Capacidad"
  },
@@ -166,7 +166,7 @@
   "rol": "Mecánico",
   "categoria": "Competencias Técnicas",
   "nombre": "Habilidades de control de procesos",
-  "descripcion": "",
+  "descripcion": "Entiende cómo funciona el proceso de la máquina (secuencia, variables y parámetros) y cómo su intervención afecta la producción y la calidad.",
   "peso": 0.04,
   "tipo": "Capacidad"
  },
@@ -175,7 +175,7 @@
   "rol": "Electricista",
   "categoria": "Competencias Técnicas",
   "nombre": "Capacidad para identificar causa raíz",
-  "descripcion": "Diagnóstico de fallas",
+  "descripcion": "Identifica fallas eléctricas o electrónicas y llega a la causa raíz, no solo cambia el componente dañado.",
   "peso": 0.1,
   "tipo": "Capacidad"
  },
@@ -184,7 +184,7 @@
   "rol": "Electricista",
   "categoria": "Competencias Técnicas",
   "nombre": "Calidad del trabajo eléctrico/electrónico",
-  "descripcion": "",
+  "descripcion": "Sus trabajos eléctricos y electrónicos quedan bien hechos y sin reprocesos: conexiones firmes, marquillado, canalización y tableros ordenados.",
   "peso": 0.05,
   "tipo": "Capacidad"
  },
@@ -193,7 +193,7 @@
   "rol": "Electricista",
   "categoria": "Competencias Técnicas",
   "nombre": "Interpretación de planos",
-  "descripcion": "Lectura de P&ID y diagramas",
+  "descripcion": "Lee e interpreta planos eléctricos, diagramas de control y P&ID.",
   "peso": 0.06,
   "tipo": "Capacidad"
  },
@@ -202,7 +202,7 @@
   "rol": "Electricista",
   "categoria": "Competencias Técnicas",
   "nombre": "Uso de instrumentos",
-  "descripcion": "Multímetro, megger, termografía",
+  "descripcion": "Usa correctamente multímetro, pinza amperimétrica, megger y cámara termográfica, e interpreta bien las lecturas.",
   "peso": 0.04,
   "tipo": "Capacidad"
  },
@@ -211,7 +211,7 @@
   "rol": "Electricista",
   "categoria": "Competencias Técnicas",
   "nombre": "Gestión documentaria",
-  "descripcion": "OT completas y claridad",
+  "descripcion": "Deja las órdenes de trabajo completas y claras, y mantiene al día la documentación (planos y cambios realizados).",
   "peso": 0.06,
   "tipo": "Capacidad"
  },
@@ -220,7 +220,7 @@
   "rol": "Electricista",
   "categoria": "Confiabilidad del Activo",
   "nombre": "Reducción de averías",
-  "descripcion": "Impacto en eliminar fallas repetitivas",
+  "descripcion": "Elimina fallas repetitivas: cuando una falla se repite, analiza por qué pasa y aplica una solución definitiva, no solo repara.",
   "peso": 0.1,
   "tipo": "Resultado"
  },
@@ -229,7 +229,7 @@
   "rol": "Electricista",
   "categoria": "Confiabilidad del Activo",
   "nombre": "Aumento de MTBF",
-  "descripcion": "Mejora en desempeño del activo",
+  "descripcion": "Sus intervenciones hacen que los equipos que atiende duren más tiempo sin fallar (mejora el MTBF).",
   "peso": 0.07,
   "tipo": "Resultado"
  },
@@ -238,7 +238,7 @@
   "rol": "Electricista",
   "categoria": "Confiabilidad del Activo",
   "nombre": "Calidad del preventivo",
-  "descripcion": "Hallazgos y precisión",
+  "descripcion": "En los preventivos e inspecciones encuentra hallazgos reales, los reporta y deja el equipo en mejor condición de como lo encontró.",
   "peso": 0.07,
   "tipo": "Resultado"
  },
@@ -247,7 +247,7 @@
   "rol": "Electricista",
   "categoria": "Seguridad",
   "nombre": "LOTOTO",
-  "descripcion": "Cumplimiento estricto",
+  "descripcion": "Aplica siempre el bloqueo, etiquetado y prueba de energía cero (LOTOTO) antes de intervenir un equipo eléctrico, sin saltarse pasos.",
   "peso": 0.05,
   "tipo": "Capacidad"
  },
@@ -256,7 +256,7 @@
   "rol": "Electricista",
   "categoria": "Seguridad",
   "nombre": "APR y estándares",
-  "descripcion": "Calidad del análisis previo",
+  "descripcion": "Hace el APR (análisis previo de riesgos) completo y a conciencia antes de cada trabajo, y cumple los estándares de seguridad.",
   "peso": 0.03,
   "tipo": "Capacidad"
  },
@@ -265,7 +265,7 @@
   "rol": "Electricista",
   "categoria": "Seguridad",
   "nombre": "Orden y 5S",
-  "descripcion": "Cuidado de herramientas y área",
+  "descripcion": "Mantiene ordenadas su área y sus herramientas, y deja limpio el equipo y el sitio de trabajo al terminar (5S).",
   "peso": 0.03,
   "tipo": "Capacidad"
  },
@@ -274,7 +274,7 @@
   "rol": "Electricista",
   "categoria": "Habilidades Blandas",
   "nombre": "Trabajo en equipo",
-  "descripcion": "Colaboración con producción y otros técnicos",
+  "descripcion": "Trabaja en equipo con producción y con técnicos de otras especialidades: apoya, coordina y comparte lo que sabe.",
   "peso": 0.05,
   "tipo": "Capacidad"
  },
@@ -283,7 +283,7 @@
   "rol": "Electricista",
   "categoria": "Habilidades Blandas",
   "nombre": "Toma de decisiones",
-  "descripcion": "Actuar rápido con criterio",
+  "descripcion": "Ante una falla toma decisiones técnicas acertadas y a tiempo, y sabe cuándo escalar el problema.",
   "peso": 0.03,
   "tipo": "Capacidad"
  },
@@ -292,7 +292,7 @@
   "rol": "Electricista",
   "categoria": "Habilidades Blandas",
   "nombre": "Comunicación",
-  "descripcion": "Claridad en reportes",
+  "descripcion": "Comunica con claridad, de palabra y por escrito (OT, bitácora, entrega de turno), qué encontró, qué hizo y qué quedó pendiente.",
   "peso": 0.03,
   "tipo": "Capacidad"
  },
@@ -301,7 +301,7 @@
   "rol": "Electricista",
   "categoria": "Competencias Técnicas",
   "nombre": "Sistemas de transmisión y potencia eléctrica/electrónica",
-  "descripcion": "Diagnóstico de fallas",
+  "descripcion": "Diagnostica y repara sistemas de potencia y transmisión eléctrica: motores, variadores, servos, arrancadores y protecciones.",
   "peso": 0.03,
   "tipo": "Capacidad"
  },
@@ -310,7 +310,7 @@
   "rol": "Electricista",
   "categoria": "Competencias Técnicas",
   "nombre": "Manejo de SAP",
-  "descripcion": "",
+  "descripcion": "Maneja SAP: crea avisos, consulta y cierra órdenes de trabajo, notifica tiempos y busca repuestos o materiales.",
   "peso": 0.04,
   "tipo": "Capacidad"
  },
@@ -319,7 +319,7 @@
   "rol": "Electricista",
   "categoria": "Competencias Técnicas",
   "nombre": "Tipos de mantenimiento y/o TPM",
-  "descripcion": "",
+  "descripcion": "Maneja los diferentes tipos de mantenimiento (correctivo, preventivo, predictivo y autónomo) y aplica herramientas TPM como tarjetas, limpieza-inspección y lecciones de un punto.",
   "peso": 0.04,
   "tipo": "Capacidad"
  },
@@ -328,7 +328,7 @@
   "rol": "Electricista",
   "categoria": "Confiabilidad del Activo",
   "nombre": "Conocimientos administrativos",
-  "descripcion": "",
+  "descripcion": "Maneja la parte administrativa de su trabajo: diligencia formatos y reportes, hace solicitudes de compra o servicio y controla tiempos y costos.",
   "peso": 0.04,
   "tipo": "Capacidad"
  },
@@ -337,7 +337,7 @@
   "rol": "Electricista",
   "categoria": "Competencias Técnicas",
   "nombre": "Habilidades de control de procesos",
-  "descripcion": "",
+  "descripcion": "Entiende cómo funciona el proceso de la máquina (secuencia, variables y parámetros) y cómo su intervención afecta la producción y la calidad.",
   "peso": 0.04,
   "tipo": "Capacidad"
  },
@@ -346,7 +346,7 @@
   "rol": "Electricista",
   "categoria": "Confiabilidad del Activo",
   "nombre": "Planeación - MRP",
-  "descripcion": "",
+  "descripcion": "Planea sus trabajos con anticipación: identifica los repuestos y materiales que necesita, verifica existencias (MRP) y los pide a tiempo.",
   "peso": 0.04,
   "tipo": "Capacidad"
  },
@@ -355,7 +355,7 @@
   "rol": "Instrumentista",
   "categoria": "Competencias Técnicas",
   "nombre": "Diagnóstico de instrumentación",
-  "descripcion": "Identificación de fallas en sensores, transmisores y lazos de control - causa raíz",
+  "descripcion": "Identifica fallas en sensores, transmisores y lazos de control, y encuentra la causa raíz.",
   "peso": 0.1,
   "tipo": "Capacidad"
  },
@@ -364,7 +364,7 @@
   "rol": "Instrumentista",
   "categoria": "Competencias Técnicas",
   "nombre": "Calibración de instrumentos",
-  "descripcion": "Calibración de transmisores de presión, nivel, temperatura y flujo",
+  "descripcion": "Calibra transmisores de presión, nivel, temperatura y flujo con el procedimiento y el patrón correctos, y registra la calibración.",
   "peso": 0.06,
   "tipo": "Capacidad"
  },
@@ -373,7 +373,7 @@
   "rol": "Instrumentista",
   "categoria": "Competencias Técnicas",
   "nombre": "Configuracion de lazos de control",
-  "descripcion": "Parametrización y sintonía de lazos PID",
+  "descripcion": "Configura y sintoniza lazos de control PID para que el proceso quede estable.",
   "peso": 0.05,
   "tipo": "Capacidad"
  },
@@ -382,7 +382,7 @@
   "rol": "Instrumentista",
   "categoria": "Competencias Técnicas",
   "nombre": "Interpretación de planos e instrumentación",
-  "descripcion": "Lectura de P&ID, diagramas de lazo y arquitectura de control",
+  "descripcion": "Lee e interpreta P&ID, diagramas de lazo y la arquitectura de control.",
   "peso": 0.06,
   "tipo": "Capacidad"
  },
@@ -391,7 +391,7 @@
   "rol": "Instrumentista",
   "categoria": "Competencias Técnicas",
   "nombre": "Programación básica de control",
-  "descripcion": "Diagnóstico y ajustes básicos de lógica en PLC/HMI/SCADA",
+  "descripcion": "Diagnostica y hace ajustes básicos en la lógica de PLC, HMI y SCADA de forma segura.",
   "peso": 0.05,
   "tipo": "Capacidad"
  },
@@ -400,7 +400,7 @@
   "rol": "Instrumentista",
   "categoria": "Competencias Técnicas",
   "nombre": "Redes y protocolos industriales",
-  "descripcion": "Manejo de HART, 4-20mA, Profibus, Modbus, Ethernet/IP",
+  "descripcion": "Maneja redes y protocolos industriales: 4-20 mA, HART, Profibus, Modbus y Ethernet/IP.",
   "peso": 0.04,
   "tipo": "Capacidad"
  },
@@ -409,7 +409,7 @@
   "rol": "Instrumentista",
   "categoria": "Confiabilidad del Activo",
   "nombre": "Reducción de averías",
-  "descripcion": "Impacto en la eliminación de fallas repetitivas de instrumentación",
+  "descripcion": "Elimina fallas repetitivas: cuando una falla se repite, analiza por qué pasa y aplica una solución definitiva, no solo repara.",
   "peso": 0.08,
   "tipo": "Resultado"
  },
@@ -418,7 +418,7 @@
   "rol": "Instrumentista",
   "categoria": "Confiabilidad del Activo",
   "nombre": "Aumento de MTBF",
-  "descripcion": "Mejora en comportamiento de lazos e instrumentos críticos",
+  "descripcion": "Sus intervenciones hacen que los equipos que atiende duren más tiempo sin fallar (mejora el MTBF).",
   "peso": 0.07,
   "tipo": "Resultado"
  },
@@ -427,7 +427,7 @@
   "rol": "Instrumentista",
   "categoria": "Confiabilidad del Activo",
   "nombre": "Calidad del preventivo",
-  "descripcion": "Hallazgos y precisión en calibraciones e inspecciones",
+  "descripcion": "En los preventivos e inspecciones encuentra hallazgos reales, los reporta y deja el equipo en mejor condición de como lo encontró.",
   "peso": 0.07,
   "tipo": "Resultado"
  },
@@ -436,7 +436,7 @@
   "rol": "Instrumentista",
   "categoria": "Seguridad",
   "nombre": "Bloqueo y aislamiento",
-  "descripcion": "Cumplimiento de LOTOTO en energia eléctrica, neumática e hidráulica",
+  "descripcion": "Aplica siempre el bloqueo y aislamiento de energía eléctrica, neumática e hidráulica (LOTOTO) antes de intervenir un instrumento, sin saltarse pasos.",
   "peso": 0.05,
   "tipo": "Capacidad"
  },
@@ -445,7 +445,7 @@
   "rol": "Instrumentista",
   "categoria": "Seguridad",
   "nombre": "APR y estándares",
-  "descripcion": "Calidad del análisis previo",
+  "descripcion": "Hace el APR (análisis previo de riesgos) completo y a conciencia antes de cada trabajo, y cumple los estándares de seguridad.",
   "peso": 0.03,
   "tipo": "Capacidad"
  },
@@ -454,7 +454,7 @@
   "rol": "Instrumentista",
   "categoria": "Seguridad",
   "nombre": "Orden y 5S",
-  "descripcion": "Cuidado del área y herramientas de precisión",
+  "descripcion": "Mantiene ordenadas su área y sus herramientas de precisión, y deja limpio el sitio de trabajo al terminar (5S).",
   "peso": 0.03,
   "tipo": "Capacidad"
  },
@@ -463,7 +463,7 @@
   "rol": "Instrumentista",
   "categoria": "Competencias Técnicas",
   "nombre": "Manejo de SAP",
-  "descripcion": "",
+  "descripcion": "Maneja SAP: crea avisos, consulta y cierra órdenes de trabajo, notifica tiempos y busca repuestos o materiales.",
   "peso": 0.05,
   "tipo": "Capacidad"
  },
@@ -472,7 +472,7 @@
   "rol": "Instrumentista",
   "categoria": "Competencias Técnicas",
   "nombre": "Tipos de mantenimiento y/o TPM",
-  "descripcion": "",
+  "descripcion": "Maneja los diferentes tipos de mantenimiento (correctivo, preventivo, predictivo y autónomo) y aplica herramientas TPM como tarjetas, limpieza-inspección y lecciones de un punto.",
   "peso": 0.04,
   "tipo": "Capacidad"
  },
@@ -481,7 +481,7 @@
   "rol": "Instrumentista",
   "categoria": "Confiabilidad del Activo",
   "nombre": "Conocimientos administrativos",
-  "descripcion": "",
+  "descripcion": "Maneja la parte administrativa de su trabajo: diligencia formatos y reportes, hace solicitudes de compra o servicio y controla tiempos y costos.",
   "peso": 0.04,
   "tipo": "Capacidad"
  },
@@ -490,7 +490,7 @@
   "rol": "Instrumentista",
   "categoria": "Confiabilidad del Activo",
   "nombre": "Planeación - MRP",
-  "descripcion": "",
+  "descripcion": "Planea sus trabajos con anticipación: identifica los repuestos y materiales que necesita, verifica existencias (MRP) y los pide a tiempo.",
   "peso": 0.04,
   "tipo": "Capacidad"
  },
@@ -499,7 +499,7 @@
   "rol": "Instrumentista",
   "categoria": "Competencias Técnicas",
   "nombre": "Habilidades de control de procesos",
-  "descripcion": "",
+  "descripcion": "Entiende cómo funciona el proceso de la máquina (secuencia, variables y parámetros) y cómo su intervención afecta la producción y la calidad.",
   "peso": 0.05,
   "tipo": "Capacidad"
  },
@@ -508,7 +508,7 @@
   "rol": "Instrumentista",
   "categoria": "Habilidades Blandas",
   "nombre": "Trabajo en equipo",
-  "descripcion": "Coordinación con producción, mecánica y electricidad",
+  "descripcion": "Trabaja en equipo con producción y con técnicos de otras especialidades: apoya, coordina y comparte lo que sabe.",
   "peso": 0.03,
   "tipo": "Capacidad"
  },
@@ -517,7 +517,7 @@
   "rol": "Instrumentista",
   "categoria": "Habilidades Blandas",
   "nombre": "Toma de decisiones",
-  "descripcion": "Criterio técnico y oportunidad ante fallas de proceso",
+  "descripcion": "Ante una falla toma decisiones técnicas acertadas y a tiempo, y sabe cuándo escalar el problema.",
   "peso": 0.03,
   "tipo": "Capacidad"
  },
@@ -526,7 +526,7 @@
   "rol": "Instrumentista",
   "categoria": "Habilidades Blandas",
   "nombre": "Comunicación",
-  "descripcion": "Claridad en reportes de calibración y lazos de control",
+  "descripcion": "Comunica con claridad, de palabra y por escrito (OT, bitácora, entrega de turno), qué encontró, qué hizo y qué quedó pendiente.",
   "peso": 0.03,
   "tipo": "Capacidad"
  },
@@ -535,7 +535,7 @@
   "rol": "Calderista",
   "categoria": "Competencias Técnicas",
   "nombre": "Diagnóstico de fallas en calderas y sistemas a presión",
-  "descripcion": "Identificación de fallas y causa raíz en calderas, recipientes y redes de vapor",
+  "descripcion": "Identifica fallas en calderas, recipientes a presión y redes de vapor, y encuentra la causa raíz.",
   "peso": 0.1,
   "tipo": "Capacidad"
  },
@@ -544,7 +544,7 @@
   "rol": "Calderista",
   "categoria": "Competencias Técnicas",
   "nombre": "Soldadura",
-  "descripcion": "Ejecución de soldadura SMAW/TIG/MIG según procedimientos calificados (WPS)",
+  "descripcion": "Suelda con calidad (SMAW, TIG, MIG) siguiendo el procedimiento calificado (WPS).",
   "peso": 0.08,
   "tipo": "Capacidad"
  },
@@ -553,7 +553,7 @@
   "rol": "Calderista",
   "categoria": "Competencias Técnicas",
   "nombre": "Interpretación de planos e isométricos",
-  "descripcion": "Lectura de planos de calderas, tubería e isométricos",
+  "descripcion": "Lee e interpreta planos de calderas, tubería e isométricos.",
   "peso": 0.06,
   "tipo": "Capacidad"
  },
@@ -562,7 +562,7 @@
   "rol": "Calderista",
   "categoria": "Competencias Técnicas",
   "nombre": "Códigos y normas de calderas",
-  "descripcion": "Aplicación de codigo ASME y normativa de recipientes a presión",
+  "descripcion": "Conoce y aplica el código ASME y la normativa de recipientes a presión.",
   "peso": 0.05,
   "tipo": "Capacidad"
  },
@@ -571,7 +571,7 @@
   "rol": "Calderista",
   "categoria": "Competencias Técnicas",
   "nombre": "Ensayos no destructivos",
-  "descripcion": "Control de espesores, corrosion y detección de defectos (END básico)",
+  "descripcion": "Realiza ensayos no destructivos básicos: medición de espesores y detección de corrosión y defectos.",
   "peso": 0.05,
   "tipo": "Capacidad"
  },
@@ -580,7 +580,7 @@
   "rol": "Calderista",
   "categoria": "Competencias Técnicas",
   "nombre": "Corte y conformado",
-  "descripcion": "Corte, doblado y conformado de lámina y tubería",
+  "descripcion": "Corta, dobla y conforma lámina y tubería con precisión.",
   "peso": 0.04,
   "tipo": "Capacidad"
  },
@@ -589,7 +589,7 @@
   "rol": "Calderista",
   "categoria": "Confiabilidad del Activo",
   "nombre": "Reducción de averías",
-  "descripcion": "Impacto en la eliminación de fallas repetitivas en calderas y redes de vapor",
+  "descripcion": "Elimina fallas repetitivas: cuando una falla se repite, analiza por qué pasa y aplica una solución definitiva, no solo repara.",
   "peso": 0.09,
   "tipo": "Resultado"
  },
@@ -598,7 +598,7 @@
   "rol": "Calderista",
   "categoria": "Confiabilidad del Activo",
   "nombre": "Aumento de MTBF",
-  "descripcion": "Mejora en comportamiento de calderas y recipientes a presión",
+  "descripcion": "Sus intervenciones hacen que los equipos que atiende duren más tiempo sin fallar (mejora el MTBF).",
   "peso": 0.07,
   "tipo": "Resultado"
  },
@@ -607,7 +607,7 @@
   "rol": "Calderista",
   "categoria": "Confiabilidad del Activo",
   "nombre": "Calidad del preventivo",
-  "descripcion": "Hallazgos y precisión en inspecciones de calderas",
+  "descripcion": "En los preventivos e inspecciones encuentra hallazgos reales, los reporta y deja el equipo en mejor condición de como lo encontró.",
   "peso": 0.07,
   "tipo": "Resultado"
  },
@@ -616,7 +616,7 @@
   "rol": "Calderista",
   "categoria": "Seguridad",
   "nombre": "Bloqueo y aislamiento",
-  "descripcion": "Cumplimiento de bloqueo en sistemas de presión, vapor y combustion",
+  "descripcion": "Aplica siempre el bloqueo y aislamiento de presión, vapor y combustión antes de intervenir, sin saltarse pasos.",
   "peso": 0.06,
   "tipo": "Capacidad"
  },
@@ -625,7 +625,7 @@
   "rol": "Calderista",
   "categoria": "Seguridad",
   "nombre": "APR y estándares",
-  "descripcion": "Calidad del análisis previo, especialmente en trabajos en caliente",
+  "descripcion": "Hace el APR completo antes de cada trabajo, en especial en trabajos en caliente (permisos, extintor, vigía), y cumple los estándares de seguridad.",
   "peso": 0.04,
   "tipo": "Capacidad"
  },
@@ -634,7 +634,7 @@
   "rol": "Calderista",
   "categoria": "Seguridad",
   "nombre": "Orden y 5S",
-  "descripcion": "Cuidado del área y herramientas",
+  "descripcion": "Mantiene ordenadas su área y sus herramientas, y deja limpio el equipo y el sitio de trabajo al terminar (5S).",
   "peso": 0.03,
   "tipo": "Capacidad"
  },
@@ -643,7 +643,7 @@
   "rol": "Calderista",
   "categoria": "Competencias Técnicas",
   "nombre": "Manejo de SAP",
-  "descripcion": "",
+  "descripcion": "Maneja SAP: crea avisos, consulta y cierra órdenes de trabajo, notifica tiempos y busca repuestos o materiales.",
   "peso": 0.04,
   "tipo": "Capacidad"
  },
@@ -652,7 +652,7 @@
   "rol": "Calderista",
   "categoria": "Competencias Técnicas",
   "nombre": "Tipos de mantenimiento y/o TPM",
-  "descripcion": "",
+  "descripcion": "Maneja los diferentes tipos de mantenimiento (correctivo, preventivo, predictivo y autónomo) y aplica herramientas TPM como tarjetas, limpieza-inspección y lecciones de un punto.",
   "peso": 0.04,
   "tipo": "Capacidad"
  },
@@ -661,7 +661,7 @@
   "rol": "Calderista",
   "categoria": "Confiabilidad del Activo",
   "nombre": "Conocimientos administrativos",
-  "descripcion": "",
+  "descripcion": "Maneja la parte administrativa de su trabajo: diligencia formatos y reportes, hace solicitudes de compra o servicio y controla tiempos y costos.",
   "peso": 0.04,
   "tipo": "Capacidad"
  },
@@ -670,7 +670,7 @@
   "rol": "Calderista",
   "categoria": "Confiabilidad del Activo",
   "nombre": "Planeación - MRP",
-  "descripcion": "",
+  "descripcion": "Planea sus trabajos con anticipación: identifica los repuestos y materiales que necesita, verifica existencias (MRP) y los pide a tiempo.",
   "peso": 0.04,
   "tipo": "Capacidad"
  },
@@ -679,7 +679,7 @@
   "rol": "Calderista",
   "categoria": "Competencias Técnicas",
   "nombre": "Habilidades de control de procesos",
-  "descripcion": "",
+  "descripcion": "Entiende cómo funciona el proceso de la máquina (secuencia, variables y parámetros) y cómo su intervención afecta la producción y la calidad.",
   "peso": 0.03,
   "tipo": "Capacidad"
  },
@@ -688,7 +688,7 @@
   "rol": "Calderista",
   "categoria": "Habilidades Blandas",
   "nombre": "Trabajo en equipo",
-  "descripcion": "Coordinación con producción y otros técnicos",
+  "descripcion": "Trabaja en equipo con producción y con técnicos de otras especialidades: apoya, coordina y comparte lo que sabe.",
   "peso": 0.03,
   "tipo": "Capacidad"
  },
@@ -697,7 +697,7 @@
   "rol": "Calderista",
   "categoria": "Habilidades Blandas",
   "nombre": "Toma de decisiones",
-  "descripcion": "Criterio técnico y oportunidad",
+  "descripcion": "Ante una falla toma decisiones técnicas acertadas y a tiempo, y sabe cuándo escalar el problema.",
   "peso": 0.02,
   "tipo": "Capacidad"
  },
@@ -706,7 +706,7 @@
   "rol": "Calderista",
   "categoria": "Habilidades Blandas",
   "nombre": "Comunicación",
-  "descripcion": "Claridad en reportes técnicos",
+  "descripcion": "Comunica con claridad, de palabra y por escrito (OT, bitácora, entrega de turno), qué encontró, qué hizo y qué quedó pendiente.",
   "peso": 0.02,
   "tipo": "Capacidad"
  },
@@ -715,7 +715,7 @@
   "rol": "Lubricador",
   "categoria": "Competencias Técnicas",
   "nombre": "Diagnóstico de fallas por lubricación",
-  "descripcion": "Identificación de fallas asociadas a lubricación deficiente y causa raíz",
+  "descripcion": "Identifica fallas causadas por lubricación deficiente o contaminada, y encuentra la causa raíz.",
   "peso": 0.09,
   "tipo": "Capacidad"
  },
@@ -724,7 +724,7 @@
   "rol": "Lubricador",
   "categoria": "Competencias Técnicas",
   "nombre": "Lubricación y tribología",
-  "descripcion": "Selección y aplicación correcta de lubricantes según componente y condicion",
+  "descripcion": "Selecciona y aplica el lubricante correcto según el componente y su condición de operación.",
   "peso": 0.1,
   "tipo": "Capacidad"
  },
@@ -733,7 +733,7 @@
   "rol": "Lubricador",
   "categoria": "Competencias Técnicas",
   "nombre": "Análisis de aceites",
-  "descripcion": "Toma de muestras e interpretación básica de resultados de laboratorio",
+  "descripcion": "Toma correctamente las muestras de aceite e interpreta de forma básica los resultados del laboratorio.",
   "peso": 0.07,
   "tipo": "Capacidad"
  },
@@ -742,7 +742,7 @@
   "rol": "Lubricador",
   "categoria": "Competencias Técnicas",
   "nombre": "Gestión de rutas de lubricación",
-  "descripcion": "Cumplimiento y calidad de rutas, frecuencias y estándares de lubricación",
+  "descripcion": "Cumple las rutas de lubricación con calidad: puntos, frecuencias y cantidades según el estándar.",
   "peso": 0.06,
   "tipo": "Capacidad"
  },
@@ -751,7 +751,7 @@
   "rol": "Lubricador",
   "categoria": "Competencias Técnicas",
   "nombre": "Control de contaminación",
-  "descripcion": "Manejo de limpieza ISO, filtrado y almacenamiento de lubricantes",
+  "descripcion": "Controla la contaminación de los lubricantes: limpieza, filtrado, almacenamiento y rotulado correctos.",
   "peso": 0.05,
   "tipo": "Capacidad"
  },
@@ -760,7 +760,7 @@
   "rol": "Lubricador",
   "categoria": "Competencias Técnicas",
   "nombre": "Manejo de equipos de aplicación",
-  "descripcion": "Uso de engrasadoras, bombas y equipos de trasiego",
+  "descripcion": "Usa correctamente engrasadoras, bombas y equipos de trasiego.",
   "peso": 0.04,
   "tipo": "Capacidad"
  },
@@ -769,7 +769,7 @@
   "rol": "Lubricador",
   "categoria": "Confiabilidad del Activo",
   "nombre": "Reducción de averías",
-  "descripcion": "Impacto en la eliminación de fallas repetitivas por lubricación",
+  "descripcion": "Elimina fallas repetitivas: cuando una falla se repite, analiza por qué pasa y aplica una solución definitiva, no solo repara.",
   "peso": 0.09,
   "tipo": "Resultado"
  },
@@ -778,7 +778,7 @@
   "rol": "Lubricador",
   "categoria": "Confiabilidad del Activo",
   "nombre": "Aumento de MTBF",
-  "descripcion": "Mejora en comportamiento del activo por buena lubricación",
+  "descripcion": "Sus intervenciones hacen que los equipos que atiende duren más tiempo sin fallar (mejora el MTBF).",
   "peso": 0.07,
   "tipo": "Resultado"
  },
@@ -787,7 +787,7 @@
   "rol": "Lubricador",
   "categoria": "Confiabilidad del Activo",
   "nombre": "Calidad del preventivo",
-  "descripcion": "Hallazgos y precisión en inspecciones y rutas de lubricación",
+  "descripcion": "En los preventivos e inspecciones encuentra hallazgos reales, los reporta y deja el equipo en mejor condición de como lo encontró.",
   "peso": 0.07,
   "tipo": "Resultado"
  },
@@ -796,7 +796,7 @@
   "rol": "Lubricador",
   "categoria": "Seguridad",
   "nombre": "Bloqueo y aislamiento",
-  "descripcion": "Cumplimiento de procedimientos de seguridad en lubricación",
+  "descripcion": "Aplica siempre el bloqueo y aislamiento de energías (LOTOTO) antes de intervenir un equipo, sin saltarse pasos.",
   "peso": 0.05,
   "tipo": "Capacidad"
  },
@@ -805,7 +805,7 @@
   "rol": "Lubricador",
   "categoria": "Seguridad",
   "nombre": "APR y estándares",
-  "descripcion": "Calidad del análisis previo",
+  "descripcion": "Hace el APR (análisis previo de riesgos) completo y a conciencia antes de cada trabajo, y cumple los estándares de seguridad.",
   "peso": 0.03,
   "tipo": "Capacidad"
  },
@@ -814,7 +814,7 @@
   "rol": "Lubricador",
   "categoria": "Seguridad",
   "nombre": "Orden y 5S",
-  "descripcion": "Cuidado del área, herramientas y almacen de lubricantes",
+  "descripcion": "Mantiene ordenados su área, sus herramientas y el almacén de lubricantes, y deja limpio el sitio de trabajo al terminar (5S).",
   "peso": 0.04,
   "tipo": "Capacidad"
  },
@@ -823,7 +823,7 @@
   "rol": "Lubricador",
   "categoria": "Competencias Técnicas",
   "nombre": "Manejo de SAP",
-  "descripcion": "",
+  "descripcion": "Maneja SAP: crea avisos, consulta y cierra órdenes de trabajo, notifica tiempos y busca repuestos o materiales.",
   "peso": 0.04,
   "tipo": "Capacidad"
  },
@@ -832,7 +832,7 @@
   "rol": "Lubricador",
   "categoria": "Competencias Técnicas",
   "nombre": "Tipos de mantenimiento y/o TPM",
-  "descripcion": "",
+  "descripcion": "Maneja los diferentes tipos de mantenimiento (correctivo, preventivo, predictivo y autónomo) y aplica herramientas TPM como tarjetas, limpieza-inspección y lecciones de un punto.",
   "peso": 0.04,
   "tipo": "Capacidad"
  },
@@ -841,7 +841,7 @@
   "rol": "Lubricador",
   "categoria": "Confiabilidad del Activo",
   "nombre": "Conocimientos administrativos",
-  "descripcion": "",
+  "descripcion": "Maneja la parte administrativa de su trabajo: diligencia formatos y reportes, hace solicitudes de compra o servicio y controla tiempos y costos.",
   "peso": 0.03,
   "tipo": "Capacidad"
  },
@@ -850,7 +850,7 @@
   "rol": "Lubricador",
   "categoria": "Confiabilidad del Activo",
   "nombre": "Planeación - MRP",
-  "descripcion": "",
+  "descripcion": "Planea sus trabajos con anticipación: identifica los repuestos y materiales que necesita, verifica existencias (MRP) y los pide a tiempo.",
   "peso": 0.03,
   "tipo": "Capacidad"
  },
@@ -859,7 +859,7 @@
   "rol": "Lubricador",
   "categoria": "Competencias Técnicas",
   "nombre": "Habilidades de control de procesos",
-  "descripcion": "",
+  "descripcion": "Entiende cómo funciona el proceso de la máquina (secuencia, variables y parámetros) y cómo su intervención afecta la producción y la calidad.",
   "peso": 0.03,
   "tipo": "Capacidad"
  },
@@ -868,7 +868,7 @@
   "rol": "Lubricador",
   "categoria": "Habilidades Blandas",
   "nombre": "Trabajo en equipo",
-  "descripcion": "Coordinación con producción y otros técnicos",
+  "descripcion": "Trabaja en equipo con producción y con técnicos de otras especialidades: apoya, coordina y comparte lo que sabe.",
   "peso": 0.03,
   "tipo": "Capacidad"
  },
@@ -877,7 +877,7 @@
   "rol": "Lubricador",
   "categoria": "Habilidades Blandas",
   "nombre": "Toma de decisiones",
-  "descripcion": "Criterio técnico y oportunidad",
+  "descripcion": "Ante una falla toma decisiones técnicas acertadas y a tiempo, y sabe cuándo escalar el problema.",
   "peso": 0.02,
   "tipo": "Capacidad"
  },
@@ -886,7 +886,7 @@
   "rol": "Lubricador",
   "categoria": "Habilidades Blandas",
   "nombre": "Comunicación",
-  "descripcion": "Claridad en reportes de lubricación",
+  "descripcion": "Comunica con claridad, de palabra y por escrito (OT, bitácora, entrega de turno), qué encontró, qué hizo y qué quedó pendiente.",
   "peso": 0.02,
   "tipo": "Capacidad"
  }

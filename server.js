@@ -1522,6 +1522,22 @@ async function arrancar() {
             console.log(`🧩 Catálogo de polivalencia actualizado a la matriz ARBEX (${d.habilidades.length} acciones).`);
         }
     }
+    // Una sola vez: las acciones del catálogo ARBEX pasan a tener un enunciado específico para calificar
+    {
+        const T = require('./lib/tecnicos');
+        const d = docs.obtener('tecnicos');
+        if (!d.enunciadosV2) {
+            const def = Object.fromEntries(T.habilidadesPorDefecto().map(h => [h.id, h]));
+            let n = 0;
+            for (const h of d.habilidades || []) {
+                const x = def[h.id];
+                if (x && x.nombre === h.nombre && x.descripcion && h.descripcion !== x.descripcion) { h.descripcion = x.descripcion; n++; }
+            }
+            d.enunciadosV2 = true;
+            await docs.guardar('tecnicos', d);
+            if (n) console.log(`🧩 ${n} acciones de polivalencia con enunciado específico.`);
+        }
+    }
     await docs.cargar('turnos', () => ({ tipos: require('./lib/tecnicos').tiposTurnoPorDefecto(), asignaciones: {} }));
     await docs.cargar('notificaciones', () => require('./lib/notificaciones').configPorDefecto());
     await docs.cargar('daily_archivo_indice', []);

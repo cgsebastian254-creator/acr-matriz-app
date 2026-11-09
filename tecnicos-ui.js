@@ -1127,7 +1127,7 @@ function renderAcciones(recargar) {
                 <td>${k + 1}</td>
                 <td><input class="form-control" list="lista-categorias" value="${attr(h.categoria)}" oninput="editarAccion(${i}, 'categoria', this.value)"></td>
                 <td><input class="form-control" value="${attr(h.nombre)}" placeholder="Nombre de la acción" oninput="editarAccion(${i}, 'nombre', this.value)"></td>
-                <td><input class="form-control" value="${attr(h.descripcion)}" placeholder="Qué se evalúa" oninput="editarAccion(${i}, 'descripcion', this.value)"></td>
+                <td><input class="form-control" value="${attr(h.descripcion)}" placeholder="Enunciado que verá quien califica (ej. Maneja los diferentes tipos de mantenimiento…)" oninput="editarAccion(${i}, 'descripcion', this.value)"></td>
                 <td><input class="form-control peso" type="number" min="0" max="100" step="0.5" value="${Math.round(h.peso * 1000) / 10}" oninput="editarAccion(${i}, 'peso', this.value / 100)"></td>
                 <td><select class="form-control" onchange="editarAccion(${i}, 'tipo', this.value)"><option ${h.tipo !== 'Resultado' ? 'selected' : ''}>Capacidad</option><option ${h.tipo === 'Resultado' ? 'selected' : ''}>Resultado</option></select></td>
                 <td><button class="btn btn-danger btn-sm" title="Quitar acción${calificados(h.id) ? ' (' + calificados(h.id) + ' técnicos ya calificados)' : ''}" onclick="quitarAccion(${i})">🗑️</button></td>
