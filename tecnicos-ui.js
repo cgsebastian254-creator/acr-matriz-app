@@ -1283,8 +1283,12 @@ function botonAsignar360(t, tipo, corto) {
     if (tipo === 'par') {
         const otros = tec.tecnicos.filter(x => x.activo !== false && x.id !== t.id).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
         const op = x => `<option value="${attr(x.id)}">${escaparHTML(x.nombre)}${x.rol !== t.rol ? ' · ' + escaparHTML(x.rol) : ''}</option>`;
-        const mismos = otros.filter(x => x.rol === t.rol), resto = otros.filter(x => x.rol !== t.rol);
+        const conMecanico = ['Instrumentista', 'Lubricador'].includes(t.rol);
+        const mismos = otros.filter(x => x.rol === t.rol);
+        const mecanicos = conMecanico ? otros.filter(x => x.rol === 'Mecánico').sort((a, b) => (b.area === t.area) - (a.area === t.area)) : [];
+        const resto = otros.filter(x => x.rol !== t.rol && !mecanicos.includes(x));
         const opciones = (mismos.length ? `<optgroup label="${attr(t.rol)}">${mismos.map(op).join('')}</optgroup>` : '') +
+            (mecanicos.length ? `<optgroup label="Mecánicos">${mecanicos.map(x => `<option value="${attr(x.id)}">${escaparHTML(x.nombre)}${x.area ? ' · ' + escaparHTML(x.area) : ''}</option>`).join('')}</optgroup>` : '') +
             `<optgroup label="Otras especialidades">${resto.map(op).join('')}</optgroup>`;
         return `<select class="e360-select" title="Elegir compañero" onchange="if (this.value) asignarManual360('${attr(t.id)}', 'par', { evaluadorTecnicoId: this.value })"><option value="">${corto ? '✏️' : '➕ Elegir…'}</option>${opciones}</select>`;
     }
