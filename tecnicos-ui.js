@@ -919,7 +919,8 @@ function areasTecnicos() {
 function filtroArea(id) { const el = document.getElementById(id); return el ? el.value : 'TODAS'; }
 function llenarSelectoresRoles() {
     document.querySelectorAll('select.sel-areas').forEach(sel => {
-        const antes = sel.value;
+        // Si el selector aún no tenía opciones, arranca en "Área: Todas" (no en "Sin área")
+        const antes = sel.options.length ? sel.value : 'TODAS';
         sel.innerHTML = '<option value="TODAS">Área: Todas</option>' + areasTecnicos().map(a => `<option value="${attr(a)}">${escaparHTML(a)}</option>`).join('') + '<option value="">Sin área</option>';
         if ([...sel.options].some(o => o.value === antes)) sel.value = antes;
     });
