@@ -1194,3 +1194,6 @@ tr.e360-diferencia td.col-fija { color: #fcd34d; }
 .perfil-360-partes span { display: grid; }
 .perfil-360-partes b { color: var(--text-main); font-size: 15px; }
 .puntaje-celda small { display: block; font-size: 10.5px; font-weight: 500; }
+
+.e360-limite{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--text-muted)}
+.e360-limite input{width:auto;padding:5px 8px;font-size:13px}

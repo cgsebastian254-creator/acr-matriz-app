@@ -1346,6 +1346,8 @@ function render360() {
             <span id="e360-suma" class="${Math.abs(suma - 1) < 0.005 ? 'suma-ok' : 'suma-mal'}">Pesos: ${Math.round(suma * 100)}%${Math.abs(suma - 1) < 0.005 ? ' ✅' : ' (se reparten sobre lo que sume)'}</span>
             <div class="grupo-botones">
                 <button class="btn btn-secondary btn-sm" id="e360-guardar-pesos" style="display: none;" onclick="guardarPesos360()">💾 Guardar pesos</button>
+                <label class="e360-limite" title="Después de esta fecha los enlaces se cierran">⏰ Fecha límite <input type="date" class="form-control" value="${attr(c.limite || '')}" onchange="guardarLimite360(this.value)"></label>
+                <button class="btn btn-secondary btn-sm" onclick="recordar360()">🔔 Recordar a pendientes</button>
                 <button class="btn btn-primary btn-sm" onclick="enviar360()">📨 Enviar correos pendientes</button>
             </div>
         </div>
@@ -1432,6 +1434,23 @@ async function enviar360() {
     try {
         const r = await postJSON('/api/360/enviar', { campanaId: e360.campanaId });
         alert(`📨 ${r.correos} correos en cola (${r.evaluaciones} evaluaciones). Salen desde Outlook en 1 a 5 minutos.${r.sinCorreo ? `\n\n⚠️ ${r.sinCorreo} evaluaciones no se enviaron porque el evaluador no tiene correo. Agrégalo en su perfil (o en ⬇️ Lista en Excel) y vuelve a enviar.` : ''}`);
+        await cargar360();
+    } catch (err) { alert('❌ ' + err.message); }
+}
+async function guardarLimite360(fecha) {
+    try {
+        await postJSON('/api/360/campana', { id: e360.campanaId, limite: fecha || '' });
+        await cargar360();
+        mostrarNotificacionToast('Evaluación 360°', fecha ? `Fecha límite: ${fecha.split('-').reverse().join('/')}. Después de ese día los enlaces se cierran.` : 'Sin fecha límite.');
+    } catch (err) { alert('❌ ' + err.message); }
+}
+async function recordar360() {
+    const c = e360.datos && e360.datos.campana;
+    if (!c) return;
+    if (!confirm(`Se enviará un recordatorio a cada evaluador que aún tiene evaluaciones sin responder${c.limite ? ', con la fecha límite (' + c.limite.split('-').reverse().join('/') + ')' : ''}. Quienes ya respondieron todo no reciben nada.\n\n¿Enviar?`)) return;
+    try {
+        const r = await postJSON('/api/360/enviar', { campanaId: e360.campanaId, reenviar: true, recordatorio: true });
+        alert(`🔔 ${r.correos} recordatorios en cola (${r.evaluaciones} evaluaciones pendientes). Salen desde Outlook en 1 a 5 minutos.`);
         await cargar360();
     } catch (err) { alert('❌ ' + err.message); }
 }
