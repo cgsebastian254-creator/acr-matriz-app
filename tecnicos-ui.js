@@ -1269,6 +1269,7 @@ function celda360(t, r, tipo) {
             ${tipo !== 'auto' ? `<span class="e360-evaluador">${escaparHTML(s.evaluador.nombre)}</span>` : ''}
             ${hecha ? `<span class="e360-puntaje">${pct(r.puntajes[tipo])}</span>` : ''}
             <div class="e360-acciones">
+                ${hecha ? '' : `<button title="Enviar este enlace por correo ahora" onclick="enviarUno360('${attr(s.token)}')">📧</button>`}
                 <button title="Copiar enlace" onclick="copiarEnlace360('${attr(s.token)}')">🔗</button>
                 <a title="Abrir el cuestionario" href="${attr(enlace360(s.token))}" target="_blank" rel="noopener">↗</a>
                 ${tipo !== 'auto' ? botonAsignar360(t, tipo, true) : ''}
@@ -1426,6 +1427,22 @@ async function enviar360() {
         alert(`📨 ${r.correos} correos en cola (${r.evaluaciones} evaluaciones). Salen desde Outlook en 1 a 5 minutos.${r.sinCorreo ? `\n\n⚠️ ${r.sinCorreo} evaluaciones no se enviaron porque el evaluador no tiene correo. Agrégalo en su perfil (o en ⬇️ Lista en Excel) y vuelve a enviar.` : ''}`);
         await cargar360();
     } catch (err) { alert('❌ ' + err.message); }
+}
+async function enviarUno360(token) {
+    const s = (e360.datos.resultados || []).flatMap(r => r.solicitudes || []).find(x => x.token === token);
+    const quien = s && s.evaluador ? `${s.evaluador.nombre || ''}${s.evaluador.correo ? ' (' + s.evaluador.correo + ')' : ''}` : 'el evaluador';
+    if (!confirm(`Se enviará SOLO este enlace por correo a ${quien}.\n\n¿Enviar?`)) return;
+    try {
+        const r = await postJSON('/api/360/enviar', { campanaId: e360.campanaId, tokens: [token], reenviar: true });
+        alert(r.correos ? '📨 Correo en cola. Sale desde Outlook en 1 a 5 minutos.' : '⚠️ No se envió: el evaluador no tiene correo.');
+        await cargar360();
+    } catch (err) { alert('❌ ' + err.message); }
+}
+async function eliminarCampana360() {
+    const c = e360.datos && e360.datos.campana;
+    if (!c) return;
+    if (!confirm(`¿Eliminar la evaluación "${c.nombre}" con todas sus asignaciones y respuestas?\n\nLos enlaces enviados dejarán de funcionar. Esto no se puede deshacer.`)) return;
+    try { await postJSON('/api/360/campana', { id: c.id, eliminar: true }); e360.campanaId = ''; await cargar360(); } catch (err) { alert('❌ ' + err.message); }
 }
 function exportar360() {
     if (!e360.campanaId) return alert('Primero crea una evaluación.');

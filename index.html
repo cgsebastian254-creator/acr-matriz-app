@@ -336,6 +336,7 @@
                     <div class="filter-group">
                         <select id="e360-campana" class="select-input" onchange="cargar360(this.value)"></select>
                         <button class="btn btn-secondary" onclick="nuevaCampana360()">➕ Nueva evaluación</button>
+                        <button class="btn btn-secondary" title="Eliminar la evaluación seleccionada (por ejemplo, una de prueba)" onclick="eliminarCampana360()">🗑️</button>
                         <select id="e360-rol" class="select-input sel-roles" data-todos="1" onchange="render360()"></select>
                         <select id="e360-area" class="select-input sel-areas" onchange="render360()"></select>
                         <input type="text" id="e360-buscar" class="search-input" placeholder="🔍 Técnico o evaluador..." oninput="render360()">
