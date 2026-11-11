@@ -708,9 +708,12 @@ async function cargarColaEnvios() {
     try { const d = await storage.load('envios_feed'); if (Array.isArray(d)) colaEnvios = d; } catch (e) { /* sin base de datos */ }
 }
 async function encolarEnvio({ para, cc, asunto, html, solicitadoPor }) {
-    const envio = { id: 'envio-' + Date.now().toString(36) + '-' + crypto.randomBytes(3).toString('hex'), para, cc: cc || [], asunto, html, fecha: new Date().toISOString(), solicitadoPor: solicitadoPor || '' };
+    // Los envíos en grupo se publican escalonados (1 cada 3 s) para no superar el límite de Outlook (30 correos por minuto)
+    const ultimo = colaEnvios.length ? new Date(colaEnvios[0].fecha).getTime() : 0;
+    const cuando = Math.max(Date.now(), ultimo + 3000);
+    const envio = { id: 'envio-' + Date.now().toString(36) + '-' + crypto.randomBytes(3).toString('hex'), para, cc: cc || [], asunto, html, fecha: new Date(cuando).toISOString(), solicitadoPor: solicitadoPor || '' };
     colaEnvios.unshift(envio);
-    colaEnvios = colaEnvios.slice(0, 80);
+    colaEnvios = colaEnvios.slice(0, 200);
     await storage.save('envios_feed', colaEnvios);
     return envio;
 }
@@ -745,7 +748,8 @@ function estadoPowerAutomate() {
     return {
         ultimaLecturaEnvios: feedLecturas.envios ? new Date(feedLecturas.envios).toISOString() : null,
         ultimaLecturaReporte: feedLecturas.alertas ? new Date(feedLecturas.alertas).toISOString() : null,
-        ultimosEnvios: colaEnvios.slice(0, 8).map(e => ({ fecha: e.fecha, para: e.para, asunto: e.asunto }))
+        enviosHoy: colaEnvios.filter(e => Date.now() - new Date(e.fecha).getTime() < 86400000).length,
+        ultimosEnvios: colaEnvios.slice(0, 60).map(e => ({ fecha: e.fecha, para: e.para, asunto: e.asunto, espera: new Date(e.fecha).getTime() > Date.now() }))
     };
 }
 // Un correo automático (recordatorio, aviso de no realizado o prueba)
@@ -896,7 +900,7 @@ const server = http.createServer((req, res) => {
         if (pathname === '/feeds/envios.xml') {
             feedLecturas.envios = Date.now();
             // Solo los envíos de los últimos 2 días, para no repetir correos viejos
-            const recientes = colaEnvios.filter(e => Date.now() - new Date(e.fecha).getTime() < 2 * 86400000);
+            const recientes = colaEnvios.filter(e => { const t = new Date(e.fecha).getTime(); return t <= Date.now() && Date.now() - t < 2 * 86400000; });
             xml = rss('Envíos de alertas ACR', recientes.map(e => ({ id: e.id, titulo: e.asunto, html: e.html, fecha: e.fecha, para: [...e.para, ...(e.cc || [])] })), req);
         } else {
             feedLecturas.alertas = Date.now();

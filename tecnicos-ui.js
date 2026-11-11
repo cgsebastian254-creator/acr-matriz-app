@@ -845,7 +845,7 @@ function renderEstadoPowerAutomate() {
         </div>
         <div>Última revisión del flujo: <strong>${escaparHTML(fecha(pa.ultimaLecturaEnvios))}</strong></div>
         <div>Último correo automático: <strong>${escaparHTML(st.ultimoRecordatorio ? fechaTxt(st.ultimoRecordatorio) : 'aún no')}</strong></div>
-        ${(pa.ultimosEnvios || []).length ? `<div style="margin-top: 8px;">Últimos correos en cola:</div><ul style="margin: 4px 0 0 18px;">${pa.ultimosEnvios.map(e => `<li>${escaparHTML(fecha(e.fecha))} → ${escaparHTML((e.para || []).join(', '))}: ${escaparHTML(e.asunto)}</li>`).join('')}</ul>` : ''}`;
+        ${(pa.ultimosEnvios || []).length ? `<div style="margin-top: 8px;">Correos en cola (últimas 24 h: <b>${pa.enviosHoy || 0}</b>):</div><ul style="margin: 4px 0 0 18px; max-height: 260px; overflow-y: auto;">${pa.ultimosEnvios.map(e => `<li>${e.espera ? '⏳ ' : ''}${escaparHTML(fecha(e.fecha))} → ${escaparHTML((e.para || []).join(', '))}: ${escaparHTML(e.asunto)}</li>`).join('')}</ul>` : ''}`;
 }
 
 // =====================================================================
@@ -1521,7 +1521,8 @@ async function recordar360() {
     if (!confirm(`Se enviará un recordatorio a cada evaluador que aún tiene evaluaciones sin responder${c.limite ? ', con la fecha límite (' + c.limite.split('-').reverse().join('/') + ')' : ''}. Quienes ya respondieron todo no reciben nada.\n\n¿Enviar?`)) return;
     try {
         const r = await postJSON('/api/360/enviar', { campanaId: e360.campanaId, reenviar: true, recordatorio: true });
-        alert(`🔔 ${r.correos} recordatorios en cola (${r.evaluaciones} evaluaciones pendientes). Salen desde Outlook en 1 a 5 minutos.`);
+        const g = r.porGrupo || {};
+        alert(`🔔 ${r.correos} recordatorios en cola (${r.evaluaciones} evaluaciones pendientes):\n\n• Técnicos: ${g.tecnicos || 0}\n• Supervisores: ${g.supervisores || 0}\n• Ingenieros: ${g.ingenieros || 0}${r.sinCorreo ? `\n\n⚠️ ${r.sinCorreo} evaluaciones sin correo del evaluador.` : ''}\n\nSalen escalonados desde Outlook (unos 20 por minuto) en los próximos minutos.`);
         await cargar360();
     } catch (err) { alert('❌ ' + err.message); }
 }
