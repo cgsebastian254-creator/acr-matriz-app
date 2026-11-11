@@ -1251,12 +1251,13 @@ function enlace360(token) { return `${(e360.datos && e360.datos.urlBase) || loca
 function solicitud360(r, tipo) { return (r.solicitudes || []).filter(s => s.tipo === tipo); }
 
 function celda360(t, r, tipo) {
-    if (tipo === 'ingenieria') {
+    if (tipo === 'ingenieria' && !solicitud360(r, tipo).length) {
         const a = avance(t);
         return `<div class="e360-celda ${a.hechas === a.total && a.total ? 'ok' : a.hechas ? 'parcial' : ''}">
             <span class="e360-estado">${a.hechas === a.total && a.total ? '✅ Completa' : a.hechas ? `⏳ ${a.hechas}/${a.total}` : '— Sin calificar'}</span>
             <span class="e360-puntaje">${pct(r.puntajes.ingenieria)}</span>
-            <button class="link" onclick="irACalificar('${attr(t.id)}')">⭐ Calificar</button></div>`;
+            <button class="link" onclick="irACalificar('${attr(t.id)}')">⭐ Calificar</button>
+            ${botonAsignar360(t, 'ingenieria')}</div>`;
     }
     const sols = solicitud360(r, tipo);
     if (!sols.length) {
@@ -1292,6 +1293,7 @@ function botonAsignar360(t, tipo, corto) {
             `<optgroup label="Otras especialidades">${resto.map(op).join('')}</optgroup>`;
         return `<select class="e360-select" title="Elegir compañero" onchange="if (this.value) asignarManual360('${attr(t.id)}', 'par', { evaluadorTecnicoId: this.value })"><option value="">${corto ? '✏️' : '➕ Elegir…'}</option>${opciones}</select>`;
     }
+    if (tipo === 'ingenieria') return `<button class="${corto ? '' : 'link'}" title="Asignar ingeniero (por correo)" onclick="pedirIngeniero360('${attr(t.id)}')">${corto ? '✏️' : '➕ Enviar a ingeniero'}</button>`;
     return `<button class="${corto ? '' : 'link'}" title="Asignar supervisor" onclick="pedirSupervisor360('${attr(t.id)}')">${corto ? '✏️' : '➕ Asignar'}</button>`;
 }
 
@@ -1325,12 +1327,13 @@ function render360() {
     const ing = { hechas: lista.filter(t => { const a = avance(t); return a.total && a.hechas === a.total; }).length };
     const suma = Object.values(c.pesos).reduce((a, b) => a + b, 0);
     const tarjeta = (tipo, icono, extra) => {
-        const k = tipo === 'ingenieria' ? { total: lista.length, hechas: ing.hechas, sinAsignar: 0 } : cuenta(tipo);
+        const conCorreo = tipo === 'ingenieria' && lista.some(t => solicitud360(porId[t.id], 'ingenieria').length);
+        const k = tipo === 'ingenieria' && !conCorreo ? { total: lista.length, hechas: ing.hechas, sinAsignar: 0 } : cuenta(tipo);
         const p = k.total ? Math.round(k.hechas / k.total * 100) : 0;
         return `<div class="e360-fuente">
             <div class="e360-fuente-cab"><span>${icono} ${escaparHTML(d.tipos[tipo].corto)}</span>
                 <label title="Peso en el resultado final"><input type="number" min="0" max="100" step="5" value="${Math.round(c.pesos[tipo] * 100)}" data-tipo="${tipo}" class="e360-peso" oninput="marcarPesos360()">%</label></div>
-            <div class="tt-avance"><div><span style="width:${p}%"></span></div><small>${k.hechas}/${k.total}${tipo === 'ingenieria' ? ' completas' : ' respondidas'}</small></div>
+            <div class="tt-avance"><div><span style="width:${p}%"></span></div><small>${k.hechas}/${k.total}${tipo === 'ingenieria' && !conCorreo ? ' completas' : ' respondidas'}</small></div>
             ${k.sinAsignar ? `<small class="texto-aviso">${k.sinAsignar} sin asignar</small>` : ''}
             ${extra || ''}
         </div>`;
@@ -1340,7 +1343,7 @@ function render360() {
             ${tarjeta('auto', '🙋', `<button class="btn btn-secondary btn-sm" onclick="asignar360('auto')">👤 Crear autoevaluaciones</button>`)}
             ${tarjeta('par', '🤝', `<button class="btn btn-secondary btn-sm" onclick="asignar360('companeros')">🎲 Asignar compañeros al azar</button>`)}
             ${tarjeta('supervisor', '👔', `<button class="btn btn-secondary btn-sm" onclick="asignarSupervisoresPerfil360()">👔 Supervisores del perfil</button><button class="btn btn-secondary btn-sm" onclick="pedirSupervisor360()">✏️ Asignar uno a varios</button>`)}
-            ${tarjeta('ingenieria', '🛠️', `<button class="btn btn-secondary btn-sm" onclick="vistaTecnicos('calificar')">⭐ Ir a calificar</button>`)}
+            ${tarjeta('ingenieria', '🛠️', `<button class="btn btn-secondary btn-sm" onclick="abrirIngenieros360()">🛠️ Repartir entre ingenieros</button><button class="btn btn-secondary btn-sm" onclick="vistaTecnicos('calificar')">⭐ Calificar en la app</button>`)}
         </div>
         <div class="e360-barra-acciones">
             <span id="e360-suma" class="${Math.abs(suma - 1) < 0.005 ? 'suma-ok' : 'suma-mal'}">Pesos: ${Math.round(suma * 100)}%${Math.abs(suma - 1) < 0.005 ? ' ✅' : ' (se reparten sobre lo que sume)'}</span>
@@ -1420,6 +1423,74 @@ async function pedirSupervisor360(tecnicoId) {
         await cargar360();
         mostrarNotificacionToast('Evaluación 360°', `${r.asignadas} evaluaciones asignadas a ${nombre}.`);
     } catch (err) { alert('❌ ' + err.message); }
+}
+// ---------- Ingenieros (evalúan por correo, repartidos por área) ----------
+function abrirIngenieros360() {
+    const c = e360.datos && e360.datos.campana;
+    if (!c) return;
+    const previos = (c.ingenieros || []).map(i => `${i.nombre}; ${i.correo}; ${i.area || ''}`).join('\n');
+    let m = document.getElementById('modal-ing360');
+    if (!m) {
+        m = document.createElement('div');
+        m.id = 'modal-ing360'; m.className = 'modal-backdrop';
+        m.innerHTML = `<div class="modal-box" style="max-width: 640px;">
+            <div class="modal-header"><h2>🛠️ Repartir entre ingenieros</h2><button class="close-modal" onclick="document.getElementById('modal-ing360').classList.remove('active')">&times;</button></div>
+            <p class="texto-ayuda">Un ingeniero por línea: <b>Nombre; correo; área</b> (TM o Conversión). Cada técnico queda con un ingeniero de su misma área, repartidos parejo y mezclando especialidades. Solo se asignan los técnicos que aún no tienen ingeniero.</p>
+            <textarea id="ing360-lista" class="form-control" rows="10" style="font-family: monospace; font-size: 13px;" placeholder="Luis Correa; luis.f.correa@kcc.com; Conversión&#10;Jhon Garcia; jhon.c.garcia@kcc.com; TM"></textarea>
+            <div id="ing360-vista" class="texto-ayuda" style="margin-top: 8px;"></div>
+            <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px;">
+                <button class="btn btn-secondary" onclick="document.getElementById('modal-ing360').classList.remove('active')">Cancelar</button>
+                <button class="btn btn-primary" onclick="repartirIngenieros360()">🛠️ Repartir</button>
+            </div></div>`;
+        document.body.appendChild(m);
+        m.querySelector('#ing360-lista').addEventListener('input', vistaIngenieros360);
+    }
+    m.querySelector('#ing360-lista').value = previos;
+    vistaIngenieros360();
+    m.classList.add('active');
+}
+function leerIngenieros360() {
+    return document.getElementById('ing360-lista').value.split('\n').map(l => l.split(/[;\t]/).map(x => x.trim())).filter(x => x[0])
+        .map(([nombre, correo, area]) => ({ nombre, correo: correo || '', area: /^conv/i.test(area || '') ? 'Conversión' : /^tm$/i.test(area || '') ? 'TM' : (area || '') }));
+}
+function vistaIngenieros360() {
+    const ings = leerIngenieros360();
+    const malos = ings.filter(i => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(i.correo));
+    const porArea = a => tec.tecnicos.filter(t => t.activo !== false && (t.area || '') === a).length;
+    const areas = [...new Set(ings.map(i => i.area))];
+    document.getElementById('ing360-vista').innerHTML = !ings.length ? '' :
+        areas.map(a => { const n = ings.filter(i => i.area === a).length; const t = a ? porArea(a) : tec.tecnicos.length; return `<b>${escaparHTML(a || 'Sin área (todos)')}</b>: ${n} ingeniero${n === 1 ? '' : 's'} para ${t} técnicos (≈${Math.ceil(t / n)} c/u)`; }).join(' · ') +
+        (malos.length ? `<br><span class="texto-aviso">⚠️ Revisa el correo de: ${malos.map(i => escaparHTML(i.nombre)).join(', ')}</span>` : '');
+}
+async function repartirIngenieros360() {
+    const ings = leerIngenieros360();
+    if (!ings.length) return alert('Escribe al menos un ingeniero.');
+    if (ings.some(i => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(i.correo))) return alert('Hay un correo inválido. Revisa la lista.');
+    try {
+        const r = await postJSON('/api/360/asignar', { campanaId: e360.campanaId, modo: 'ingenieros', ingenieros: ings });
+        document.getElementById('modal-ing360').classList.remove('active');
+        await cargar360();
+        alert(`🛠️ ${r.asignadas} evaluaciones de ingeniería asignadas.\n\n${r.reparto.map(x => `• ${x.nombre} (${x.area || 'todas'}): ${x.total}`).join('\n')}${r.sinIngeniero ? `\n\n⚠️ ${r.sinIngeniero} técnicos sin ingeniero de su área.` : ''}\n\nRevisa la tabla y luego dale 📨 Enviar correos pendientes.`);
+    } catch (err) { alert('❌ ' + err.message); }
+}
+async function pedirIngeniero360(tecnicoId) {
+    const t = tec.tecnicos.find(x => x.id === tecnicoId);
+    const c = e360.datos && e360.datos.campana;
+    const ings = (c && c.ingenieros) || [];
+    let elegido = null;
+    if (ings.length) {
+        const txt = prompt(`Ingeniero que evaluará a ${t.nombre}. Escribe el número:\n\n${ings.map((i, k) => `${k + 1}. ${i.nombre} (${i.area || 'todas'})`).join('\n')}\n\no deja vacío para escribir otro.`);
+        if (txt === null) return;
+        elegido = ings[Number(txt) - 1] || null;
+    }
+    if (!elegido) {
+        const nombre = (prompt(`Nombre del ingeniero que evaluará a ${t.nombre}:`) || '').trim();
+        if (!nombre) return;
+        const correo = (prompt(`Correo de ${nombre}:`) || '').trim();
+        if (!correo) return;
+        elegido = { nombre, correo };
+    }
+    asignarManual360(tecnicoId, 'ingenieria', { nombre: elegido.nombre, correo: elegido.correo });
 }
 async function quitar360(token, respondida) {
     if (!confirm(respondida ? 'Esta evaluación YA fue respondida. Si la quitas se pierden sus calificaciones. ¿Quitarla?' : '¿Quitar esta asignación? El enlace dejará de funcionar.')) return;
