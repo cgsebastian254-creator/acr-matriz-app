@@ -1058,6 +1058,28 @@ const server = http.createServer((req, res) => {
     if (/^\/api\/(tecnicos|habilidades|360|turnos|acceso-tecnicos)(\/|$)/.test(pathname) && !esAdminTecnicos(sesion)) {
         return sendJson(res, 403, { error: 'No tienes acceso al módulo Técnicos. Pide acceso a un administrador de la matriz de polivalencia.', sinAcceso: true });
     }
+    // ---------- Presupuesto IFP: el tablero lo ven todos; cargar o restablecer datos, solo administradores ----------
+    if (pathname === '/presupuesto' && req.method === 'GET') {
+        res.writeHead(302, { Location: '/presupuesto.html' }); res.end(); return;
+    }
+    if (pathname === '/api/presupuesto' && req.method === 'GET') {
+        const d = docs.obtener('presupuesto') || {};
+        return sendJson(res, 200, { estado: d.estado || null, actualizado: d.actualizado || null, por: d.por || '', puedeEditar: esAdminTecnicos(sesion) });
+    }
+    if (pathname === '/api/presupuesto' && req.method === 'POST') {
+        if (!esAdminTecnicos(sesion)) return sendJson(res, 403, { error: 'Solo los administradores pueden cargar datos del presupuesto.' });
+        readBody(req, 8 * 1024 * 1024, async body => {
+            try {
+                const p = JSON.parse(body || '{}');
+                if (!p.estado || typeof p.estado !== 'object' || typeof p.estado.months !== 'object') throw new Error('Datos de presupuesto inválidos.');
+                const por = (sesion && (sesion.nombre || (sesion.correo && nombreDesdeCorreo(sesion.correo)))) || '';
+                await docs.guardar('presupuesto', { estado: p.estado, actualizado: new Date().toISOString(), por });
+                broadcastEvent({ type: 'presupuesto_updated', user: por });
+                sendJson(res, 200, { success: true });
+            } catch (e) { sendJson(res, 400, { error: e.message }); }
+        });
+        return;
+    }
     if (pathname === '/api/acceso-tecnicos' && req.method === 'GET') {
         return sendJson(res, 200, { admins: adminsTecnicos() });
     }
@@ -1546,6 +1568,7 @@ async function arrancar() {
     await docs.cargar('notificaciones', () => require('./lib/notificaciones').configPorDefecto());
     await docs.cargar('daily_archivo_indice', []);
     await docs.cargar('tecnicos_acceso', () => ({ admins: ADMINS_TECNICOS_INICIALES }));
+    await docs.cargar('presupuesto', () => ({ estado: null }));
     await docs.cargar('evaluacion360', () => ({ campanas: [], solicitudes: [] }));
     await docs.cargar('correos_acr', () => ({ ids: [], registro: [], inicializado: false }));
     const pendientes = readJson(DAILY_DATA_FILE);

@@ -1,0 +1,1924 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Presupuesto IFP</title>
+  <link rel="stylesheet" href="/vendor/presupuesto.css">
+    <!-- html2pdf.js para descarga directa de informes PDF -->
+  <script src="/vendor/html2pdf.bundle.min.js"></script>
+  <!-- SheetJS para lectura instantánea de Excel (.xls / .xlsx) 100% en el navegador -->
+  <script src="/vendor/xlsx.full.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .glow-orange {
+      box-shadow: 0 0 25px -5px rgba(255, 122, 0, 0.35);
+    }
+    .glow-red {
+      box-shadow: 0 0 20px -3px rgba(239, 68, 68, 0.4);
+    }
+    .glow-[#FF7A00] {
+      box-shadow: 0 0 20px -3px rgba(16, 185, 129, 0.35);
+    }
+    .card-glass {
+      background: linear-gradient(135deg, rgba(15, 26, 54, 0.85) 0%, rgba(10, 18, 38, 0.95) 100%);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .dropzone.dragover {
+      border-color: #FF7A00 !important;
+      background: rgba(255, 122, 0, 0.14) !important;
+      transform: scale(1.01);
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="bg-[#070D1E] text-slate-100 min-h-screen custom-scroll p-4 md:p-6 antialiased selection:bg-orange-500 selection:text-white">
+
+  <!-- ========================================================================= -->
+  <!-- TOP NAVIGATION & GLOBAL HEADER                                            -->
+  <!-- ========================================================================= -->
+  <header class="max-w-[1480px] mx-auto mb-6 relative">
+    <!-- Company Logo: esquina superior derecha del header, fondo blanco -->
+    <div class="absolute -top-1 right-0 z-20 bg-white rounded-lg shadow-md px-3 py-1.5 flex items-center justify-center">
+      <img src="data:image/png;base64,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" alt="Logo empresa" class="h-5 w-auto" />
+    </div>
+
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-4 pt-2 border-b border-slate-800/80">
+      
+      <!-- Brand & Title -->
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-[#FF7A00] to-amber-400 flex items-center justify-center shadow-lg shadow-orange-500/20 text-white font-extrabold text-xl tracking-tighter">
+          IFP
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+              PRESUPUESTO IFP
+              <span class="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/30">
+                Modelo 1606
+              </span>
+            </h1>
+          </div>
+          <p class="text-xs text-slate-400 mt-0.5">
+            Monitor Financiero &middot; Control MTD &middot; Proyección Diaria de Cierre
+          </p>
+        </div>
+      </div>
+
+      <!-- Live Executive Notification Banner -->
+      <div id="alert-banner" class="flex-1 max-w-2xl bg-slate-900/90 border border-red-500/40 rounded-xl px-4 py-2.5 flex items-center justify-between gap-3 shadow-lg glow-red transition-all">
+        <div class="flex items-center gap-3 min-w-0">
+          <span class="relative flex h-3 w-3 flex-shrink-0">
+            <span id="alert-pulse" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+            <span id="alert-dot" class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+          </span>
+          <div class="truncate">
+            <div class="text-[10px] font-bold tracking-wider uppercase text-red-400 flex items-center gap-1.5" id="alert-title">
+              <span>ALERTA DE PROYECCIÓN</span> &bull; <span>[MENSAJE EJECUTIVO]</span>
+            </div>
+            <p id="alert-message" class="text-xs font-semibold text-slate-200 truncate">
+              Al ritmo actual, el mes cierra en <span class="text-red-400 font-bold">$4,120.5M</span> — <span class="text-red-400 font-bold">+2.6%</span> por encima del presupuesto.
+            </p>
+          </div>
+        </div>
+        <div class="hidden sm:flex flex-col items-end flex-shrink-0 text-right">
+          <span class="text-[10px] uppercase tracking-wider text-slate-400 font-medium">Estado Global</span>
+          <span id="alert-badge" class="text-xs font-extrabold text-red-400 bg-red-500/20 px-2 py-0.5 rounded border border-red-500/40">
+            SOBREGIRO PROYECTADO
+          </span>
+        </div>
+      </div>
+
+      <!-- Controls, Upload Button & Tabs -->
+      <div class="flex items-center gap-2.5 flex-wrap">
+        
+        
+        <!-- Volver a la app -->
+        <a href="/" class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white font-bold text-xs shadow-md">🏠 Módulos</a>
+        <!-- Corporate PDF Export Button -->
+        <button onclick="openCorporateReportModal()" class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white font-bold text-xs shadow-md transition-all transform hover:scale-105 active:scale-95">
+          <svg class="w-4 h-4 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          <span>📄 Exportar Informe PDF</span>
+        </button>
+
+        <!-- Live Upload Excel Button -->
+        <button data-solo-admin onclick="openUploadModal()" class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#FF7A00] to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs shadow-lg shadow-orange-500/25 transition-all transform hover:scale-105 active:scale-95">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+          </svg>
+          <span>📥 Cargar Archivo Diario</span>
+        </button>
+
+        <!-- Tab Selector -->
+        <div class="bg-slate-900/90 p-1 rounded-xl border border-slate-800 flex items-center text-xs font-medium">
+          <button onclick="switchTab('page1')" id="tab-btn-page1" class="px-3 py-1.5 rounded-lg bg-[#FF7A00] text-white font-semibold transition-all shadow-md shadow-orange-500/20">
+            1. Cockpit Ejecutivo
+          </button>
+          <button onclick="switchTab('page2')" id="tab-btn-page2" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition-all">
+            2. Radiografía CeCo
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ======================================================================= -->
+    <!-- SUBHEADER: FILTRO DINÁMICO DE AÑOMES & METRICAS                         -->
+    <!-- ======================================================================= -->
+    <div class="flex flex-wrap items-center justify-between gap-3 pt-3 text-xs text-slate-400">
+      <div class="flex items-center gap-2.5 flex-wrap">
+        <span class="text-slate-500 uppercase font-semibold text-[10px] tracking-wider">Filtro Activo:</span>
+        
+        <!-- Interactive Month Selector Dropdown -->
+        <div class="flex items-center gap-1.5 bg-slate-800/90 px-2.5 py-1 rounded-lg border border-slate-700/80 shadow-sm">
+          <svg class="w-3.5 h-3.5 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+          <span class="text-slate-400 text-[11px] font-semibold">AñoMes:</span>
+          <select id="select-anomes" onchange="onMonthChange(this.value)" class="bg-slate-900 text-orange-400 font-extrabold text-xs rounded px-2 py-0.5 border border-slate-700/80 focus:outline-none focus:border-orange-500 cursor-pointer">
+            <!-- Populated dynamically via JS -->
+          </select>
+        </div>
+
+        <span class="bg-slate-800/80 text-slate-200 px-2.5 py-1 rounded-md border border-slate-700/60">
+          Día de corte: <strong id="filter-corte" class="text-orange-400">24 de 31</strong> (<span id="filter-restantes">7 días restantes</span>)
+        </span>
+
+        <button data-solo-admin onclick="openBudgetModal()" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-md border border-slate-700/60 flex items-center gap-1.5 transition-all">
+          <span>⚙️ Presupuesto:</span>
+          <strong id="filter-presupuesto-tag" class="text-emerald-400 font-mono font-bold">$480.0M</strong>
+          <span class="text-[10px] text-orange-400 underline">Editar</span>
+        </button>
+
+        <button data-solo-admin onclick="resetCurrentMonthData()" class="bg-slate-800/80 hover:bg-red-500/20 text-slate-300 hover:text-red-400 px-2.5 py-1 rounded-md border border-slate-700/60 flex items-center gap-1 transition-all cursor-pointer" title="Eliminar y limpiar todos los datos cargados de este mes">
+          <span>🗑️ Limpiar Mes</span>
+        </button>
+        <span id="presupuesto-actualizado" class="text-[11px] text-slate-500"></span>
+      </div>
+
+      <div class="flex items-center gap-4 text-xs font-mono">
+        <span class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Bajo Control (&le;95%)
+        </span>
+        <span class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-amber-400"></span> En Límite (95-102%)
+        </span>
+        <span class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-red-400"></span> Sobregiro (&gt;102%)
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================================================================= -->
+  <!-- TAB 1: COCKPIT EJECUTIVO (PÁGINA 1)                                       -->
+  <!-- ========================================================================= -->
+  <main id="view-page1" class="max-w-[1480px] mx-auto space-y-5">
+    
+    <!-- 1. Top 4 Smart KPI Cards (2x2 Grid) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      
+      <!-- KPI 1: Consumo Real (MTD) -->
+      <div class="card-glass rounded-2xl p-5 border border-slate-800/90 relative overflow-hidden group hover:border-slate-700 transition-all">
+        <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl"></div>
+        <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
+          <span class="font-semibold uppercase tracking-wider flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-blue-400"></span>
+            CONSUMO REAL (MTD)
+          </span>
+          <span id="kpi1-tag" class="text-[11px] font-mono text-slate-400">Al día 24</span>
+        </div>
+        <div class="text-3xl lg:text-4xl font-extrabold text-white font-mono tracking-tight my-1">
+          <span id="kpi1-val">$229.03</span><span class="text-base font-normal text-slate-400 ml-1">M COP</span>
+        </div>
+        <div class="mt-3 flex items-center justify-between text-xs pt-2.5 border-t border-slate-800/80">
+          <span class="text-slate-400">Avance del Presupuesto:</span>
+          <span class="font-bold text-slate-200 flex items-center gap-1">
+            <span id="kpi1-sub" class="text-orange-400">47.7%</span> de la Meta
+          </span>
+        </div>
+      </div>
+
+      <!-- KPI 2: Presupuesto Meta (Con Botón de Cambio Rápido) -->
+      <div class="card-glass rounded-2xl p-5 border border-slate-800/90 relative overflow-hidden group hover:border-slate-700 transition-all">
+        <div class="absolute top-0 right-0 w-32 h-32 bg-slate-500/5 rounded-full blur-2xl"></div>
+        <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
+          <span class="font-semibold uppercase tracking-wider flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+            PRESUPUESTO META
+          </span>
+          <button data-solo-admin onclick="openBudgetModal()" class="text-[11px] font-mono text-orange-400 hover:text-orange-300 flex items-center gap-1 bg-orange-500/10 hover:bg-orange-500/20 px-2 py-0.5 rounded border border-orange-500/30 transition-all cursor-pointer">
+            ✏️ Cambiar Meta
+          </button>
+        </div>
+        <div class="text-3xl lg:text-4xl font-extrabold text-white font-mono tracking-tight my-1">
+          <span id="kpi2-val">$480.00</span><span class="text-base font-normal text-slate-400 ml-1">M COP</span>
+        </div>
+        <div class="mt-3 flex items-center justify-between text-xs pt-2.5 border-t border-slate-800/80">
+          <span class="text-slate-400">Saldo Disponible:</span>
+          <span id="kpi2-sub" class="font-bold text-emerald-400 font-mono">
+            $250.97M (52.3%)
+          </span>
+        </div>
+      </div>
+
+      <!-- KPI 3: Proyección Cierre (Alerta Sobregiro) -->
+      <div id="kpi3-card" class="card-glass rounded-2xl p-5 border border-red-500/50 relative overflow-hidden group glow-red transition-all">
+        <div class="absolute top-0 right-0 w-36 h-36 bg-red-500/10 rounded-full blur-2xl"></div>
+        <div class="flex items-center justify-between text-xs text-red-400 mb-2 font-semibold">
+          <span class="uppercase tracking-wider flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+            PROYECCIÓN DE CIERRE
+          </span>
+          <span id="kpi3-badge" class="text-[10px] uppercase font-bold bg-red-500/20 text-red-400 px-2 py-0.5 rounded border border-red-500/30">
+            BAJO CONTROL
+          </span>
+        </div>
+        <div class="text-3xl lg:text-4xl font-extrabold text-white font-mono tracking-tight my-1">
+          <span id="kpi3-val">$300.60</span><span class="text-base font-normal text-slate-400 ml-1">M COP</span>
+        </div>
+        <div class="mt-3 flex items-center justify-between text-xs pt-2.5 border-t border-red-500/20">
+          <span class="text-slate-300">Desviación Proyectada:</span>
+          <span id="kpi3-sub" class="font-bold text-emerald-400 font-mono">
+            -$179.40M ahorro
+          </span>
+        </div>
+      </div>
+
+      <!-- KPI 4: Ritmo Diario vs Permitido -->
+      <div class="card-glass rounded-2xl p-5 border border-slate-800/90 relative overflow-hidden group hover:border-slate-700 transition-all">
+        <div class="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full blur-2xl"></div>
+        <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
+          <span class="font-semibold uppercase tracking-wider flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-orange-400"></span>
+            RITMO DIARIO VS PERMITIDO
+          </span>
+          <span id="kpi4-tag" class="text-[11px] font-mono text-orange-400 font-bold">7 días rest.</span>
+        </div>
+        <div class="text-3xl lg:text-4xl font-extrabold text-white font-mono tracking-tight my-1 flex items-baseline gap-2">
+          <span id="kpi4-val-actual">$14.3<span class="text-xs font-normal text-slate-400">M/d</span></span>
+          <span class="text-sm text-slate-500">vs</span>
+          <span id="kpi4-val-permitido" class="text-xl font-bold text-slate-400 font-mono">$50.2<span class="text-xs font-normal text-slate-500">M/d</span></span>
+        </div>
+        <div class="mt-3 flex items-center justify-between text-xs pt-2.5 border-t border-slate-800/80">
+          <span class="text-slate-400">Consumo del Día (último):</span>
+          <span id="kpi4-sub" class="font-bold text-orange-400 font-mono">
+            $18.50M
+          </span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 2. Mid Section: Main Trajectory Chart (70%) + Mix Breakdown (30%) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      
+      <!-- Main Chart: Consumo Real Acumulado vs Ritmo Ideal vs Proyección (8 Cols) -->
+      <div class="lg:col-span-8 card-glass rounded-2xl p-5 border border-slate-800/90 relative flex flex-col justify-between">
+        <div>
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+            <div>
+              <h3 class="text-base font-bold text-white flex items-center gap-2">
+                <svg class="w-4 h-4 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                Evolución Diaria: Consumo Real vs Trayectoria Ideal &amp; Proyección
+              </h3>
+              <p class="text-xs text-slate-400">Comparativa acumulada día a día frente a la meta lineal y la estimación de fin de mes</p>
+            </div>
+            <!-- Legend -->
+            <div class="flex items-center gap-3 text-xs flex-wrap font-medium">
+              <span class="flex items-center gap-1.5 text-slate-300">
+                <span class="w-3 h-1 bg-[#FF7A00] rounded"></span> Consumo Real
+              </span>
+              <span class="flex items-center gap-1.5 text-slate-400">
+                <span class="w-3 h-0.5 border-b border-dashed border-slate-300"></span> Ritmo Ideal
+              </span>
+              <span class="flex items-center gap-1.5 text-red-400">
+                <span class="w-3 h-0.5 border-b border-dotted border-red-400"></span> Proyección Cierre
+              </span>
+            </div>
+          </div>
+
+          <!-- Dynamic SVG Line/Area Chart Container -->
+          <div id="chart-container" class="h-64 sm:h-72 w-full">
+            <!-- Rendered dynamically by renderChart() -->
+          </div>
+        </div>
+
+        <div class="mt-3 flex items-center justify-between text-[11px] text-slate-400 bg-slate-900/60 rounded-lg p-2.5 border border-slate-800">
+          <div id="executive-interpretation">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <div id="anomaly-alert-container">
+          <!-- Rendered dynamically solo si se detecta un movimiento atipico -->
+        </div>
+      </div>
+
+      <!-- Secondary Visual: Donut Chart Mix Almacén vs Servicios (4 Cols) -->
+      <div class="lg:col-span-4 card-glass rounded-2xl p-5 border border-slate-800/90 flex flex-col">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <svg class="w-4 h-4 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
+            Mix de Consumo: Tipo
+          </h3>
+          <span class="text-xs text-slate-400">Medida: <code class="text-orange-400 text-[10px]">[% Almacen]</code></span>
+        </div>
+
+        <!-- Interactive Ring Donut Chart -->
+        <div class="relative flex-1 flex items-center justify-center min-h-[220px]">
+          <svg id="donut-svg" class="w-64 h-64 transform -rotate-90" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="38" stroke="#1e293b" stroke-width="14" fill="transparent"/>
+            <circle id="donut-almacen" cx="50" cy="50" r="38" stroke="#FF7A00" stroke-width="14" fill="transparent"
+                    stroke-dasharray="124.15 238.76" stroke-dashoffset="0" class="transition-all duration-500"/>
+            <circle id="donut-servicios" cx="50" cy="50" r="38" stroke="#00D2FF" stroke-width="14" fill="transparent"
+                    stroke-dasharray="114.60 238.76" stroke-dashoffset="-124.15" class="transition-all duration-500"/>
+            <circle id="donut-otros" cx="50" cy="50" r="38" stroke="#94A3B8" stroke-width="14" fill="transparent"
+                    stroke-dasharray="0 238.76" stroke-dashoffset="-238.76" class="transition-all duration-500"/>
+          </svg>
+          <div class="absolute flex flex-col items-center justify-center text-center">
+            <span class="text-xs text-slate-400 font-medium">Total Real</span>
+            <span id="donut-total" class="text-2xl font-extrabold text-white font-mono">$229M</span>
+            <span class="text-[10px] text-slate-400">100% MTD</span>
+          </div>
+        </div>
+
+        <!-- Breakdown Details -->
+        <div class="space-y-2.5 pt-3 border-t border-slate-800">
+          <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-[#FF7A00]"></span>
+              <div>
+                <div class="text-xs font-bold text-white">Almacén (Repuestos/Insumos)</div>
+                <div id="donut-almacen-val" class="text-[10px] text-slate-400 font-mono">$119.1M COP</div>
+              </div>
+            </div>
+            <div class="text-right">
+              <span id="donut-almacen-pct" class="text-sm font-extrabold text-orange-400 font-mono">52.0%</span>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-[#00D2FF]"></span>
+              <div>
+                <div class="text-xs font-bold text-white">Servicios &amp; Contratistas</div>
+                <div id="donut-servicios-val" class="text-[10px] text-slate-400 font-mono">$109.9M COP</div>
+              </div>
+            </div>
+            <div class="text-right">
+              <span id="donut-servicios-pct" class="text-sm font-extrabold text-cyan-400 font-mono">48.0%</span>
+            </div>
+          </div>
+
+          <div id="donut-otros-row" class="hidden items-center justify-between p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-[#94A3B8]"></span>
+              <div>
+                <div class="text-xs font-bold text-white">Otros Costos</div>
+                <div id="donut-otros-val" class="text-[10px] text-slate-400 font-mono">$0.000M COP</div>
+              </div>
+            </div>
+            <div class="text-right">
+              <span id="donut-otros-pct" class="text-sm font-extrabold text-slate-400 font-mono">0.0%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 3. Bottom Section: Ranking CeCos -->
+    <div class="card-glass rounded-2xl p-5 border border-slate-800/90">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <div>
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-orange-400"></span>
+            Semáforo de Desviación por Centro de Costo (Top Centros con Mayor Volumen)
+          </h3>
+          <p class="text-xs text-slate-400">Centros de costo ordenados por volumen y ejecución frente a la meta</p>
+        </div>
+        <button onclick="switchTab('page2')" class="text-xs font-bold text-orange-400 hover:text-orange-300 flex items-center gap-1 self-start sm:self-auto">
+          Ver todos los CeCos en Página 2 &rarr;
+        </button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead>
+            <tr class="border-b border-slate-800 text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
+              <th class="pb-3 pl-2">CeCo</th>
+              <th class="pb-3">Nombre &amp; Área</th>
+              <th class="pb-3 text-right">Consumo Real (COP)</th>
+              <th class="pb-3 text-right">% del Total del Mes</th>
+              <th class="pb-3 text-right">Proy. Cierre</th>
+              <th class="pb-3 text-center">Concentración</th>
+            </tr>
+          </thead>
+          <tbody id="ceco-table-body" class="divide-y divide-slate-800/60 font-mono">
+            <!-- Rendered dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- TAB 2: RADIOGRAFÍA CECO & HISTÓRICO                                       -->
+  <!-- ========================================================================= -->
+  <main id="view-page2" class="max-w-[1480px] mx-auto space-y-5 hidden">
+    <div class="card-glass rounded-2xl p-6 border border-slate-800">
+      <h2 class="text-xl font-bold text-white mb-2 flex items-center gap-2">
+        <span class="w-3 h-3 rounded-full bg-orange-400"></span>
+        Detalle de Auditoría por Centro de Costo (Todos los CeCos)
+      </h2>
+      <p class="text-xs text-slate-400 mb-6">Visualización completa de los centros de costo con distribución Almacén vs Servicios.</p>
+      
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs font-mono">
+          <thead>
+            <tr class="border-b border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider">
+              <th class="pb-3">CeCo</th>
+              <th class="pb-3">Nombre</th>
+              <th class="pb-3">Área</th>
+              <th class="pb-3 text-right">Almacén (COP)</th>
+              <th class="pb-3 text-right">Servicio (COP)</th>
+              <th class="pb-3 text-right">Total Real</th>
+              <th class="pb-3 text-right">% del Total del Mes</th>
+            </tr>
+          </thead>
+          <tbody id="full-ceco-table-body" class="divide-y divide-slate-800/60">
+            <!-- Rendered dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: CARGAR ARCHIVO DIARIO / PARAMETROS (DRAG & DROP)                   -->
+  <!-- ========================================================================= -->
+  <div id="upload-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-[#0F1A36] border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+      
+      <!-- Close Button -->
+      <button onclick="closeUploadModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg font-bold">
+        &times;
+      </button>
+
+      <!-- Modal Header -->
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#FF7A00] to-amber-400 flex items-center justify-center text-white font-bold text-lg">
+          📥
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-white">Cargar Datos Diarios o Parámetros</h3>
+          <p class="text-xs text-slate-400">Arrastra archivos como <code class="text-orange-400">IFP_20260902.xls</code> o <code class="text-emerald-400">Parametros.xlsx</code></p>
+        </div>
+      </div>
+
+      <!-- Drag & Drop Zone -->
+      <div id="modal-dropzone" class="dropzone border-2 border-dashed border-blue-500/50 hover:border-orange-500 rounded-xl p-8 text-center cursor-pointer bg-blue-500/5 transition-all flex flex-col items-center justify-center gap-3 my-4">
+        <div class="text-4xl">📁</div>
+        <div class="text-sm font-bold text-slate-200">
+          Arrastra tu archivo aquí
+        </div>
+        <div class="text-xs text-slate-400">
+          Reconoce automáticamente el corte diario (ej. <strong class="text-orange-400">IFP_20260902</strong>)
+        </div>
+        <button type="button" class="mt-2 px-4 py-2 rounded-lg bg-[#FF7A00] hover:bg-orange-600 text-white font-bold text-xs shadow-md transition-all">
+          Examinar Archivo (.xls / .xlsx)
+        </button>
+        <input type="file" id="modal-file-input" class="hidden" accept=".xls,.xlsx" multiple>
+      </div>
+
+      <!-- Status & Feedback Area -->
+      <div id="modal-status" class="hidden p-3 rounded-lg text-xs mb-4"></div>
+
+      <!-- Footer Actions -->
+      <div class="flex items-center justify-between pt-3 border-t border-slate-800 text-xs">
+        <span></span>
+        <button onclick="closeUploadModal()" class="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold">
+          Cerrar
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: CAMBIAR PRESUPUESTO RÁPIDO                                         -->
+  <!-- ========================================================================= -->
+  <div id="budget-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-[#0F1A36] border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+      <button onclick="closeBudgetModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg font-bold">&times;</button>
+      
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-orange-500/20 text-orange-400 border border-orange-500/30 flex items-center justify-center text-xl">
+          💰
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-white">Editar Presupuesto Meta</h3>
+          <p class="text-xs text-slate-400">Mes seleccionado: <strong id="budget-modal-month-tag" class="text-orange-400">2026-09</strong></p>
+        </div>
+      </div>
+
+      <div class="space-y-3 my-4">
+        <label class="block text-xs text-slate-300 font-semibold">Monto del Presupuesto (en Millones COP):</label>
+        <div class="relative">
+          <span class="absolute left-3 top-2.5 text-slate-400 font-mono font-bold text-base">$</span>
+          <input type="number" step="0.01" id="input-budget-val" class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-8 pr-16 py-2.5 text-white font-mono font-bold text-lg focus:outline-none focus:border-orange-500" placeholder="480.00">
+          <span class="absolute right-3 top-3 text-xs text-slate-400 font-mono">M COP</span>
+        </div>
+        <p class="text-[11px] text-slate-400">
+          💡 Para <strong>$480,000,000 COP</strong> escribe <strong>480</strong>.<br>
+          💡 Para <strong>$890,000,000 COP</strong> escribe <strong>890</strong>.
+        </p>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+        <button onclick="closeBudgetModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">
+          Cancelar
+        </button>
+        <button onclick="saveNewBudget()" class="px-5 py-2 rounded-xl bg-[#FF7A00] hover:bg-orange-600 text-white text-xs font-bold shadow-lg shadow-orange-500/20">
+          Guardar y Recalcular
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 border border-emerald-500 text-emerald-400 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-xs font-semibold transform translate-y-24 opacity-0 transition-all duration-300 z-50">
+    <span>✅</span>
+    <span id="toast-msg">Datos cargados exitosamente</span>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- JAVASCRIPT: MOTOR COMPLETO DE CÁLCULO & GESTIÓN DE MESES                   -->
+  <!-- ========================================================================= -->
+  <script>
+    // --- DICCIONARIO DE MESES EN ESPAÑOL ---
+    const MONTH_NAMES = {
+      "01": "Enero", "02": "Febrero", "03": "Marzo", "04": "Abril",
+      "05": "Mayo", "06": "Junio", "07": "Julio", "08": "Agosto",
+      "09": "Septiembre", "10": "Octubre", "11": "Noviembre", "12": "Diciembre"
+    };
+
+    function getDaysInMonth(year, month) {
+      return new Date(year, month, 0).getDate();
+    }
+
+    // --- ESTADO BASE MULTI-MES (CARGADO DIRECTAMENTE DE PARAMETROS.XLSX) ---
+    const INITIAL_APP_STATE = {
+      activeMonth: "2026-09",
+      months: {
+        "2026-09": {
+          year: 2026,
+          month: 9,
+          daysInMonth: 30,
+          corteDia: 7,
+          presupuestoMeta: 560.00, // En Millones COP
+          dailyCumulative: [
+            { dia: 7, consumo: 22.96 }
+          ],
+          ultimoConsumoDia: 22.96,
+          almacenCOP: 11.94,
+          servicioCOP: 11.02,
+          otroCOP: 0,
+          cecos: [
+            { ceco: "CC-9304023", nombre: "CA Recicled fiber", area: "Producción", real: 10.2, meta: 80.0 },
+            { ceco: "CC-9304924", nombre: "CA Tissue Machine", area: "Producción", real: 8.5, meta: 60.0 },
+            { ceco: "CC-9304925", nombre: "CA Tratamiento de E", area: "Servicios Planta", real: 4.26, meta: 50.0 }
+          ]
+        },
+        "2026-08": {
+          year: 2026,
+          month: 8,
+          daysInMonth: 31,
+          corteDia: 24,
+          presupuestoMeta: 480.00, // De Parametros.xlsx ($480,000,000)
+          dailyCumulative: [
+            { dia: 1,  consumo: 12.5 },
+            { dia: 5,  consumo: 48.0 },
+            { dia: 10, consumo: 98.4 },
+            { dia: 15, consumo: 145.2 },
+            { dia: 20, consumo: 198.0 },
+            { dia: 24, consumo: 229.03 }
+          ],
+          ultimoConsumoDia: 14.31,
+          almacenCOP: 119.1,
+          servicioCOP: 109.9,
+          otroCOP: 0,
+          cecos: [
+            { ceco: "CC-104", nombre: "Mantenimiento Correctivo", area: "Operaciones", real: 72.5, almacen: 37.7, servicio: 34.8, meta: 95.0 },
+            { ceco: "CC-102", nombre: "Servicios Generales Planta", area: "Infraestructura", real: 54.2, almacen: 28.2, servicio: 26.0, meta: 70.0 },
+            { ceco: "CC-108", nombre: "Almacén Repuestos Críticos", area: "Logística", real: 41.8, almacen: 41.8, servicio: 0, meta: 65.0 },
+            { ceco: "CC-115", nombre: "Energía & Servicios Públicos", area: "Producción", real: 38.0, almacen: 11.4, servicio: 26.6, meta: 60.0 },
+            { ceco: "CC-120", nombre: "Lubricantes & Químicos IFP", area: "Química", real: 22.5, almacen: 22.5, servicio: 0, meta: 50.0 }
+          ]
+        },
+        "2026-07": {
+          year: 2026,
+          month: 7,
+          daysInMonth: 31,
+          corteDia: 31,
+          presupuestoMeta: 890.00, // De Parametros.xlsx ($890,000,000)
+          dailyCumulative: [
+            { dia: 5,  consumo: 140.0 },
+            { dia: 15, consumo: 430.0 },
+            { dia: 25, consumo: 710.0 },
+            { dia: 31, consumo: 865.4 }
+          ],
+          ultimoConsumoDia: 28.2,
+          almacenCOP: 450.0,
+          servicioCOP: 415.4,
+          otroCOP: 0,
+          cecos: [
+            { ceco: "CC-104", nombre: "Mantenimiento Correctivo", area: "Operaciones", real: 240.0, meta: 230.0 },
+            { ceco: "CC-102", nombre: "Servicios Generales Planta", area: "Infraestructura", real: 180.0, meta: 190.0 },
+            { ceco: "CC-108", nombre: "Almacén Repuestos Críticos", area: "Logística", real: 165.0, meta: 170.0 }
+          ]
+        }
+      }
+    };
+
+    let AppState = null;
+
+    // Estado guardado en la nube (app Matriz ACR): todos ven lo mismo; solo administradores cargan datos
+    let PUEDE_EDITAR = false;
+    function aplicarPermisos() {
+      document.querySelectorAll('[data-solo-admin]').forEach(b => { b.style.display = PUEDE_EDITAR ? '' : 'none'; });
+    }
+    function mostrarActualizado(fecha, por) {
+      const el = document.getElementById('presupuesto-actualizado');
+      if (!el) return;
+      el.textContent = fecha ? `Actualizado ${new Date(fecha).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })}${por ? ' por ' + por : ''}` : 'Sin datos cargados: se muestran datos de ejemplo';
+    }
+    function ultimoMes(st) {
+      const ks = Object.keys(st.months || {}).sort();
+      return ks.length ? ks[ks.length - 1] : st.activeMonth;
+    }
+    async function initAppState() {
+      let r = null;
+      try { r = await (await fetch('/api/presupuesto', { cache: 'no-store' })).json(); } catch (e) { /* sin conexión */ }
+      PUEDE_EDITAR = !!(r && r.puedeEditar);
+      AppState = (r && r.estado && r.estado.months) ? r.estado : Object.assign(JSON.parse(JSON.stringify(INITIAL_APP_STATE)), { _demo: true });
+      AppState.activeMonth = ultimoMes(AppState);
+      mostrarActualizado(r && r.estado ? r.actualizado : null, r && r.por);
+      aplicarPermisos();
+      populateMonthSelector();
+      recalculateAndRender();
+    }
+
+    async function saveState() {
+      if (!PUEDE_EDITAR) return;
+      try {
+        const resp = await fetch('/api/presupuesto', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estado: AppState }) });
+        const j = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(j.error || 'No se pudo guardar');
+        mostrarActualizado(new Date().toISOString(), 'ti');
+      } catch (e) {
+        showToast('❌ No se guardó en la nube: ' + e.message);
+      }
+    }
+
+    function resetToDemoData() {
+      if (!PUEDE_EDITAR) { showToast('🔒 Solo los administradores pueden cambiar los datos del presupuesto.'); return; }
+      AppState = JSON.parse(JSON.stringify(INITIAL_APP_STATE));
+      saveState();
+      populateMonthSelector();
+      recalculateAndRender();
+      showToast("Datos restablecidos a la demostración original.");
+      closeUploadModal();
+    }
+
+    // Poblar el dropdown selector de AñoMes
+    function populateMonthSelector() {
+      const select = document.getElementById('select-anomes');
+      select.innerHTML = '';
+      
+      const keys = Object.keys(AppState.months).sort().reverse();
+      keys.forEach(k => {
+        const parts = k.split('-');
+        const y = parts[0];
+        const m = parts[1];
+        const name = MONTH_NAMES[m] || m;
+        const opt = document.createElement('option');
+        opt.value = k;
+        opt.textContent = `${k} (${name} ${y})`;
+        if (k === AppState.activeMonth) opt.selected = true;
+        select.appendChild(opt);
+      });
+    }
+
+    // Evento al cambiar de mes en el dropdown
+    function onMonthChange(newMonth) {
+      if (AppState.months[newMonth]) {
+        AppState.activeMonth = newMonth;
+        recalculateAndRender();
+        showToast(`Cambiado al mes: ${newMonth}`);
+      }
+    }
+
+    
+    // --- ELIMINAR / LIMPIAR DATOS DEL MES ACTIVO ---
+    function resetCurrentMonthData() {
+      if (!PUEDE_EDITAR) { showToast('🔒 Solo los administradores pueden cambiar los datos del presupuesto.'); return; }
+      const mKey = AppState.activeMonth;
+      const parts = mKey.split('-');
+      const y = parts[0];
+      const m = parts[1];
+      const monthName = MONTH_NAMES[m] || m;
+
+      if (confirm(`¿Estás seguro de que deseas eliminar y limpiar todos los datos de ${monthName} ${y} (${mKey})?\n\nEsto borra el consumo acumulado y CeCos de este mes para que puedas volver a cargar tus archivos diarios desde cero.`)) {
+        if (AppState.months[mKey]) {
+          AppState.months[mKey].dailyCumulative = [];
+          AppState.months[mKey].corteDia = 1;
+          AppState.months[mKey].ultimoConsumoDia = 0;
+          AppState.months[mKey].almacenCOP = 0;
+          AppState.months[mKey].servicioCOP = 0;
+          AppState.months[mKey].otroCOP = 0;
+          AppState.months[mKey].cecos = [];
+          
+          saveState();
+          recalculateAndRender();
+          showToast(`🗑️ Datos de ${monthName} ${y} limpiados exitosamente. Puedes volver a cargar tus archivos.`);
+        }
+      }
+    }
+
+    // --- MODAL DE CAMBIO RÁPIDO DE PRESUPUESTO ---
+    function openBudgetModal() {
+      if (!PUEDE_EDITAR) { showToast('🔒 Solo los administradores pueden cambiar los datos del presupuesto.'); return; }
+      const mKey = AppState.activeMonth;
+      const curData = AppState.months[mKey];
+      document.getElementById('budget-modal-month-tag').textContent = `${mKey} (${MONTH_NAMES[String(curData.month).padStart(2, '0')]} ${curData.year})`;
+      document.getElementById('input-budget-val').value = curData.presupuestoMeta.toFixed(3);
+      document.getElementById('budget-modal').classList.remove('hidden');
+      document.getElementById('input-budget-val').focus();
+    }
+
+    function closeBudgetModal() {
+      document.getElementById('budget-modal').classList.add('hidden');
+    }
+
+    function saveNewBudget() {
+      const input = document.getElementById('input-budget-val');
+      const val = parseFloat(input.value);
+      if (isNaN(val) || val <= 0) {
+        alert("Por favor ingresa un monto válido de presupuesto.");
+        return;
+      }
+
+      const mKey = AppState.activeMonth;
+      AppState.months[mKey].presupuestoMeta = val;
+      saveState();
+      recalculateAndRender();
+      closeBudgetModal();
+      showToast(`Presupuesto de ${mKey} actualizado a $${val.toFixed(3)}M COP.`);
+    }
+
+    // --- CÁLCULO DAX REACTIVO PARA EL MES ACTIVO ---
+    function calculateCurrentMeasures() {
+      const mData = AppState.months[AppState.activeMonth];
+      const diasMes = mData.daysInMonth;               // días de calendario (para el eje del gráfico)
+      const diasTranscurridos = mData.corteDia;         // día de calendario del último dato
+      const diasRestantes = Math.max(0, diasMes - diasTranscurridos);
+      const presupuesto = mData.presupuestoMeta;
+
+      // DÍAS HÁBILES (lunes a viernes) — la planta no opera fines de semana,
+      // así que las proyecciones financieras deben basarse en esto, no en días de calendario.
+      const diasHabilesMes = countBusinessDaysInMonth(mData.year, mData.month);
+      const diasHabilesTranscurridos = Math.max(1, countBusinessDaysInRange(mData.year, mData.month, 1, diasTranscurridos));
+      const diasHabilesRestantes = Math.max(0, diasHabilesMes - diasHabilesTranscurridos);
+
+      const consumoMTD = mData.dailyCumulative.length > 0
+        ? mData.dailyCumulative[mData.dailyCumulative.length - 1].consumo
+        : 0;
+
+      // Avance %
+      const avancePct = presupuesto > 0 ? (consumoMTD / presupuesto) : 0;
+      // Falta por Consumir
+      const faltaPorConsumir = presupuesto - consumoMTD;
+      // Ritmo Actual Diario (sobre días HÁBILES transcurridos)
+      const ritmoActualDiario = diasHabilesTranscurridos > 0 ? (consumoMTD / diasHabilesTranscurridos) : 0;
+      // Proyección Cierre (ritmo diario hábil x total de días hábiles del mes)
+      const proyeccionCierre = diasHabilesTranscurridos > 0 ? (ritmoActualDiario * diasHabilesMes) : consumoMTD;
+      // Proyección %
+      const proyeccionPct = presupuesto > 0 ? (proyeccionCierre / presupuesto) : 1;
+      // Consumo Diario Permitido (repartido en los días HÁBILES que quedan)
+      const consumoDiarioPermitido = diasHabilesRestantes > 0 ? (faltaPorConsumir / diasHabilesRestantes) : 0;
+      // Desviación
+      const desviacionM = proyeccionCierre - presupuesto;
+      const desviacionPct = (proyeccionPct - 1) * 100;
+
+      return {
+        mData,
+        diasMes,
+        diasTranscurridos,
+        diasRestantes,
+        diasHabilesMes,
+        diasHabilesTranscurridos,
+        diasHabilesRestantes,
+        presupuesto,
+        consumoMTD,
+        avancePct,
+        faltaPorConsumir,
+        ritmoActualDiario,
+        proyeccionCierre,
+        proyeccionPct,
+        consumoDiarioPermitido,
+        desviacionM,
+        desviacionPct
+      };
+    }
+
+    // --- RENDERIZADO DEL DASHBOARD ---
+    function recalculateAndRender() {
+      const c = calculateCurrentMeasures();
+      const mData = c.mData;
+
+      // 1. Subheader (días hábiles: la planta no opera fines de semana)
+      document.getElementById('filter-corte').textContent = `${c.diasHabilesTranscurridos} de ${c.diasHabilesMes} días hábiles`;
+      document.getElementById('filter-restantes').textContent = `${c.diasHabilesRestantes} días hábiles restantes`;
+      document.getElementById('filter-presupuesto-tag').textContent = `$${c.presupuesto.toFixed(3)}M`;
+
+      // 2. Alert Banner
+      const alertBanner = document.getElementById('alert-banner');
+      const alertPulse = document.getElementById('alert-pulse');
+      const alertDot = document.getElementById('alert-dot');
+      const alertBadge = document.getElementById('alert-badge');
+      const alertMsg = document.getElementById('alert-message');
+
+      const isSobregiro = c.proyeccionPct > 1.02;
+      const isEnLimite = c.proyeccionPct > 0.95 && c.proyeccionPct <= 1.02;
+
+      if (isSobregiro) {
+        alertBanner.className = "flex-1 max-w-2xl bg-slate-900/90 border border-red-500/40 rounded-xl px-4 py-2.5 flex items-center justify-between gap-3 shadow-lg glow-red transition-all";
+        alertPulse.className = "animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75";
+        alertDot.className = "relative inline-flex rounded-full h-3 w-3 bg-red-500";
+        alertBadge.className = "text-xs font-extrabold text-red-400 bg-red-500/20 px-2 py-0.5 rounded border border-red-500/40";
+        alertBadge.textContent = "SOBREGIRO PROYECTADO";
+        alertMsg.innerHTML = `Al ritmo actual, el mes cierra en <span class="text-red-400 font-bold">$${c.proyeccionCierre.toFixed(3)}M</span> — <span class="text-red-400 font-bold">+${c.desviacionPct.toFixed(1)}%</span> por encima del presupuesto.`;
+      } else if (isEnLimite) {
+        alertBanner.className = "flex-1 max-w-2xl bg-slate-900/90 border border-amber-500/40 rounded-xl px-4 py-2.5 flex items-center justify-between gap-3 shadow-lg transition-all";
+        alertPulse.className = "animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75";
+        alertDot.className = "relative inline-flex rounded-full h-3 w-3 bg-amber-500";
+        alertBadge.className = "text-xs font-extrabold text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40";
+        alertBadge.textContent = "EN LÍMITE (PRECAUCIÓN)";
+        alertMsg.innerHTML = `Al ritmo actual, el mes cierra en <span class="text-amber-400 font-bold">$${c.proyeccionCierre.toFixed(3)}M</span> — <span class="text-amber-400 font-bold">${c.desviacionPct >= 0 ? '+' : ''}${c.desviacionPct.toFixed(1)}%</span> sobre presupuesto.`;
+      } else {
+        alertBanner.className = "flex-1 max-w-2xl bg-slate-900/90 border border-[#FF7A00]/40 rounded-xl px-4 py-2.5 flex items-center justify-between gap-3 shadow-lg glow-[#FF7A00] transition-all";
+        alertPulse.className = "hidden";
+        alertDot.className = "relative inline-flex rounded-full h-3 w-3 bg-[#FF7A00]";
+        alertBadge.className = "text-xs font-extrabold text-[#FF7A00] bg-[#FF7A00]/20 px-2 py-0.5 rounded border border-[#FF7A00]/40";
+        alertBadge.textContent = "BAJO CONTROL";
+        alertMsg.innerHTML = `Presupuesto bajo control: Cierre proyectado en <span class="text-[#FF7A00] font-bold">$${c.proyeccionCierre.toFixed(3)}M</span> (${(c.avancePct*100).toFixed(1)}% ejecutado).`;
+      }
+
+      // 3. KPI Cards
+      document.getElementById('kpi1-tag').textContent = `Al día ${c.diasTranscurridos}`;
+      document.getElementById('kpi1-val').textContent = `$${c.consumoMTD.toFixed(3)}`;
+      document.getElementById('kpi1-sub').textContent = `${(c.avancePct * 100).toFixed(1)}%`;
+
+      document.getElementById('kpi2-val').textContent = `$${c.presupuesto.toFixed(3)}`;
+      const saldoPct = c.presupuesto > 0 ? ((c.faltaPorConsumir / c.presupuesto) * 100).toFixed(1) : "0.0";
+      document.getElementById('kpi2-sub').textContent = `$${c.faltaPorConsumir.toFixed(3)}M (${saldoPct}%)`;
+
+      const kpi3Card = document.getElementById('kpi3-card');
+      const kpi3Val = document.getElementById('kpi3-val');
+      const kpi3Badge = document.getElementById('kpi3-badge');
+      const kpi3Sub = document.getElementById('kpi3-sub');
+
+      kpi3Val.textContent = `$${c.proyeccionCierre.toFixed(3)}`;
+      kpi3Badge.textContent = isSobregiro ? `+${c.desviacionPct.toFixed(1)}% RIESGO` : (isEnLimite ? `EN LÍMITE` : `BAJO CONTROL`);
+      kpi3Sub.textContent = `${c.desviacionM >= 0 ? '+' : ''}$${Math.abs(c.desviacionM).toFixed(3)}M ${c.desviacionM >= 0 ? 'exceso' : 'ahorro'}`;
+      
+      if (isSobregiro) {
+        kpi3Card.className = "card-glass rounded-2xl p-5 border border-red-500/50 relative overflow-hidden group glow-red transition-all";
+        kpi3Val.className = "text-3xl lg:text-4xl font-extrabold text-red-400 font-mono tracking-tight my-1";
+        kpi3Badge.className = "text-[10px] uppercase font-bold bg-red-500/20 text-red-400 px-2 py-0.5 rounded border border-red-500/30";
+        kpi3Sub.className = "font-bold text-red-400 font-mono";
+      } else {
+        kpi3Card.className = "card-glass rounded-2xl p-5 border border-[#FF7A00]/40 relative overflow-hidden group glow-[#FF7A00] transition-all";
+        kpi3Val.className = "text-3xl lg:text-4xl font-extrabold text-[#FF7A00] font-mono tracking-tight my-1";
+        kpi3Badge.className = "text-[10px] uppercase font-bold bg-[#FF7A00]/20 text-[#FF7A00] px-2 py-0.5 rounded border border-[#FF7A00]/30";
+        kpi3Sub.className = "font-bold text-[#FF7A00] font-mono";
+      }
+
+      document.getElementById('kpi4-tag').textContent = `${c.diasHabilesRestantes} días háb. rest.`;
+      document.getElementById('kpi4-val-actual').innerHTML = `$${c.ritmoActualDiario.toFixed(3)}<span class="text-xs font-normal text-slate-400">M/d</span>`;
+      document.getElementById('kpi4-val-permitido').innerHTML = `$${c.consumoDiarioPermitido.toFixed(3)}<span class="text-xs font-normal text-slate-500">M/d</span>`;
+      document.getElementById('kpi4-sub').textContent = `$${mData.ultimoConsumoDia.toFixed(3)}M`;
+
+      // 4. Interpretation Footer
+      document.getElementById('executive-interpretation').innerHTML = `
+        <strong class="text-slate-200">Interpretación Ejecutiva:</strong> El ritmo actual (${c.ritmoActualDiario.toFixed(3)}M/día hábil) proyecta un cierre en <span class="${isSobregiro ? 'text-red-400' : 'text-[#FF7A00]'} font-bold">$${c.proyeccionCierre.toFixed(3)}M</span>.
+        Para cumplir la meta de $${c.presupuesto.toFixed(3)}M, el consumo diario de los ${c.diasHabilesRestantes} días hábiles restantes debe limitarse a <span class="text-[#FF7A00] font-bold">$${c.consumoDiarioPermitido.toFixed(3)}M/día</span>.
+      `;
+
+      // 5. Render SVG Charts & Tables
+      renderChart(c);
+      renderDonut(mData, c.consumoMTD);
+      renderCeCoTables(c);
+      renderAnomalyAlert(mData);
+    }
+
+    // --- DETECCIÓN DE MOVIMIENTOS ATÍPICOS Y VALORES EXCLUIDOS ---
+    // No oculta ni descarta ningún valor del cálculo (los negativos ya se excluyeron
+    // en el parseo por política del ingeniero): esto solo INFORMA para trazabilidad.
+    function renderAnomalyAlert(mData) {
+      const container = document.getElementById('anomaly-alert-container');
+      let html = '';
+
+      // Aviso de trazabilidad: cuánto se excluyó por ser negativo (informativo, no bloquea nada)
+      if (mData.valoresNegativosExcluidos && mData.valoresNegativosExcluidos > 0) {
+        html += `
+          <div class="mt-2 flex items-start gap-2.5 text-[11px] bg-sky-500/10 border border-sky-500/30 rounded-lg p-2.5">
+            <span class="text-sky-400 mt-0.5">ℹ</span>
+            <div class="text-sky-100">
+              <strong class="text-sky-300">Política vigente:</strong> se excluyeron
+              <span class="font-bold font-mono">$${mData.valoresNegativosExcluidos.toFixed(3)}M</span>
+              en valores negativos (reversiones/notas crédito) de este archivo. Solo se contabilizan consumos positivos.
+            </div>
+          </div>
+        `;
+      }
+
+      // Alerta de concentración: un CeCo con peso desproporcionado sobre el total positivo
+      if (mData.cecos && mData.cecos.length > 0) {
+        const totalPositivo = mData.cecos.reduce((s, item) => s + Math.max(0, item.real), 0);
+        if (totalPositivo > 0) {
+          const UMBRAL_PCT = 0.45;
+          const atipicos = mData.cecos
+            .map(item => ({ ...item, pesoPct: Math.max(0, item.real) / totalPositivo }))
+            .filter(item => item.pesoPct >= UMBRAL_PCT)
+            .sort((a, b) => b.pesoPct - a.pesoPct);
+
+          if (atipicos.length > 0) {
+            const rows = atipicos.map(item => `
+              <span class="font-bold text-white">${item.nombre}</span>
+              (<span class="font-mono">${item.ceco}</span>):
+              <span class="font-bold text-amber-300 font-mono">$${item.real.toFixed(3)}M</span>
+              — ${(item.pesoPct * 100).toFixed(0)}% del consumo del mes
+            `).join('<br/>');
+
+            html += `
+              <div class="mt-2 flex items-start gap-2.5 text-[11px] bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5">
+                <span class="text-amber-400 mt-0.5">⚠</span>
+                <div class="text-amber-100">
+                  <strong class="text-amber-300">Concentración inusual detectada</strong> — un centro de costo domina el consumo del mes:<br/>
+                  ${rows}
+                </div>
+              </div>
+            `;
+          }
+        }
+      }
+
+      container.innerHTML = html;
+    }
+
+    // --- GRÁFICO SVG DINÁMICO ---
+    function renderChart(c) {
+      const container = document.getElementById('chart-container');
+      const maxVal = Math.max(c.presupuesto * 1.15, c.proyeccionCierre * 1.1, 500);
+      
+      const width = 800;
+      const height = 300;
+      const xStart = 60;
+      const xEnd = 770;
+      const yBottom = 260;
+      const yTop = 25;
+
+      const getX = (dia) => xStart + ((dia - 1) / (c.diasMes - 1)) * (xEnd - xStart);
+      const getY = (val) => yBottom - (val / maxVal) * (yBottom - yTop);
+
+      const xIdealEnd = getX(c.diasMes);
+      const yIdealEnd = getY(c.presupuesto);
+
+      const pts = c.mData.dailyCumulative.map(d => ({ x: getX(d.dia), y: getY(d.consumo), val: d.consumo, dia: d.dia }));
+      
+      let realPath = `M ${getX(1)} ${yBottom}`;
+      let areaPath = `M ${getX(1)} ${yBottom}`;
+      pts.forEach((p, idx) => {
+        if (idx === 0) {
+          realPath += ` L ${p.x} ${p.y}`;
+          areaPath += ` L ${p.x} ${p.y}`;
+        } else {
+          const prev = pts[idx - 1];
+          const cx = (prev.x + p.x) / 2;
+          realPath += ` C ${cx} ${prev.y}, ${cx} ${p.y}, ${p.x} ${p.y}`;
+          areaPath += ` C ${cx} ${prev.y}, ${cx} ${p.y}, ${p.x} ${p.y}`;
+        }
+      });
+      const lastPt = pts.length > 0 ? pts[pts.length - 1] : { x: getX(1), y: yBottom, val: 0 };
+      areaPath += ` L ${lastPt.x} ${yBottom} Z`;
+
+      const xProjEnd = getX(c.diasMes);
+      const yProjEnd = getY(c.proyeccionCierre);
+      const projPath = `M ${lastPt.x} ${lastPt.y} L ${xProjEnd} ${yProjEnd}`;
+      const projArea = `M ${lastPt.x} ${lastPt.y} L ${xProjEnd} ${yProjEnd} L ${xProjEnd} ${yBottom} L ${lastPt.x} ${yBottom} Z`;
+
+      container.innerHTML = `
+        <svg viewBox="0 0 ${width} ${height}" class="w-full h-full overflow-visible">
+          <defs>
+            <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#FF7A00" stop-opacity="0.4"/>
+              <stop offset="100%" stop-color="#FF7A00" stop-opacity="0.0"/>
+            </linearGradient>
+            <linearGradient id="projGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#EF4444" stop-opacity="0.25"/>
+              <stop offset="100%" stop-color="#EF4444" stop-opacity="0.0"/>
+            </linearGradient>
+          </defs>
+
+          <!-- Grid Lines -->
+          <line x1="${xStart}" y1="${getY(c.presupuesto)}" x2="${xEnd}" y2="${getY(c.presupuesto)}" stroke="#334155" stroke-dasharray="3 3"/>
+          <text x="${xStart - 8}" y="${getY(c.presupuesto) + 3}" fill="#94A3B8" font-size="9" text-anchor="end" font-family="monospace">$${c.presupuesto.toFixed(0)}M (Meta)</text>
+
+          <line x1="${xStart}" y1="${getY(c.presupuesto * 0.5)}" x2="${xEnd}" y2="${getY(c.presupuesto * 0.5)}" stroke="#1e293b" stroke-dasharray="3 3"/>
+          <line x1="${xStart}" y1="${yBottom}" x2="${xEnd}" y2="${yBottom}" stroke="#334155"/>
+          <text x="${xStart - 8}" y="${yBottom + 3}" fill="#64748B" font-size="9" text-anchor="end" font-family="monospace">$0</text>
+
+          <!-- Cutoff Line for Today -->
+          <line x1="${lastPt.x}" y1="${yTop}" x2="${lastPt.x}" y2="${yBottom}" stroke="#FF7A00" stroke-width="1.5" stroke-dasharray="4 4"/>
+          <rect x="${lastPt.x - 45}" y="${yTop - 12}" width="90" height="18" rx="4" fill="#FF7A00" fill-opacity="0.2" stroke="#FF7A00" stroke-width="1"/>
+          <text x="${lastPt.x}" y="${yTop}" fill="#FF7A00" font-size="9" font-weight="bold" text-anchor="middle">HOY &bull; DÍA ${c.diasTranscurridos}</text>
+
+          <!-- Ritmo Ideal Acumulado -->
+          <line x1="${xStart}" y1="${yBottom}" x2="${xIdealEnd}" y2="${yIdealEnd}" stroke="#94a3b8" stroke-width="2" stroke-dasharray="5 5"/>
+
+          <!-- Real Cumulative Area & Line -->
+          <path d="${areaPath}" fill="url(#areaGrad)"/>
+          <path d="${realPath}" fill="none" stroke="#FF7A00" stroke-width="3" stroke-linecap="round"/>
+
+          <!-- Last Real Point -->
+          <circle cx="${lastPt.x}" cy="${lastPt.y}" r="5" fill="#FF7A00" stroke="#FFFFFF" stroke-width="2"/>
+          <text x="${lastPt.x - 8}" y="${lastPt.y - 10}" fill="#FFFFFF" font-size="11" font-weight="bold" font-family="monospace">$${lastPt.val.toFixed(0)}M</text>
+
+          <!-- Projection Line & Area -->
+          <path d="${projArea}" fill="url(#projGrad)"/>
+          <path d="${projPath}" fill="none" stroke="#EF4444" stroke-width="3" stroke-dasharray="4 4" stroke-linecap="round"/>
+          <circle cx="${xProjEnd}" cy="${yProjEnd}" r="5" fill="#EF4444" stroke="#FFFFFF" stroke-width="2"/>
+          <text x="${xProjEnd}" y="${yProjEnd - 10}" fill="${c.desviacionM > 0 ? '#EF4444' : '#10B981'}" font-size="11" font-weight="bold" text-anchor="end" font-family="monospace">
+            Proy: $${c.proyeccionCierre.toFixed(3)}M (${c.desviacionPct >= 0 ? '+' : ''}${c.desviacionPct.toFixed(1)}%)
+          </text>
+
+          <!-- X Axis Day Labels -->
+          <text x="${getX(1)}" y="${yBottom + 18}" fill="#64748B" font-size="10" text-anchor="middle">D1</text>
+          <text x="${getX(5)}" y="${yBottom + 18}" fill="#64748B" font-size="10" text-anchor="middle">D5</text>
+          <text x="${getX(10)}" y="${yBottom + 18}" fill="#64748B" font-size="10" text-anchor="middle">D10</text>
+          <text x="${getX(15)}" y="${yBottom + 18}" fill="#64748B" font-size="10" text-anchor="middle">D15</text>
+          <text x="${getX(20)}" y="${yBottom + 18}" fill="#64748B" font-size="10" text-anchor="middle">D20</text>
+          <text x="${lastPt.x}" y="${yBottom + 18}" fill="#FF7A00" font-size="10" font-weight="bold" text-anchor="middle">D${c.diasTranscurridos}</text>
+          <text x="${getX(c.diasMes)}" y="${yBottom + 18}" fill="#64748B" font-size="10" text-anchor="middle">D${c.diasMes}</text>
+        </svg>
+      `;
+    }
+
+    // --- DONUT CHART (ALMACÉN VS SERVICIOS VS OTROS) ---
+    function renderDonut(mData, consumoMTD) {
+      // "Otros" se calcula como RESIDUO frente al KPI Consumo Real (MTD) — en vez de confiar
+      // ciegamente en el campo guardado mData.otroCOP — así la dona SIEMPRE cuadra con la
+      // tarjeta, incluso con datos que quedaron guardados en el navegador (localStorage) de
+      // una carga anterior a este ajuste, donde ese campo todavía no existía o no se había
+      // recalculado. Si no se recibe consumoMTD (llamada suelta), se cae al campo guardado.
+      const total = (typeof consumoMTD === 'number')
+        ? consumoMTD
+        : (mData.almacenCOP + mData.servicioCOP + (mData.otroCOP || 0));
+      const otroCOP = total - mData.almacenCOP - mData.servicioCOP;
+      // IMPORTANTE: este "total" se calcula exactamente igual que el KPI "Consumo Real (MTD)"
+      // (almacén + servicio + otro), así la dona y la tarjeta SIEMPRE cuadran, sin diferencia.
+      // El % de participación se calcula sobre el PESO (valor absoluto) de cada tipo,
+      // no sobre el neto — así, si el mes tiene una reversión grande que vuelve el
+      // total negativo o cero, el mix sigue reflejando la actividad real y no cae
+      // en una proporción inventada.
+      const totalAbs = Math.abs(mData.almacenCOP) + Math.abs(mData.servicioCOP) + Math.abs(otroCOP);
+      const pctAlm = totalAbs > 0 ? (Math.abs(mData.almacenCOP) / totalAbs) : 0;
+      const pctSer = totalAbs > 0 ? (Math.abs(mData.servicioCOP) / totalAbs) : 0;
+      const pctOtr = totalAbs > 0 ? (Math.abs(otroCOP) / totalAbs) : 0;
+
+      const circumference = 2 * Math.PI * 38; // 238.76
+      const almDash = (pctAlm * circumference).toFixed(2);
+      const serDash = (pctSer * circumference).toFixed(2);
+      const otrDash = (pctOtr * circumference).toFixed(2);
+
+      const almCircle = document.getElementById('donut-almacen');
+      const serCircle = document.getElementById('donut-servicios');
+      const otrCircle = document.getElementById('donut-otros');
+
+      almCircle.setAttribute('stroke-dasharray', `${almDash} ${circumference}`);
+      serCircle.setAttribute('stroke-dasharray', `${serDash} ${circumference}`);
+      serCircle.setAttribute('stroke-dashoffset', `-${almDash}`);
+      if (otrCircle) {
+        otrCircle.setAttribute('stroke-dasharray', `${otrDash} ${circumference}`);
+        otrCircle.setAttribute('stroke-dashoffset', `-${(parseFloat(almDash) + parseFloat(serDash)).toFixed(2)}`);
+      }
+
+      document.getElementById('donut-total').textContent = `$${total.toFixed(3)}M`;
+      document.getElementById('donut-almacen-val').textContent = `$${mData.almacenCOP.toFixed(3)}M COP`;
+      document.getElementById('donut-almacen-pct').textContent = `${(pctAlm * 100).toFixed(1)}%`;
+      document.getElementById('donut-servicios-val').textContent = `$${mData.servicioCOP.toFixed(3)}M COP`;
+      document.getElementById('donut-servicios-pct').textContent = `${(pctSer * 100).toFixed(1)}%`;
+
+      // Fila "Otros" solo se muestra si hay algo que mostrar (>0.001M ≈ $1.000 COP), para no
+      // saturar el dashboard en meses donde todo el gasto cae limpiamente en 717/527.
+      const otrosRow = document.getElementById('donut-otros-row');
+      if (otrosRow) {
+        if (Math.abs(otroCOP) >= 0.001) {
+          otrosRow.classList.remove('hidden');
+          otrosRow.classList.add('flex');
+          document.getElementById('donut-otros-val').textContent = `$${otroCOP.toFixed(3)}M COP`;
+          document.getElementById('donut-otros-pct').textContent = `${(pctOtr * 100).toFixed(1)}%`;
+        } else {
+          otrosRow.classList.add('hidden');
+          otrosRow.classList.remove('flex');
+        }
+      }
+    }
+
+
+    // --- TABLAS CECOS ---
+    function renderCeCoTables(c) {
+      const tbody = document.getElementById('ceco-table-body');
+      const fullTbody = document.getElementById('full-ceco-table-body');
+      const mData = c.mData;
+      
+      const sorted = [...mData.cecos].sort((a, b) => b.real - a.real);
+
+      function fmtCeCoVal(valM) {
+        if (valM >= 1) return '$' + valM.toFixed(3) + 'M';
+        if (valM >= 0.001) return '$' + (valM * 1000).toFixed(0) + 'K';
+        return '$' + Math.round(valM * 1000000).toLocaleString('es-CO');
+      }
+
+      // Total real del mes (para calcular participación % de cada CeCo — dato real,
+      // no una meta inventada por CeCo, ya que solo existe la meta GLOBAL del mes)
+      const totalMesReal = sorted.reduce((s, item) => s + item.real, 0);
+
+      tbody.innerHTML = sorted.slice(0, 5).map(item => {
+        const pctDelTotal = totalMesReal > 0 ? (item.real / totalMesReal) * 100 : 0;
+        const proy = c.diasHabilesTranscurridos > 0 ? (item.real / c.diasHabilesTranscurridos) * c.diasHabilesMes : item.real;
+        // "Concentración inusual": un solo CeCo pesando desproporcionado (>20%) sobre el total del mes
+        const isAlert = pctDelTotal > 20;
+        return `
+          <tr class="hover:bg-slate-800/40 transition-colors">
+            <td class="py-3 pl-2 font-bold text-white">${item.ceco}</td>
+            <td class="py-3 font-sans">
+              <div class="font-bold text-white">${item.nombre}</div>
+              <div class="text-[10px] text-slate-400">Área: ${item.area}</div>
+            </td>
+            <td class="py-3 text-right text-slate-200 font-bold">${fmtCeCoVal(item.real)}</td>
+            <td class="py-3 text-right">
+              <span class="px-2 py-0.5 rounded text-[11px] font-bold ${isAlert ? 'bg-red-500/20 text-red-400' : 'bg-[#FF7A00]/20 text-[#FF7A00]'}">
+                ${pctDelTotal.toFixed(1)}%
+              </span>
+            </td>
+            <td class="py-3 text-right font-bold ${isAlert ? 'text-red-400' : 'text-slate-200'}">${fmtCeCoVal(proy)}</td>
+            <td class="py-3 text-center">
+              <span class="inline-block w-2.5 h-2.5 rounded-full ${isAlert ? 'bg-red-500 shadow-md shadow-red-500/50' : 'bg-[#FF7A00]'}"></span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      fullTbody.innerHTML = sorted.map(item => {
+        const pctDelTotal = totalMesReal > 0 ? (item.real / totalMesReal) * 100 : 0;
+        const alm = item.almacen !== undefined ? item.almacen : 0;
+        const ser = item.servicio !== undefined ? item.servicio : 0;
+        return `
+          <tr class="hover:bg-slate-800/40">
+            <td class="py-3 font-bold text-white">${item.ceco}</td>
+            <td class="py-3 font-sans font-semibold text-white">${item.nombre}</td>
+            <td class="py-3 text-slate-400">${item.area}</td>
+            <td class="py-3 text-right text-orange-400">${fmtCeCoVal(alm)}</td>
+            <td class="py-3 text-right text-cyan-400">${fmtCeCoVal(ser)}</td>
+            <td class="py-3 text-right font-bold text-white">${fmtCeCoVal(item.real)}</td>
+            <td class="py-3 text-right text-slate-300 font-semibold">${pctDelTotal.toFixed(1)}%</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // --- PROCESADOR INTELIGENTE DE ARCHIVOS (IFP_YYYYMMDD Y PARAMETROS.XLSX) ---
+    // --- PROCESADOR INTELIGENTE DE ARCHIVOS (IFP_YYYYMMDD Y PARAMETROS.XLSX) ---
+    // --- PROCESADOR INTELIGENTE DE ARCHIVOS (IFP_YYYYMMDD Y PARAMETROS.XLSX) ---
+    // --- PROCESADOR INTELIGENTE DE ARCHIVOS (IFP_YYYYMMDD Y PARAMETROS.XLSX) ---
+    // --- FUNCIÓN DE PARSEO DE VALORES EN COP (ROBUSTO ANTE PUNTOS/COMAS/SUFIJOS) ---
+    function parseCOPValue(val) {
+      if (val === null || val === undefined) return 0;
+      if (typeof val === 'number') return val;
+      
+      let s = String(val).trim();
+      if (!s) return 0;
+      
+      // El signo negativo en los reportes SAP viene pegado antes de "COP"/"USD"
+      // (ej. "62.888.713- COP"), no necesariamente al final absoluto del texto.
+      let isNeg = s.includes('-');
+      s = s.replace(/COP/gi, '').replace(/USD/gi, '').replace(/-/g, '').trim();
+      if (!s) return 0;
+      
+      // Manejo de formatos con comas y puntos
+      if (s.includes('.') && s.includes(',')) {
+        if (s.lastIndexOf('.') > s.lastIndexOf(',')) {
+          // Formato EE.UU.: 22,960,235.50
+          s = s.replace(/,/g, '');
+        } else {
+          // Formato Español/SAP: 22.960.235,50
+          s = s.replace(/\./g, '').replace(',', '.');
+        }
+      } else if (s.includes('.')) {
+        const parts = s.split('.');
+        if (parts.length > 2) {
+          // Múltiples puntos: 22.960.235
+          s = s.replace(/\./g, '');
+        } else if (parts[1] && parts[1].length === 3) {
+          // Separador de miles: 22.960 o 960.000
+          s = s.replace(/\./g, '');
+        }
+      } else if (s.includes(',')) {
+        const parts = s.split(',');
+        if (parts.length > 2) {
+          // Múltiples comas: 22,960,235
+          s = s.replace(/,/g, '');
+        } else if (parts[1] && parts[1].length === 3) {
+          // Separador de miles EE.UU.: 22,960
+          s = s.replace(/,/g, '');
+        } else {
+          // Coma decimal española: 15,00 -> 15.00
+          s = s.replace(',', '.');
+        }
+      }
+
+      let num = parseFloat(s);
+      if (isNaN(num)) return 0;
+      return isNeg ? -num : num;
+    }
+
+    // --- MAPEO REAL DE CENTROS DE COSTO (según Parametros.xlsx) ---
+    const CECO_AREA_MAP = {
+      "9304924": { nombre: "CA Tissue Machine",      area: "TR/RF-WWTP" },
+      "9304023": { nombre: "CA Recicled fiber",      area: "TR/RF-WWTP" },
+      "9304021": { nombre: "CA Utilities Agua",      area: "TR/RF-WWTP" },
+      "9304012": { nombre: "CA Tratamiento Efluente",area: "TR/RF-WWTP" },
+      "9304017": { nombre: "Generales",              area: "Conversión" },
+      "9304026": { nombre: "RW3",                    area: "Conversión" },
+      "9304027": { nombre: "SINCRO 1",               area: "Conversión" },
+      "9304042": { nombre: "Hinnli",                 area: "Conversión" },
+      "9304028": { nombre: "SINCRO 2",               area: "Conversión" },
+      "9304029": { nombre: "Forte",                  area: "Conversión" },
+      "9304030": { nombre: "Futura",                 area: "Conversión" },
+      "9304033": { nombre: "Pocket",                 area: "Conversión" },
+      "9304019": { nombre: "CA Utilities Energía",   area: "Cogeneración" },
+      "9304020": { nombre: "CA Utilities Co-gen",    area: "Cogeneración" },
+      "9304022": { nombre: "CA Utilities Vapor",     area: "Cogeneración" },
+      "9304009": { nombre: "CA Mantenimiento",       area: "Mtto/Generales" },
+      "9304011": { nombre: "CA Generales de Planta", area: "Mtto/Generales" }
+    };
+
+    function detectCeCoArea(code, name) {
+      if (CECO_AREA_MAP[code]) return CECO_AREA_MAP[code].area;
+      const n = String(name || '').toLowerCase();
+      if (/fiber|fibra|tissue|papel|máquina|maquina|efluente|tratamiento|agua/i.test(n)) return "TR/RF-WWTP";
+      if (/energ|co-gen|cogen|vapor|caldera/i.test(n)) return "Cogeneración";
+      if (/mantenimiento|generales de pla/i.test(n)) return "Mtto/Generales";
+      return "Conversión";
+    }
+
+    // --- CONTEO DE DÍAS HÁBILES (Lunes a Viernes) ---
+    function countBusinessDaysInRange(year, month, fromDay, toDay) {
+      let count = 0;
+      for (let d = fromDay; d <= toDay; d++) {
+        const dow = new Date(year, month - 1, d).getDay(); // 0=Dom, 6=Sab
+        if (dow !== 0 && dow !== 6) count++;
+      }
+      return count;
+    }
+    function countBusinessDaysInMonth(year, month) {
+      return countBusinessDaysInRange(year, month, 1, getDaysInMonth(year, month));
+    }
+
+    function processExcelFile(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+
+            // CASO A: Archivo de Parámetros (Parametros.xlsx)
+            if (workbook.SheetNames.includes("Metas") || file.name.toLowerCase().includes("parametro")) {
+              const metasSheet = workbook.Sheets["Metas"] || workbook.Sheets[workbook.SheetNames[0]];
+              const metasRows = XLSX.utils.sheet_to_json(metasSheet, { header: 1, raw: false });
+              
+              let updatedCount = 0;
+              metasRows.forEach(r => {
+                if (!r || r.length < 2) return;
+                const aMes = String(r[0] || '').trim();
+                const presNum = parseCOPValue(r[1]);
+
+                if (aMes.match(/^\d{4}-\d{2}$/) && !isNaN(presNum) && presNum > 0) {
+                  const presM = presNum > 100000 ? (presNum / 1000000) : presNum;
+                  if (!AppState.months[aMes]) {
+                    const [y, m] = aMes.split('-').map(n => parseInt(n));
+                    AppState.months[aMes] = {
+                      year: y,
+                      month: m,
+                      daysInMonth: getDaysInMonth(y, m),
+                      corteDia: 1,
+                      presupuestoMeta: presM,
+                      dailyCumulative: [],
+                      ultimoConsumoDia: 0,
+                      almacenCOP: 0,
+                      servicioCOP: 0,
+                      otroCOP: 0,
+                      cecos: []
+                    };
+                  } else {
+                    AppState.months[aMes].presupuestoMeta = presM;
+                  }
+                  updatedCount++;
+                }
+              });
+
+              resolve({
+                type: "PARAMETROS",
+                message: "✅ Metas de presupuesto actualizadas para " + updatedCount + " meses desde Parametros.xlsx."
+              });
+              return;
+            }
+
+            // CASO B: Archivo Diario IFP_YYYYMMDD (ej. IFP_20260907.xls)
+            const nameMatch = file.name.match(/IFP_(\d{4})(\d{2})(\d{2})/i) || file.name.match(/(\d{4})[-_]?(\d{2})[-_]?(\d{2})/);
+            if (!nameMatch) {
+              throw new Error("El archivo '" + file.name + "' no tiene el formato estándar IFP_YYYYMMDD.xls");
+            }
+
+            const anio = parseInt(nameMatch[1]);
+            const mesStr = nameMatch[2];
+            const mes = parseInt(mesStr);
+            const dia = parseInt(nameMatch[3]);
+            const monthKey = anio + "-" + mesStr;
+
+            // Parse Daily Excel Data
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
+
+            // --- LÓGICA DE PARSEO SAP: los detalles (Servicio/Almacén) vienen ANTES
+            // de la línea "* CeCo" que los totaliza. Vamos acumulando en un buffer
+            // y lo volcamos al CeCo cuando encontramos su línea de total. ---
+            // POLÍTICA VIGENTE (definida con el ingeniero): los valores negativos
+            // (reversiones/notas crédito) NO se restan del consumo — se tratan como $0.
+            // Solo se suman valores positivos. Se conserva un registro de cuánto se
+            // excluyó, únicamente para trazabilidad, sin afectar ningún cálculo.
+            let buffer = { almacen: 0, servicio: 0, otro: 0 };
+            let cecoData = {}; // code -> { nombre, real, almacen, servicio, otro }
+            let excludedNegativeTotal = 0; // COP, valor absoluto de todo lo negativo excluido
+
+            rows.forEach(r => {
+              if (!r || r.length === 0) return;
+
+              const col0 = String(r[0] || '').trim();
+              const col1 = String(r[1] || '').trim();
+              // El texto real puede caer en col0 o col1 según el archivo
+              const textCell = /^\*?\s*\d+/.test(col0) ? col0 : (/^\*?\s*\d+/.test(col1) ? col1 : col0);
+
+              // Buscar la celda de valor en COP (o numérica pura si viene como .xlsm)
+              let copRaw = null;
+              for (let i = 0; i < r.length; i++) {
+                const cellVal = String(r[i] || '').trim();
+                if (cellVal.includes('COP')) { copRaw = cellVal; break; }
+              }
+              if (copRaw === null) {
+                // Si no hay celda con "COP" como texto, tomar la 3ra o 4ta columna numérica
+                for (let i = 2; i <= 3; i++) {
+                  if (r[i] !== undefined && r[i] !== null && r[i] !== '' && !isNaN(parseFloat(String(r[i]).replace(',','.')))) {
+                    copRaw = r[i];
+                    break;
+                  }
+                }
+              }
+              if (copRaw === null || copRaw === '') return;
+
+              let num = parseCOPValue(copRaw);
+              if (num === 0 && !textCell) return;
+
+              if (textCell.startsWith('*')) {
+                // LÍNEA DE TOTAL DE CECO: cierra el grupo, vuelca el buffer.
+                // No se usa su propio valor (ya quedó reflejado en las filas de
+                // detalle de abajo) — evita contar la misma reversión dos veces.
+                const match = textCell.match(/\*\s*(\d+)\s*(.*)/);
+                const code = match ? match[1] : textCell.replace(/\D/g, '');
+                let name = match ? match[2].trim() : '';
+                if (!name) name = (CECO_AREA_MAP[code] && CECO_AREA_MAP[code].nombre) || "Centro " + code;
+
+                // IMPORTANTE: el "real" del CeCo se RECALCULA como la suma de sus
+                // propias filas de detalle (ya con negativos excluidos), en vez de
+                // tomar el neto oficial que trae la línea "*" de SAP. Esto garantiza
+                // que Total Real = Almacén + Servicio + Otro siempre, sin importar
+                // cuántas reversiones parciales tenga el CeCo por dentro.
+                const realRecalculado = buffer.almacen + buffer.servicio + buffer.otro;
+
+                if (code) {
+                  cecoData[code] = {
+                    nombre: name,
+                    real: realRecalculado,
+                    almacen: buffer.almacen,
+                    servicio: buffer.servicio,
+                    otro: buffer.otro
+                  };
+                }
+                // Reiniciar buffer para el siguiente grupo de CeCo
+                buffer = { almacen: 0, servicio: 0, otro: 0 };
+              } else {
+                // FILA DE DETALLE (clase de coste): aquí SÍ se aplica la regla de
+                // exclusión de negativos, con trazabilidad de cuánto se excluyó.
+                if (num < 0) {
+                  excludedNegativeTotal += Math.abs(num);
+                  num = 0;
+                }
+
+                const claseDigitos = textCell.replace(/\D/g, '').slice(0, 8);
+                let tipo = "Otro";
+                if (claseDigitos.startsWith('717')) tipo = "Servicio";
+                else if (claseDigitos.startsWith('527')) tipo = "Almacen";
+
+                if (tipo === "Almacen") buffer.almacen += num;
+                else if (tipo === "Servicio") buffer.servicio += num;
+                else buffer.otro += num;
+              }
+            });
+
+            // Totales del archivo = suma de los totales oficiales de cada CeCo (fuente de verdad)
+            const codes = Object.keys(cecoData);
+            if (codes.length === 0) {
+              throw new Error("No se detectaron Centros de Costo (líneas '*') en el archivo '" + file.name + "'.");
+            }
+            const totalCOP = codes.reduce((sum, c) => sum + cecoData[c].real, 0);
+            const almCOP = codes.reduce((sum, c) => sum + cecoData[c].almacen, 0);
+            const serCOP = codes.reduce((sum, c) => sum + cecoData[c].servicio, 0);
+            const otrCOP = codes.reduce((sum, c) => sum + cecoData[c].otro, 0);
+
+            // Convertir de pesos COP a Millones COP
+            const dailyM = totalCOP / 1000000; // "dailyM" = valor ACUMULADO del mes a esta fecha (no es un delta diario)
+            const almM = almCOP / 1000000;
+            const serM = serCOP / 1000000;
+            const otrM = otrCOP / 1000000; // "Otros" costos (clases distintas de 717/527) — se incluyen en el total real
+
+            // Asegurar que el mes exista en AppState
+            if (!AppState.months[monthKey]) {
+              AppState.months[monthKey] = {
+                year: anio,
+                month: mes,
+                daysInMonth: getDaysInMonth(anio, mes),
+                corteDia: dia,
+                presupuestoMeta: 480.00,
+                dailyCumulative: [],
+                ultimoConsumoDia: 0,
+                almacenCOP: almM,
+                servicioCOP: serM,
+                otroCOP: otrM,
+                cecos: []
+              };
+            }
+
+            const targetMonth = AppState.months[monthKey];
+            targetMonth.corteDia = dia;
+
+            // Quitar cualquier punto previo del MISMO día (re-carga) o de días posteriores
+            targetMonth.dailyCumulative = targetMonth.dailyCumulative.filter(d => d.dia < dia);
+
+            // El archivo YA trae el acumulado del mes hasta esta fecha (formato SAP) —
+            // no se suma al anterior, se usa el valor directo.
+            const prevCum = targetMonth.dailyCumulative.length > 0
+              ? targetMonth.dailyCumulative[targetMonth.dailyCumulative.length - 1].consumo
+              : 0;
+            const newCum = dailyM;
+            targetMonth.ultimoConsumoDia = newCum - prevCum; // movimiento real de este día (para referencia)
+
+            targetMonth.dailyCumulative.push({ dia, consumo: newCum });
+            targetMonth.dailyCumulative.sort((a, b) => a.dia - b.dia);
+
+            // Mix Almacén vs Servicios vs Otros = el acumulado real del mes (no una proporción inventada)
+            // almM + serM + otrM == dailyM SIEMPRE (misma fuente: suma de cecoData[c].real), así la
+            // dona y el KPI "Consumo Real (MTD)" quedan matemáticamente cuadrados.
+            targetMonth.almacenCOP = almM;
+            targetMonth.servicioCOP = serM;
+            targetMonth.otroCOP = otrM;
+            targetMonth.valoresNegativosExcluidos = excludedNegativeTotal / 1000000; // solo trazabilidad
+
+            // Actualizar CeCos con el desglose REAL de Almacén/Servicio por centro de costo
+            targetMonth.cecos = codes.map(code => {
+              const d = cecoData[code];
+              const cM = d.real / 1000000;
+              const nombreFinal = (CECO_AREA_MAP[code] && CECO_AREA_MAP[code].nombre) || d.nombre;
+              return {
+                ceco: "CC-" + code,
+                nombre: nombreFinal,
+                area: detectCeCoArea(code, nombreFinal),
+                real: cM,
+                almacen: d.almacen / 1000000,
+                servicio: d.servicio / 1000000,
+                otro: d.otro / 1000000
+                // Nota: ya no se genera un campo "meta" por CeCo — solo existe la
+                // meta GLOBAL del mes ($560M). Si en el futuro se definen metas
+                // reales por centro de costo, se cargarían aquí desde Parametros.
+              };
+            });
+
+            // Cambiar automáticamente al mes del archivo subido
+            AppState.activeMonth = monthKey;
+
+            const totalCOPFormat = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(totalCOP);
+            const excluidoMsg = excludedNegativeTotal > 0
+              ? ` (se excluyeron $${(excludedNegativeTotal/1000000).toFixed(3)}M en valores negativos, según política vigente)`
+              : '';
+
+            resolve({
+              type: "DAILY",
+              monthKey,
+              dia,
+              dailyM,
+              message: "✅ Archivo " + file.name + " cargado. Acumulado del mes al día " + dia + ": " + totalCOPFormat + " (" + dailyM.toFixed(3) + "M COP)." + excluidoMsg
+            });
+
+          } catch(err) {
+            reject(err);
+          }
+        };
+        reader.onerror = (err) => reject(err);
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+// --- MODAL Y EVENTOS DRAG & DROP ---
+    const uploadModal = document.getElementById('upload-modal');
+    const modalDropzone = document.getElementById('modal-dropzone');
+    const modalFileInput = document.getElementById('modal-file-input');
+    const modalStatus = document.getElementById('modal-status');
+
+    function openUploadModal() {
+      if (!PUEDE_EDITAR) { showToast('🔒 Solo los administradores pueden cambiar los datos del presupuesto.'); return; }
+      uploadModal.classList.remove('hidden');
+      modalStatus.classList.add('hidden');
+    }
+
+    function closeUploadModal() {
+      uploadModal.classList.add('hidden');
+    }
+
+    modalDropzone.addEventListener('click', () => modalFileInput.click());
+
+    ['dragenter', 'dragover'].forEach(n => {
+      modalDropzone.addEventListener(n, (e) => {
+        e.preventDefault();
+        modalDropzone.classList.add('dragover');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(n => {
+      modalDropzone.addEventListener(n, (e) => {
+        e.preventDefault();
+        modalDropzone.classList.remove('dragover');
+      });
+    });
+
+    modalDropzone.addEventListener('drop', (e) => {
+      const files = e.dataTransfer.files;
+      if (files.length > 0) handleFiles(files);
+    });
+
+    modalFileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) handleFiles(e.target.files);
+    });
+
+    async function handleFiles(fileList) {
+      modalStatus.classList.remove('hidden');
+      modalStatus.className = "p-3 rounded-lg text-xs mb-4 bg-blue-500/20 text-blue-300 border border-blue-500/40";
+      modalStatus.innerHTML = `⏳ Procesando ${fileList.length} archivo(s)...`;
+
+      try {
+        // La primera carga real reemplaza los datos de ejemplo
+        if (AppState._demo) AppState = { activeMonth: '', months: {} };
+        let lastMsg = "";
+        for (let i = 0; i < fileList.length; i++) {
+          const res = await processExcelFile(fileList[i]);
+          lastMsg = res.message;
+        }
+
+        if (!AppState.months[AppState.activeMonth]) AppState.activeMonth = ultimoMes(AppState);
+        saveState();
+        populateMonthSelector();
+        recalculateAndRender();
+
+        modalStatus.className = "p-3 rounded-lg text-xs mb-4 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40";
+        modalStatus.innerHTML = lastMsg;
+
+        showToast(lastMsg);
+        setTimeout(() => closeUploadModal(), 1400);
+
+      } catch(err) {
+        modalStatus.className = "p-3 rounded-lg text-xs mb-4 bg-red-500/20 text-red-300 border border-red-500/40";
+        modalStatus.innerHTML = `❌ Error: ${err.message}`;
+      }
+    }
+
+    // --- TAB SWITCHER ---
+    function switchTab(tabId) {
+      const p1 = document.getElementById('view-page1');
+      const p2 = document.getElementById('view-page2');
+      const b1 = document.getElementById('tab-btn-page1');
+      const b2 = document.getElementById('tab-btn-page2');
+
+      if (tabId === 'page1') {
+        p1.classList.remove('hidden');
+        p2.classList.add('hidden');
+        b1.className = "px-3 py-1.5 rounded-lg bg-[#FF7A00] text-white font-semibold transition-all shadow-md shadow-orange-500/20";
+        b2.className = "px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition-all";
+      } else {
+        p1.classList.add('hidden');
+        p2.classList.remove('hidden');
+        b2.className = "px-3 py-1.5 rounded-lg bg-[#FF7A00] text-white font-semibold transition-all shadow-md shadow-orange-500/20";
+        b1.className = "px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition-all";
+      }
+    }
+
+    // --- TOAST ---
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      document.getElementById('toast-msg').textContent = msg;
+      t.classList.remove('translate-y-24', 'opacity-0');
+      setTimeout(() => {
+        t.classList.add('translate-y-24', 'opacity-0');
+      }, 3500);
+    }
+
+    
+    // --- GESTIÓN DE MODAL Y DESCARGA 100% FIABLE DE INFORME PDF ---
+    function openCorporateReportModal() {
+      const m = calculateCurrentMeasures();
+      const mKey = AppState.activeMonth;
+      const parts = mKey.split('-');
+      const year = parts[0];
+      const monthNum = parts[1];
+      const monthName = MONTH_NAMES[monthNum] || monthNum;
+
+      const now = new Date();
+      const timestamp = now.toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+      const fmtM = (val) => '$ ' + val.toFixed(3) + 'M COP';
+      const fmtPct = (val) => (val * 100).toFixed(1) + '%';
+
+      // Paleta formal: un solo tono (marino) + gris. El color solo aparece
+      // para marcar desviaciones (rojo oscuro) o cumplimiento (verde oscuro) en texto, no en fondos.
+      const NAVY = '#1B2A4A';
+      const INK = '#111827';
+      const GRAY_TXT = '#4B5563';
+      const GRAY_LINE = '#D1D5DB';
+      const GRAY_BG = '#F3F4F6';
+      const DEV_COLOR = m.desviacionM > 0 ? '#7A1F1F' : '#1F5E3A';
+
+      const estadoTexto = m.desviacionM > 0 ? 'SOBREGIRO PROYECTADO' : 'DENTRO DE PRESUPUESTO';
+
+      // --- Mensaje Ejecutivo (diagnóstico + recomendación en lenguaje gerencial) ---
+      const rubroDominante = (m.mData.almacenCOP >= m.mData.servicioCOP) ? 'Almacén (repuestos e insumos)' : 'Servicios y contratistas';
+      const rubroDominantePct = (m.mData.almacenCOP >= m.mData.servicioCOP)
+        ? (Math.abs(m.mData.almacenCOP) / (Math.abs(m.mData.almacenCOP) + Math.abs(m.mData.servicioCOP)) * 100)
+        : (Math.abs(m.mData.servicioCOP) / (Math.abs(m.mData.almacenCOP) + Math.abs(m.mData.servicioCOP)) * 100);
+
+      const diagnosticoMsg = m.desviacionM > 0
+        ? `Al día ${m.diasTranscurridos} del mes, la ejecución acumulada asciende a ${fmtM(m.consumoMTD)} (${fmtPct(m.avancePct)} de la meta de ${fmtM(m.presupuesto)}). Al ritmo actual de $ ${m.ritmoActualDiario.toFixed(3)}M por día hábil, el cierre se proyecta en ${fmtM(m.proyeccionCierre)}, un sobregiro de ${fmtM(Math.abs(m.desviacionM))} (${(m.desviacionPct >= 0 ? '+' : '')}${m.desviacionPct.toFixed(1)}%) frente al presupuesto asignado. El rubro de mayor peso en el mes es <strong>${rubroDominante}</strong>, con ${rubroDominantePct.toFixed(1)}% del consumo total.`
+        : `Al día ${m.diasTranscurridos} del mes, la ejecución acumulada asciende a ${fmtM(m.consumoMTD)} (${fmtPct(m.avancePct)} de la meta de ${fmtM(m.presupuesto)}), y el cierre proyectado de ${fmtM(m.proyeccionCierre)} se mantiene dentro del presupuesto asignado. El rubro de mayor peso en el mes es <strong>${rubroDominante}</strong>, con ${rubroDominantePct.toFixed(1)}% del consumo total.`;
+
+      const recomendacionMsg = m.desviacionM > 0
+        ? (m.diasHabilesRestantes > 0
+            ? `Para cerrar dentro de la meta, el consumo diario de los ${m.diasHabilesRestantes} días hábiles restantes debe limitarse a un máximo de $ ${Math.max(0, m.consumoDiarioPermitido).toFixed(3)}M/día — muy por debajo del ritmo actual. Se recomienda una revisión inmediata de compromisos pendientes en ${rubroDominante.toLowerCase()} y priorizar únicamente consumos críticos para los días restantes.`
+            : `El mes cierra hoy sin margen para ajustar el ritmo de consumo; se recomienda documentar las causas del sobregiro y definir acciones correctivas para el próximo periodo.`)
+        : `Se recomienda mantener el ritmo de ejecución actual y continuar el monitoreo diario para asegurar el cierre dentro de la meta presupuestal.`;
+
+      // Mix de Consumo: Almacén vs Servicios (mismos datos del donut del cockpit)
+      // "Otros" como residuo frente a Consumo Real (MTD), igual que en renderDonut, para que
+      // el PDF cuadre exactamente con la pantalla sin depender de un campo guardado que pudo
+      // quedar desactualizado en el navegador.
+      const mixAlmacen = m.mData.almacenCOP || 0;
+      const mixServicio = m.mData.servicioCOP || 0;
+      const mixOtros = m.consumoMTD - mixAlmacen - mixServicio;
+      const mixTotalAbs = Math.abs(mixAlmacen) + Math.abs(mixServicio) + Math.abs(mixOtros);
+      const pctMixAlmacen = mixTotalAbs > 0 ? (Math.abs(mixAlmacen) / mixTotalAbs) * 100 : 0;
+      const pctMixServicio = mixTotalAbs > 0 ? (Math.abs(mixServicio) / mixTotalAbs) * 100 : 0;
+      const pctMixOtros = mixTotalAbs > 0 ? (Math.abs(mixOtros) / mixTotalAbs) * 100 : 0;
+      const showMixOtros = Math.abs(mixOtros) >= 0.001;
+      const mixColWidth = showMixOtros ? '33.33%' : '50%';
+
+      const reportHTML = `
+        <div style="font-family: Georgia, 'Times New Roman', serif; color: ${INK}; width: 100%; box-sizing: border-box;">
+
+          <!-- Encabezado Corporativo Formal -->
+          <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid ${NAVY}; padding-bottom: 16px; margin-bottom: 18px;">
+            <div style="display: flex; align-items: center; gap: 14px;">
+              <div style="background: #FFFFFF; border: 1px solid ${GRAY_LINE}; border-radius: 6px; padding: 6px 10px; display:flex; align-items:center;">
+                <img src="data:image/png;base64,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" alt="Logo" style="height: 22px; width: auto; display:block;" />
+              </div>
+              <div>
+                <h1 style="margin: 0; font-size: 18px; font-weight: 700; color: ${NAVY}; letter-spacing: 0.3px; font-family: Georgia, serif;">INFORME EJECUTIVO DE PRESUPUESTO</h1>
+                <p style="margin: 2px 0 0 0; font-size: 10.5px; color: ${GRAY_TXT}; font-family: Arial, sans-serif;">Planta IFP &middot; Control de Ejecución Presupuestal Mensual</p>
+              </div>
+            </div>
+            <div style="text-align: right; font-size: 10.5px; color: ${GRAY_TXT}; font-family: Arial, sans-serif; line-height: 1.5;">
+              <div><strong style="color:${INK};">Periodo:</strong> ${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${year}</div>
+              <div><strong style="color:${INK};">Corte:</strong> Día ${m.diasTranscurridos} de ${m.diasMes} (${m.diasRestantes} días rest.)</div>
+              <div style="color: #9CA3AF; font-size: 9.5px; margin-top: 2px;">Generado el ${timestamp}</div>
+            </div>
+          </div>
+
+          <!-- Mensaje Ejecutivo -->
+          <div style="border: 1px solid ${GRAY_LINE}; border-left: 4px solid ${NAVY}; background: ${GRAY_BG}; padding: 16px 20px; margin-bottom: 22px; font-family: Arial, sans-serif;">
+            <div style="font-weight: 700; font-size: 12px; color: ${NAVY}; letter-spacing: 0.4px; margin-bottom: 8px; text-transform: uppercase;">
+              Mensaje Ejecutivo &mdash; Estado: <span style="color:${DEV_COLOR};">${estadoTexto}</span>
+            </div>
+            <div style="font-size: 12px; color: ${INK}; line-height: 1.7; margin-bottom: 10px;">${diagnosticoMsg}</div>
+            <div style="font-size: 12px; color: ${INK}; line-height: 1.7; padding-top: 10px; border-top: 1px dashed ${GRAY_LINE};">
+              <strong style="color: ${NAVY};">Recomendación:</strong> ${recomendacionMsg}
+            </div>
+          </div>
+
+          <!-- Indicadores clave (tabla, no tarjetas de colores) -->
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-family: Arial, sans-serif;">
+            <tr>
+              <td style="width:25%; padding: 10px 14px; border: 1px solid ${GRAY_LINE}; border-right: none;">
+                <div style="font-size: 9px; font-weight: 700; color: ${GRAY_TXT}; text-transform: uppercase; letter-spacing: 0.3px;">Presupuesto Meta</div>
+                <div style="font-size: 16px; font-weight: 700; color: ${INK}; margin-top: 4px;">${fmtM(m.presupuesto)}</div>
+              </td>
+              <td style="width:25%; padding: 10px 14px; border: 1px solid ${GRAY_LINE}; border-right: none;">
+                <div style="font-size: 9px; font-weight: 700; color: ${GRAY_TXT}; text-transform: uppercase; letter-spacing: 0.3px;">Ejecutado MTD</div>
+                <div style="font-size: 16px; font-weight: 700; color: ${INK}; margin-top: 4px;">${fmtM(m.consumoMTD)}</div>
+                <div style="font-size: 9.5px; color: ${GRAY_TXT}; margin-top: 1px;">${fmtPct(m.avancePct)} del presupuesto</div>
+              </td>
+              <td style="width:25%; padding: 10px 14px; border: 1px solid ${GRAY_LINE}; border-right: none;">
+                <div style="font-size: 9px; font-weight: 700; color: ${GRAY_TXT}; text-transform: uppercase; letter-spacing: 0.3px;">Saldo Disponible</div>
+                <div style="font-size: 16px; font-weight: 700; color: ${INK}; margin-top: 4px;">${fmtM(m.faltaPorConsumir)}</div>
+              </td>
+              <td style="width:25%; padding: 10px 14px; border: 1px solid ${GRAY_LINE};">
+                <div style="font-size: 9px; font-weight: 700; color: ${GRAY_TXT}; text-transform: uppercase; letter-spacing: 0.3px;">Proyección de Cierre</div>
+                <div style="font-size: 16px; font-weight: 700; color: ${DEV_COLOR}; margin-top: 4px;">${fmtM(m.proyeccionCierre)}</div>
+                <div style="font-size: 9.5px; font-weight: 600; color: ${DEV_COLOR}; margin-top: 1px;">${(m.desviacionPct >= 0 ? '+' : '')}${m.desviacionPct.toFixed(1)}% vs. presupuesto</div>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Mix de Consumo: Almacén vs Servicios (vs Otros, si aplica) -->
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-family: Arial, sans-serif;">
+            <tr>
+              <td style="width:${mixColWidth}; padding: 10px 14px; border: 1px solid ${GRAY_LINE}; border-right: none;">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                  <div>
+                    <div style="font-size: 9px; font-weight: 700; color: ${GRAY_TXT}; text-transform: uppercase; letter-spacing: 0.3px;">Almacén (Repuestos / Insumos)</div>
+                    <div style="font-size: 15px; font-weight: 700; color: ${INK}; margin-top: 4px;">$ ${mixAlmacen.toFixed(3)}M COP</div>
+                  </div>
+                  <div style="font-size: 18px; font-weight: 700; color: ${NAVY};">${pctMixAlmacen.toFixed(1)}%</div>
+                </div>
+              </td>
+              <td style="width:${mixColWidth}; padding: 10px 14px; border: 1px solid ${GRAY_LINE}; ${showMixOtros ? 'border-right: none;' : ''}">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                  <div>
+                    <div style="font-size: 9px; font-weight: 700; color: ${GRAY_TXT}; text-transform: uppercase; letter-spacing: 0.3px;">Servicios &amp; Contratistas</div>
+                    <div style="font-size: 15px; font-weight: 700; color: ${INK}; margin-top: 4px;">$ ${mixServicio.toFixed(3)}M COP</div>
+                  </div>
+                  <div style="font-size: 18px; font-weight: 700; color: ${GRAY_TXT};">${pctMixServicio.toFixed(1)}%</div>
+                </div>
+              </td>
+              ${showMixOtros ? `
+              <td style="width:${mixColWidth}; padding: 10px 14px; border: 1px solid ${GRAY_LINE};">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                  <div>
+                    <div style="font-size: 9px; font-weight: 700; color: ${GRAY_TXT}; text-transform: uppercase; letter-spacing: 0.3px;">Otros Costos</div>
+                    <div style="font-size: 15px; font-weight: 700; color: ${INK}; margin-top: 4px;">$ ${mixOtros.toFixed(3)}M COP</div>
+                  </div>
+                  <div style="font-size: 18px; font-weight: 700; color: #94A3B8;">${pctMixOtros.toFixed(1)}%</div>
+                </div>
+              </td>` : ''}
+            </tr>
+          </table>
+
+          <!-- Pie de página formal -->
+          <div style="margin-top: 24px; border-top: 1px solid ${GRAY_LINE}; padding-top: 10px; display: flex; align-items: center; justify-content: space-between; font-size: 9px; color: #9CA3AF; font-family: Arial, sans-serif;">
+            <div>Sistema Integrado de Control Presupuestal &middot; Presupuesto IFP</div>
+            <div style="font-style: italic;">Documento confidencial de uso interno. Prohibida su distribución externa.</div>
+          </div>
+
+        </div>
+      `;
+
+      document.getElementById('corporate-report-printable-area').innerHTML = reportHTML;
+      document.getElementById('pdf-report-modal').classList.remove('hidden');
+
+      // Descargar automáticamente después de 300ms
+      setTimeout(() => executePdfDownload(), 350);
+    }
+
+    function closePdfReportModal() {
+      document.getElementById('pdf-report-modal').classList.add('hidden');
+    }
+
+    async function executePdfDownload() {
+      const area = document.getElementById('corporate-report-printable-area');
+      if (!area) return;
+
+      showToast("⏳ Descargando archivo PDF...");
+
+      const mKey = AppState.activeMonth;
+      const parts = mKey.split('-');
+      const year = parts[0];
+      const monthNum = parts[1];
+      const monthName = MONTH_NAMES[monthNum] || monthNum;
+
+      const opt = {
+        margin: [6, 6, 6, 6],
+        filename: `Informe_Presupuesto_IFP_${monthName}_${year}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      try {
+        if (typeof html2pdf !== 'undefined') {
+          await html2pdf().set(opt).from(area).save();
+          showToast("✅ Informe PDF descargado exitosamente.");
+        } else {
+          showToast("⚠️ Librería PDF no disponible. Usando vista para imprimir.");
+          window.print();
+        }
+      } catch(e) {
+        console.error("Error al descargar PDF:", e);
+        showToast("❌ Error al procesar descarga de PDF.");
+      }
+    }
+
+    // Inicializar al cargar el DOM
+    window.addEventListener('DOMContentLoaded', initAppState);
+  </script>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL DE VISTA PREVIA Y DESCARGA DE INFORME CORPORATIVO PDF               -->
+  <!-- ========================================================================= -->
+  <div id="pdf-report-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 hidden p-4 overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-5xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+      
+      <!-- Encabezado del Modal -->
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/90">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#FF7A00] to-amber-500 flex items-center justify-center text-white font-extrabold text-sm shadow-md">
+            PDF
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">Vista Previa del Informe Corporativo</h3>
+            <p class="text-xs text-slate-400">Documento ejecutivo oficial listo para descargar en formato digital</p>
+          </div>
+        </div>
+        
+        <div class="flex items-center gap-3">
+          <button onclick="executePdfDownload()" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#FF7A00] to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs shadow-lg shadow-orange-500/25 transition-all transform hover:scale-105 active:scale-95">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+            </svg>
+            <span>📥 Descargar Archivo PDF</span>
+          </button>
+
+          <button onclick="closePdfReportModal()" class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-all">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Cuerpo del Modal (Área imprimible) -->
+      <div class="p-6 overflow-y-auto bg-slate-950/50 flex justify-center custom-scroll">
+        <div id="corporate-report-printable-area" class="bg-white text-slate-900 p-8 rounded-xl shadow-2xl w-[760px] box-border">
+          <!-- El informe HTML se renderiza dinámicamente aquí -->
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>
