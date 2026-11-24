@@ -1064,7 +1064,11 @@ const server = http.createServer((req, res) => {
     }
 
     // ---------- Módulo Técnicos: solo administradores (matriz, ranking, 360° con evaluadores) ----------
-    if (/^\/api\/(tecnicos|habilidades|360|turnos|acceso-tecnicos)(\/|$)/.test(pathname) && !esAdminTecnicos(sesion)) {
+    // Todos pueden ver la matriz en solo lectura; los resultados 360° sin evaluadores
+    if (pathname === '/api/360' && req.method === 'GET' && !esAdminTecnicos(sesion)) {
+        return sendJson(res, 200, ev360.resumenPublico(rutasExtra.datosTecnicos(), parsedUrl.searchParams.get('campana')));
+    }
+    if (/^\/api\/(tecnicos|habilidades|360|turnos|acceso-tecnicos)(\/|$)/.test(pathname) && !esAdminTecnicos(sesion) && !(pathname === '/api/tecnicos' && req.method === 'GET')) {
         return sendJson(res, 403, { error: 'No tienes acceso al módulo Técnicos. Pide acceso a un administrador de la matriz de polivalencia.', sinAcceso: true });
     }
     // ---------- Presupuesto IFP: el tablero lo ven todos; cargar o restablecer datos, solo administradores ----------

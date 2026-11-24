@@ -215,6 +215,7 @@ function renderTurnoHoy() {
 const VISTAS_TEC = ['perfiles', 'calificar', 'matriz', 'e360', 'ranking', 'buscar', 'acciones'];
 function vistaTecnicos(vista) {
     if (vista === 'turnos') vista = 'perfiles';
+    if (soloLecturaTec() && ['calificar', 'e360', 'acciones'].includes(vista)) vista = 'perfiles';
     if (vistaTecActual === 'acciones' && vista !== 'acciones' && accionesCambiadas && !confirm('Tienes cambios sin guardar en las acciones a calificar. ¿Salir sin guardar?')) return;
     if (vista !== 'acciones') accionesCambiadas = false;
     vistaTecActual = vista;
@@ -320,7 +321,7 @@ function renderBuscador() {
     cont.innerHTML = lista.slice(0, 60).map(({ t, razones, cod, ahora }) => tarjetaTecnico(t, {
         razones, cod, ahora,
         acciones: `<button class="btn btn-secondary btn-sm" onclick="abrirPerfil('${attr(t.id)}')">🪪 Perfil</button>
-                   <button class="btn btn-primary btn-sm" onclick="irACalificar('${attr(t.id)}')">⭐ Calificar</button>`
+                   <button class="tec-solo-admin btn btn-primary btn-sm" onclick="irACalificar('${attr(t.id)}')">⭐ Calificar</button>`
     })).join('');
 }
 
@@ -403,8 +404,8 @@ function renderPerfiles() {
         <div class="grupo-rol">
             <div class="grupo-rol-titulo">${ICONO_ROL[r] || '👤'} ${escaparHTML(r)} <span>${grupos[r].length}</span></div>
             <div class="tarjetas-tecnicos">${grupos[r].map(t => tarjetaTecnico(t, {
-                acciones: `<button class="btn btn-primary btn-sm" onclick="irACalificar('${attr(t.id)}')">⭐ Calificar</button>
-                           <button class="btn btn-secondary btn-sm" onclick="abrirPerfil('${attr(t.id)}')">✏️ Perfil</button>${t.activo === false ? ' <span class="badge badge-gris">Inactivo</span>' : ''}`
+                acciones: `<button class="tec-solo-admin btn btn-primary btn-sm" onclick="irACalificar('${attr(t.id)}')">⭐ Calificar</button>
+                           <button class="btn btn-secondary btn-sm" onclick="abrirPerfil('${attr(t.id)}')">${soloLecturaTec() ? '🪪 Ver perfil' : '✏️ Perfil'}</button>${t.activo === false ? ' <span class="badge badge-gris">Inactivo</span>' : ''}`
             })).join('')}</div>
         </div>`).join('') : `<div class="vacio">${tec.tecnicos.length ? 'Ningún técnico coincide.' : 'Aún no hay técnicos. Usa <strong>➕ Nuevo técnico</strong> para crear el primero: nombre, especialidad y listo, después lo calificas en ⭐ Calificar.'}</div>`;
 }
@@ -467,6 +468,12 @@ function abrirPerfil(id) {
         extra.innerHTML = '';
     }
     renderNivelesPerfil();
+    const lectura = soloLecturaTec();
+    document.querySelectorAll('#modal-perfil input, #modal-perfil select, #modal-perfil textarea').forEach(e => { e.disabled = lectura; });
+    ['perfil-telefono', 'perfil-correo', 'perfil-supervisor-correo', 'perfil-notas'].forEach(id => {
+        const g = document.getElementById(id)?.closest('.form-group'); if (g) g.style.display = lectura ? 'none' : '';
+    });
+    if (lectura) document.getElementById('perfil-eliminar').style.display = 'none';
     document.getElementById('modal-perfil').classList.add('active');
 }
 
@@ -851,8 +858,12 @@ function renderEstadoPowerAutomate() {
 // =====================================================================
 // PORTADA: elegir módulo (ACR o Técnicos)
 // =====================================================================
+// Quien no administra la matriz la ve en solo lectura (perfiles, matriz, ranking, buscar)
+function soloLecturaTec() { return window.esAdminTec === false; }
 function aplicarAccesoTecnicos() {
-    const bloqueado = window.esAdminTec === false || tec.sinAcceso;
+    document.body.classList.toggle('tec-lectura', soloLecturaTec());
+    if (soloLecturaTec() && ['calificar', 'e360', 'acciones'].includes(vistaTecActual)) vistaTecActual = 'perfiles';
+    const bloqueado = !!tec.sinAcceso;
     const op = document.querySelector('.portada-op.tec');
     if (op) {
         op.classList.toggle('bloqueado', !!bloqueado);
@@ -862,7 +873,7 @@ function aplicarAccesoTecnicos() {
     if (bloqueado && document.body.classList.contains('modo-tec')) abrirModulo('acr');
 }
 function abrirModulo(modulo) {
-    if (modulo === 'tecnicos' && (window.esAdminTec === false || tec.sinAcceso)) {
+    if (modulo === 'tecnicos' && tec.sinAcceso) {
         alert('🔒 El módulo Técnicos es solo para los administradores de la matriz de polivalencia. Si necesitas acceso, pídelo a Sara Moreno.');
         return;
     }
@@ -891,7 +902,7 @@ function renderPortada() {
         a.textContent = `${acrsData.length} ACR · ${abiertas} acciones abiertas`;
     }
     const t = document.getElementById('portada-dato-tec');
-    if (t && tec.cargado && !tec.sinAcceso && window.esAdminTec !== false) {
+    if (t && tec.cargado && !tec.sinAcceso) {
         const activos = tec.tecnicos.filter(x => x.activo !== false);
         t.textContent = `${activos.length} técnicos · ${rolesCatalogo().length} especialidades`;
     }
@@ -971,6 +982,7 @@ function renderKpisTecnicos() {
 // =====================================================================
 let calificarId = '';
 function irACalificar(id) {
+    if (soloLecturaTec()) return abrirPerfil(id);
     const t = tec.tecnicos.find(x => x.id === id);
     if (!t) return;
     calificarId = id;
@@ -1654,7 +1666,7 @@ function resumen360Html(t) {
     return `<div class="perfil-360">
         <div class="perfil-360-final"><strong>${pct(r.puntajes.final)}</strong><small>Final ponderado 360°<br>${escaparHTML(d.campana.nombre)}</small></div>
         <div class="perfil-360-partes">${partes}</div>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="detalle360('${attr(t.id)}')">🔍 Detalle por acción</button>
+        <button type="button" class="tec-solo-admin btn btn-secondary btn-sm" onclick="detalle360('${attr(t.id)}')">🔍 Detalle por acción</button>
     </div>`;
 }
 document.addEventListener('DOMContentLoaded', () => document.querySelectorAll('.sel-fuente').forEach(sel => { sel.value = fuenteVista; }));

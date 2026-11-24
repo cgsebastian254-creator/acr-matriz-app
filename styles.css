@@ -1200,3 +1200,7 @@ tr.e360-diferencia td.col-fija { color: #fcd34d; }
 .e360-limite input{width:auto;padding:5px 8px;font-size:13px}
 
 .texto-ayuda { color: var(--text-muted); font-size: 13px; margin: 4px 0 10px; }
+
+/* Técnicos en solo lectura (usuarios que no administran la matriz) */
+body.tec-lectura .tec-solo-admin { display: none !important; }
+body.tec-lectura #perfil-niveles button { pointer-events: none; }

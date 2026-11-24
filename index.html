@@ -266,12 +266,12 @@
             </div>
             <div class="subtabs">
                 <button class="subtab activo" data-vista="perfiles" onclick="vistaTecnicos('perfiles')">🪪 Técnicos</button>
-                <button class="subtab" data-vista="calificar" onclick="vistaTecnicos('calificar')">⭐ Calificar</button>
+                <button class="subtab tec-solo-admin" data-vista="calificar" onclick="vistaTecnicos('calificar')">⭐ Calificar</button>
                 <button class="subtab" data-vista="matriz" onclick="vistaTecnicos('matriz')">🧩 Matriz</button>
-                <button class="subtab" data-vista="e360" onclick="vistaTecnicos('e360')">🔄 Evaluación 360°</button>
+                <button class="subtab tec-solo-admin" data-vista="e360" onclick="vistaTecnicos('e360')">🔄 Evaluación 360°</button>
                 <button class="subtab" data-vista="ranking" onclick="vistaTecnicos('ranking')">🏆 Ranking</button>
                 <button class="subtab" data-vista="buscar" onclick="vistaTecnicos('buscar')">🔎 Buscar técnico</button>
-                <button class="subtab" data-vista="acciones" onclick="vistaTecnicos('acciones')">⚙️ Acciones a calificar</button>
+                <button class="subtab tec-solo-admin" data-vista="acciones" onclick="vistaTecnicos('acciones')">⚙️ Acciones a calificar</button>
             </div>
 
             <!-- Técnicos -->
@@ -288,9 +288,9 @@
                         </select>
                     </div>
                     <div class="grupo-botones">
-                        <button class="btn btn-primary" onclick="abrirPerfil()">➕ Nuevo técnico</button>
-                        <button class="btn btn-secondary" onclick="window.location.href='/api/tecnicos/plantilla'" title="Excel con todos los técnicos para completar área, cargo y supervisor">⬇️ Lista en Excel</button>
-                        <button class="btn btn-secondary" onclick="document.getElementById('archivo-tecnicos').click()">📥 Cargar Excel</button>
+                        <button class="tec-solo-admin btn btn-primary" onclick="abrirPerfil()">➕ Nuevo técnico</button>
+                        <button class="tec-solo-admin btn btn-secondary" onclick="window.location.href='/api/tecnicos/plantilla'" title="Excel con todos los técnicos para completar área, cargo y supervisor">⬇️ Lista en Excel</button>
+                        <button class="tec-solo-admin btn btn-secondary" onclick="document.getElementById('archivo-tecnicos').click()">📥 Cargar Excel</button>
                         <input type="file" id="archivo-tecnicos" accept=".xlsx,.xls,.xlsm" style="display: none;" onchange="importarMatrizExcel(this, true)">
                     </div>
                 </div>
@@ -808,7 +808,7 @@
                     <button type="button" class="btn btn-danger" id="perfil-eliminar" onclick="eliminarPerfil()">🗑️ Eliminar técnico</button>
                     <div style="display: flex; gap: 12px;">
                         <button type="button" class="btn btn-secondary" onclick="cerrarModal('modal-perfil')">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Guardar perfil</button>
+                        <button type="submit" class="tec-solo-admin btn btn-primary">Guardar perfil</button>
                     </div>
                 </div>
             </form>
