@@ -701,7 +701,7 @@
     }
 
     function resetToDemoData() {
-      if (!PUEDE_EDITAR) { showToast('🔒 Solo los administradores pueden cambiar los datos del presupuesto.'); return; }
+      if (!PUEDE_EDITAR) { showToast('🔒 Solo el responsable del presupuesto puede cargar archivos o editar.'); return; }
       AppState = JSON.parse(JSON.stringify(INITIAL_APP_STATE));
       saveState();
       populateMonthSelector();
@@ -741,7 +741,7 @@
     
     // --- ELIMINAR / LIMPIAR DATOS DEL MES ACTIVO ---
     function resetCurrentMonthData() {
-      if (!PUEDE_EDITAR) { showToast('🔒 Solo los administradores pueden cambiar los datos del presupuesto.'); return; }
+      if (!PUEDE_EDITAR) { showToast('🔒 Solo el responsable del presupuesto puede cargar archivos o editar.'); return; }
       const mKey = AppState.activeMonth;
       const parts = mKey.split('-');
       const y = parts[0];
@@ -767,7 +767,7 @@
 
     // --- MODAL DE CAMBIO RÁPIDO DE PRESUPUESTO ---
     function openBudgetModal() {
-      if (!PUEDE_EDITAR) { showToast('🔒 Solo los administradores pueden cambiar los datos del presupuesto.'); return; }
+      if (!PUEDE_EDITAR) { showToast('🔒 Solo el responsable del presupuesto puede cargar archivos o editar.'); return; }
       const mKey = AppState.activeMonth;
       const curData = AppState.months[mKey];
       document.getElementById('budget-modal-month-tag').textContent = `${mKey} (${MONTH_NAMES[String(curData.month).padStart(2, '0')]} ${curData.year})`;
@@ -1578,7 +1578,7 @@
     const modalStatus = document.getElementById('modal-status');
 
     function openUploadModal() {
-      if (!PUEDE_EDITAR) { showToast('🔒 Solo los administradores pueden cambiar los datos del presupuesto.'); return; }
+      if (!PUEDE_EDITAR) { showToast('🔒 Solo el responsable del presupuesto puede cargar archivos o editar.'); return; }
       uploadModal.classList.remove('hidden');
       modalStatus.classList.add('hidden');
     }

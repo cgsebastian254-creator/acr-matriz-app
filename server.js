@@ -866,6 +866,15 @@ const ADMINS_TECNICOS_INICIALES = (process.env.ADMINS_TECNICOS || 'sara.s.moreno
 function adminsTecnicos() {
     return docs.obtener('tecnicos_acceso', () => ({ admins: ADMINS_TECNICOS_INICIALES })).admins || [];
 }
+// Presupuesto IFP: solo estas personas pueden cargar archivos y editar (variable PRESUPUESTO_EDITORES para cambiarlo)
+const EDITORES_PRESUPUESTO = (process.env.PRESUPUESTO_EDITORES || 'victor.m.hurtado@kcc.com')
+    .split(/[,;\s]+/).map(c => c.trim().toLowerCase()).filter(Boolean);
+function puedeEditarPresupuesto(sesion) {
+    // Sin ingreso por correo no se sabe quién es: nadie edita
+    if (LOGIN_MODE !== 'correo') return false;
+    const correo = sesion && sesion.correo ? String(sesion.correo).toLowerCase() : '';
+    return !!correo && EDITORES_PRESUPUESTO.includes(correo);
+}
 function esAdminTecnicos(sesion) {
     // Sin ingreso por correo (contraseña única o app abierta) no hay forma de distinguir personas
     if (LOGIN_MODE !== 'correo') return true;
@@ -1064,10 +1073,10 @@ const server = http.createServer((req, res) => {
     }
     if (pathname === '/api/presupuesto' && req.method === 'GET') {
         const d = docs.obtener('presupuesto') || {};
-        return sendJson(res, 200, { estado: d.estado || null, actualizado: d.actualizado || null, por: d.por || '', puedeEditar: esAdminTecnicos(sesion) });
+        return sendJson(res, 200, { estado: d.estado || null, actualizado: d.actualizado || null, por: d.por || '', puedeEditar: puedeEditarPresupuesto(sesion) });
     }
     if (pathname === '/api/presupuesto' && req.method === 'POST') {
-        if (!esAdminTecnicos(sesion)) return sendJson(res, 403, { error: 'Solo los administradores pueden cargar datos del presupuesto.' });
+        if (!puedeEditarPresupuesto(sesion)) return sendJson(res, 403, { error: 'Solo el responsable del presupuesto puede cargar archivos o editar.' });
         readBody(req, 8 * 1024 * 1024, async body => {
             try {
                 const p = JSON.parse(body || '{}');
