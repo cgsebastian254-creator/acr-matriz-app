@@ -215,7 +215,7 @@ function renderTurnoHoy() {
 const VISTAS_TEC = ['perfiles', 'calificar', 'matriz', 'e360', 'ranking', 'buscar', 'acciones'];
 function vistaTecnicos(vista) {
     if (vista === 'turnos') vista = 'perfiles';
-    if (soloLecturaTec() && ['calificar', 'e360', 'acciones'].includes(vista)) vista = 'perfiles';
+    if (soloLecturaTec() && ['calificar', 'e360', 'acciones', 'ranking'].includes(vista)) vista = 'perfiles';
     if (vistaTecActual === 'acciones' && vista !== 'acciones' && accionesCambiadas && !confirm('Tienes cambios sin guardar en las acciones a calificar. ¿Salir sin guardar?')) return;
     if (vista !== 'acciones') accionesCambiadas = false;
     vistaTecActual = vista;
@@ -862,7 +862,7 @@ function renderEstadoPowerAutomate() {
 function soloLecturaTec() { return window.esAdminTec === false; }
 function aplicarAccesoTecnicos() {
     document.body.classList.toggle('tec-lectura', soloLecturaTec());
-    if (soloLecturaTec() && ['calificar', 'e360', 'acciones'].includes(vistaTecActual)) vistaTecActual = 'perfiles';
+    if (soloLecturaTec() && ['calificar', 'e360', 'acciones', 'ranking'].includes(vistaTecActual)) vistaTecActual = 'perfiles';
     const bloqueado = !!tec.sinAcceso;
     const op = document.querySelector('.portada-op.tec');
     if (op) {

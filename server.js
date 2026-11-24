@@ -1105,7 +1105,7 @@ const server = http.createServer((req, res) => {
                 const malos = lista.filter(c => !correoPermitido(c));
                 if (malos.length) return sendJson(res, 400, { error: `Solo correos corporativos: ${malos.join(', ')}` });
                 if (sesion && sesion.correo && !lista.includes(sesion.correo.toLowerCase())) lista.push(sesion.correo.toLowerCase());
-                await docs.guardar('tecnicos_acceso', { admins: lista });
+                await docs.guardar('tecnicos_acceso', { ...docs.obtener('tecnicos_acceso', () => ({})), admins: lista });
                 sendJson(res, 200, { success: true, admins: lista });
             } catch (e) { sendJson(res, 400, { error: e.message }); }
         });
@@ -1581,6 +1581,17 @@ async function arrancar() {
     await docs.cargar('notificaciones', () => require('./lib/notificaciones').configPorDefecto());
     await docs.cargar('daily_archivo_indice', []);
     await docs.cargar('tecnicos_acceso', () => ({ admins: ADMINS_TECNICOS_INICIALES }));
+    // Administradores agregados por despliegue (una sola vez; luego se pueden quitar desde la app)
+    {
+        const acc = docs.obtener('tecnicos_acceso');
+        acc.agregados = acc.agregados || [];
+        const nuevos = ['marcela.m.acosta1@kcc.com'].filter(c => !acc.agregados.includes(c));
+        if (nuevos.length) {
+            acc.admins = [...new Set([...(acc.admins || []), ...nuevos])];
+            acc.agregados.push(...nuevos);
+            await docs.guardar('tecnicos_acceso', acc);
+        }
+    }
     await docs.cargar('presupuesto', () => ({ estado: null }));
     await docs.cargar('evaluacion360', () => ({ campanas: [], solicitudes: [] }));
     await docs.cargar('correos_acr', () => ({ ids: [], registro: [], inicializado: false }));
